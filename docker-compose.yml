@@ -1,6 +1,6 @@
 services:
   resume-matcher:
-    image: ghcr.io/srbhr/resume-matcher
+    image: ghcr.io/lachlanmag/resume-matcher
     build: .
     container_name: resume-matcher
     ports:
