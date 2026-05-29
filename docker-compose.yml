@@ -2,16 +2,16 @@ services:
   resume-matcher:
     image: ghcr.io/lachlanmag/resume-matcher
     build: .
-    container_name: resume-matcher
+    container_name: ${CONTAINER_NAME:-resume-matcher-lm}
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-3001}:3000"
     volumes:
       - resume-data:/app/backend/data
     #secrets:
     #  - llm_api_key
     environment:
       # domain in reverse proxy
-      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3000}
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3001}
       # Logging configuration: DEBUG, INFO, WARNING, ERROR
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       #- LOG_LEVEL_FILE=${LOG_LEVEL_FILE:-}
@@ -33,7 +33,7 @@ services:
       # - LLM_API_BASE=http://host.docker.internal:8765/v1
       - LLM_API_BASE=${LLM_API_BASE:-}
       # CORS origins (JSON array format). FRONTEND_BASE_URL is auto-included.
-      #- CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
+      #- CORS_ORIGINS=["http://localhost:3001","http://127.0.0.1:3001"]
     restart: unless-stopped
 
 #secrets:
