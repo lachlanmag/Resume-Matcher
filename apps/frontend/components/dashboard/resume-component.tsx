@@ -24,12 +24,17 @@ export interface PersonalInfo {
   github?: string;
 }
 
-export interface Experience {
+export interface ExperienceRole {
   id: number;
   title?: string;
+  years?: string;
+}
+
+export interface Experience {
+  id: number;
   company?: string;
   location?: string;
-  years?: string;
+  roles: ExperienceRole[];
   description?: string[];
 }
 

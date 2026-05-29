@@ -27,10 +27,15 @@ def sample_resume() -> dict:
         "workExperience": [
             {
                 "id": 1,
-                "title": "Senior Backend Engineer",
                 "company": "Acme Corp",
                 "location": "San Francisco, CA",
-                "years": "Jan 2021 - Present",
+                "roles": [
+                    {
+                        "id": 1,
+                        "title": "Senior Backend Engineer",
+                        "years": "Jan 2021 - Present",
+                    }
+                ],
                 "description": [
                     "Built REST APIs serving 50K requests/day using Python and FastAPI",
                     "Led migration from monolith to microservices architecture",
@@ -39,10 +44,15 @@ def sample_resume() -> dict:
             },
             {
                 "id": 2,
-                "title": "Software Engineer",
                 "company": "StartupCo",
                 "location": "New York, NY",
-                "years": "Jun 2018 - Dec 2020",
+                "roles": [
+                    {
+                        "id": 1,
+                        "title": "Software Engineer",
+                        "years": "Jun 2018 - Dec 2020",
+                    }
+                ],
                 "description": [
                     "Developed payment processing system handling $2M monthly",
                     "Wrote unit and integration tests improving coverage from 40% to 85%",

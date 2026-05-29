@@ -13,6 +13,7 @@ import { API_BASE } from '@/lib/api/client';
 import { translate } from '@/lib/i18n/server';
 import { resolveLocale } from '@/lib/i18n/locale';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
+import { withNormalizedWorkExperience } from '@/lib/utils/work-experience';
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -87,11 +88,13 @@ async function fetchResumeData(id: string): Promise<ResumeData> {
     data: { processed_resume?: ResumeData; raw_resume?: { content?: string } };
   };
   if (payload.data.processed_resume) {
-    return payload.data.processed_resume;
+    return withNormalizedWorkExperience(payload.data.processed_resume as ResumeData);
   }
   if (payload.data.raw_resume?.content) {
     try {
-      return JSON.parse(payload.data.raw_resume.content) as ResumeData;
+      return withNormalizedWorkExperience(
+        JSON.parse(payload.data.raw_resume.content) as ResumeData
+      );
     } catch (error) {
       // Log error for debugging instead of silently failing
       // Note: Avoid logging content preview to prevent PII exposure

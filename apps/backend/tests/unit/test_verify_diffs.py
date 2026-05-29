@@ -84,12 +84,12 @@ class TestVerifyIdentityFields:
         warnings = verify_diff_result(sample_resume, result, applied, sample_job_keywords)
         assert any("company" in w.lower() or "identity" in w.lower() for w in warnings)
 
-    def test_warns_on_title_change(self, sample_resume, sample_job_keywords):
+    def test_warns_on_role_title_change(self, sample_resume, sample_job_keywords):
         result = copy.deepcopy(sample_resume)
-        result["workExperience"][0]["title"] = "VP of Engineering"
+        result["workExperience"][0]["roles"][0]["title"] = "VP of Engineering"
         applied = [ResumeChange(path="summary", action="replace", original="x", value="y", reason="z")]
         warnings = verify_diff_result(sample_resume, result, applied, sample_job_keywords)
-        assert any("title" in w.lower() or "identity" in w.lower() for w in warnings)
+        assert any("roles" in w.lower() or "identity" in w.lower() for w in warnings)
 
     def test_warns_on_institution_change(self, sample_resume, sample_job_keywords):
         result = copy.deepcopy(sample_resume)

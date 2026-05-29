@@ -13,13 +13,18 @@ export interface PersonalInfo {
   github?: string;
 }
 
+export interface ExperienceRoleEntry {
+  id: number;
+  title?: string;
+  years?: string;
+}
+
 export interface ExperienceEntry {
   id: number;
-  title: string;
-  company: string;
+  company?: string;
   location?: string;
-  years?: string;
-  description: string[];
+  roles: ExperienceRoleEntry[];
+  description?: string[];
 }
 
 export interface EducationEntry {

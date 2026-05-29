@@ -46,6 +46,10 @@ import { useRegenerateWizard } from '@/hooks/use-regenerate-wizard';
 import { useTranslations } from '@/lib/i18n';
 import { type TemplateSettings, DEFAULT_TEMPLATE_SETTINGS } from '@/lib/types/template-settings';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
+import {
+  getExperienceRoleTitles,
+  withNormalizedWorkExperience,
+} from '@/lib/utils/work-experience';
 import { useLanguage } from '@/lib/context/language-context';
 import { buildResumeFilename, downloadBlobAsFile, openUrlInNewTab } from '@/lib/utils/download';
 import type { RegenerateItemInput } from '@/lib/api/enrichment';
@@ -171,8 +175,11 @@ const ResumeBuilderContent = () => {
         // Update resume title for downloads
         setResumeTitle(data.title ?? null);
         if (data.processed_resume) {
-          setResumeData(data.processed_resume as ResumeData);
-          setLastSavedData(data.processed_resume as ResumeData);
+          const normalized = withNormalizedWorkExperience(
+            data.processed_resume as ResumeData
+          );
+          setResumeData(normalized);
+          setLastSavedData(normalized);
           setHasUnsavedChanges(false);
         }
       } catch (error) {
@@ -208,7 +215,7 @@ const ResumeBuilderContent = () => {
     return (resumeData.workExperience || []).map((exp, idx) => ({
       item_id: `exp_${idx}`,
       item_type: 'experience' as const,
-      title: exp.title ?? '',
+      title: getExperienceRoleTitles(exp) || exp.company || '',
       subtitle: exp.company || undefined,
       current_content: Array.isArray(exp.description) ? exp.description : [],
     }));
@@ -313,15 +320,20 @@ const ResumeBuilderContent = () => {
           }
           // Prefer processed_resume if available
           if (data.processed_resume) {
-            setResumeData(data.processed_resume as ResumeData);
-            setLastSavedData(data.processed_resume as ResumeData);
+            const normalized = withNormalizedWorkExperience(
+              data.processed_resume as ResumeData
+            );
+            setResumeData(normalized);
+            setLastSavedData(normalized);
             setLoadingState('loaded');
             return;
           }
           // Fallback to parsing raw content
           if (data.raw_resume?.content) {
             try {
-              const parsed = JSON.parse(data.raw_resume.content);
+              const parsed = withNormalizedWorkExperience(
+                JSON.parse(data.raw_resume.content) as ResumeData
+              );
               setResumeData(parsed);
               setLastSavedData(parsed);
               setLoadingState('loaded');
@@ -337,8 +349,9 @@ const ResumeBuilderContent = () => {
 
       // Priority 2: Improved Data from Context (Tailor Flow)
       if (improvedPreview) {
-        setResumeData(improvedPreview);
-        setLastSavedData(improvedPreview);
+        const normalized = withNormalizedWorkExperience(improvedPreview);
+        setResumeData(normalized);
+        setLastSavedData(normalized);
         // Also load cover letter and outreach if present
         if (improvedCoverLetter) {
           setCoverLetter(improvedCoverLetter);
@@ -347,7 +360,7 @@ const ResumeBuilderContent = () => {
           setOutreachMessage(improvedOutreach);
         }
         // Persist to localStorage as backup
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(improvedPreview));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
         setLoadingState('loaded');
         return;
       }
@@ -356,7 +369,7 @@ const ResumeBuilderContent = () => {
       const savedDraft = localStorage.getItem(STORAGE_KEY);
       if (savedDraft) {
         try {
-          const parsed = JSON.parse(savedDraft);
+          const parsed = withNormalizedWorkExperience(JSON.parse(savedDraft) as ResumeData);
           setResumeData(parsed);
           setLastSavedData(parsed);
           setHasUnsavedChanges(true); // Mark as unsaved since it's a draft
@@ -407,7 +420,6 @@ const ResumeBuilderContent = () => {
   const handleUpdate = useCallback((newData: ResumeData) => {
     setResumeData(newData);
     setHasUnsavedChanges(true);
-    // Auto-save draft to localStorage
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
   }, []);
 
@@ -422,8 +434,11 @@ const ResumeBuilderContent = () => {
     }
     try {
       setIsSaving(true);
-      const updated = await updateResume(resumeId, resumeData);
-      const nextData = (updated.processed_resume || resumeData) as ResumeData;
+      const payload = withNormalizedWorkExperience(resumeData);
+      const updated = await updateResume(resumeId, payload);
+      const nextData = withNormalizedWorkExperience(
+        (updated.processed_resume || resumeData) as ResumeData
+      );
       setResumeData(nextData);
       setLastSavedData(nextData);
       setHasUnsavedChanges(false);

@@ -21,6 +21,7 @@ CURSOR_PROXY_URL="${CURSOR_PROXY_URL:-http://127.0.0.1:8765}"
 BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:8000}"
 BACKEND_HEALTH_URL="${BACKEND_HEALTH_URL:-${BACKEND_URL}/api/v1/health}"
 FRONTEND_URL="${FRONTEND_URL:-http://localhost:3000}"
+CURSOR_API_PROXY_VERSION="${CURSOR_API_PROXY_VERSION:-1.1.0}"
 
 PROXY_PID=""
 BACKEND_PID=""
@@ -112,10 +113,10 @@ if [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
   (cd "$FRONTEND_DIR" && npm install)
 fi
 
-log "Starting cursor-api-proxy on ${CURSOR_PROXY_URL}/v1 ..."
+log "Starting cursor-api-proxy@${CURSOR_API_PROXY_VERSION} on ${CURSOR_PROXY_URL}/v1 ..."
 log "  CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE=${CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE}"
 log "  CURSOR_BRIDGE_FORCE=${CURSOR_BRIDGE_FORCE}"
-npx --yes cursor-api-proxy >/tmp/resume-matcher-cursor-proxy.log 2>&1 &
+npx --yes "cursor-api-proxy@${CURSOR_API_PROXY_VERSION}" >/tmp/resume-matcher-cursor-proxy.log 2>&1 &
 PROXY_PID=$!
 
 wait_for_url "cursor-api-proxy" "${CURSOR_PROXY_URL}/health" 90

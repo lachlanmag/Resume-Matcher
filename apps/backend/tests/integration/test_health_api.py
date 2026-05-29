@@ -32,7 +32,8 @@ class TestHealthEndpoint:
         assert data["status"] == "healthy"
 
     @patch("app.routers.health.check_llm_health", new_callable=AsyncMock)
-    async def test_health_returns_degraded(self, mock_health, client):
+    async def test_health_liveness_ignores_llm_health(self, mock_health, client):
+        """GET /health is Docker liveness only; it must not call the LLM."""
         mock_health.return_value = {
             "healthy": False,
             "provider": "openai",
@@ -42,8 +43,8 @@ class TestHealthEndpoint:
         async with client:
             resp = await client.get("/api/v1/health")
         assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "degraded"
+        assert resp.json()["status"] == "healthy"
+        mock_health.assert_not_called()
 
 
 class TestStatusEndpoint:

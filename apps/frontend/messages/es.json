@@ -307,7 +307,13 @@
         "addFirstJob": "Agregar primer trabajo",
         "fields": {
           "jobTitle": "Puesto",
+          "roleTitle": "Título del puesto",
+          "roles": "Puestos",
           "company": "Empresa"
+        },
+        "actions": {
+          "addRole": "Agregar puesto",
+          "removeRole": "Eliminar puesto"
         },
         "placeholders": {
           "jobTitle": "Desarrollador senior",

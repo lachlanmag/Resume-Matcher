@@ -10,6 +10,7 @@ from app.schemas.models import (
     CustomSectionItem,
     Education,
     Experience,
+    ExperienceRole,
     FeatureConfigRequest,
     FeatureConfigResponse,
     FeaturePromptsRequest,
@@ -58,6 +59,7 @@ from app.schemas.models import (
 __all__ = [
     "PersonalInfo",
     "Experience",
+    "ExperienceRole",
     "Education",
     "Project",
     "AdditionalInfo",

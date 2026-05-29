@@ -201,6 +201,37 @@ def _restore_original_dates(
                 )
                 result_entries[idx]["years"] = orig_years
 
+            if section_key == "workExperience":
+                orig_roles = orig_entry.get("roles", [])
+                result_roles = result_entries[idx].get("roles", [])
+                if isinstance(orig_roles, list) and isinstance(result_roles, list):
+                    for role_idx, orig_role in enumerate(orig_roles):
+                        if role_idx >= len(result_roles):
+                            break
+                        if not isinstance(orig_role, dict) or not isinstance(
+                            result_roles[role_idx], dict
+                        ):
+                            continue
+                        orig_role_years = orig_role.get("years", "")
+                        result_role_years = result_roles[role_idx].get("years", "")
+                        if (
+                            isinstance(orig_role_years, str)
+                            and isinstance(result_role_years, str)
+                            and orig_role_years
+                            and orig_role_years != result_role_years
+                            and _has_month(orig_role_years)
+                            and not _has_month(result_role_years)
+                        ):
+                            logger.info(
+                                "Restoring date in %s[%d].roles[%d]: %r → %r",
+                                section_key,
+                                idx,
+                                role_idx,
+                                result_role_years,
+                                orig_role_years,
+                            )
+                            result_roles[role_idx]["years"] = orig_role_years
+
     # Custom sections (itemList)
     orig_custom = original_data.get("customSections", {})
     result_custom = result.get("customSections", {})

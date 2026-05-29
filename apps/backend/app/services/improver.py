@@ -411,7 +411,7 @@ def verify_diff_result(
 
     # Check 3: Identity fields unchanged
     for key, id_fields in [
-        ("workExperience", ["company", "title"]),
+        ("workExperience", ["company", "roles"]),
         ("education", ["institution", "degree"]),
     ]:
         orig_entries = original.get(key, [])
@@ -941,12 +941,21 @@ def _format_entry_label(parts: list[str], fallback: str) -> str:
 
 
 def _format_experience_entry(entry: dict[str, Any], index: int) -> str:
+    roles = entry.get("roles", [])
+    role_titles: list[str] = []
+    if isinstance(roles, list):
+        for role in roles:
+            if isinstance(role, dict):
+                title = str(role.get("title", "")).strip()
+                if title:
+                    role_titles.append(title)
+    if not role_titles:
+        legacy_title = str(entry.get("title", "")).strip()
+        if legacy_title:
+            role_titles.append(legacy_title)
+    roles_label = "; ".join(role_titles)
     return _format_entry_label(
-        [
-            entry.get("title", ""),
-            entry.get("company", ""),
-            entry.get("years", ""),
-        ],
+        [entry.get("company", ""), roles_label],
         f"Work experience #{index + 1}",
     )
 

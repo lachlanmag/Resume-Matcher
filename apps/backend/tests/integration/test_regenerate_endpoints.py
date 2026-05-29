@@ -240,6 +240,85 @@ class TestRegenerateEndpoints(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(updated["workExperience"][0]["description"], ["Keep me"])
         self.assertEqual(updated["workExperience"][1]["description"], ["New bullet"])
 
+    async def test_apply_regenerated_matches_experience_using_roles_titles(self) -> None:
+        resume_id = "resume_1"
+        processed_data = {
+            "workExperience": [
+                {
+                    "company": "Google",
+                    "roles": [
+                        {"id": 1, "title": "Senior Software Engineer", "years": "2021 - Present"}
+                    ],
+                    "description": ["Old bullet"],
+                }
+            ],
+            "personalProjects": [],
+            "additional": {"technicalSkills": ["Python"]},
+        }
+
+        mock_db = MagicMock()
+        mock_db.get_resume.return_value = {"processed_data": processed_data}
+        mock_db.update_resume.return_value = None
+
+        regenerated_items = [
+            RegeneratedItem(
+                item_id="exp_0",
+                item_type="experience",
+                title="Senior Software Engineer",
+                subtitle="Google",
+                original_content=["Old bullet"],
+                new_content=["New bullet"],
+                diff_summary="Summary",
+            )
+        ]
+
+        with patch.object(enrichment_router, "db", mock_db):
+            result = await enrichment_router.apply_regenerated_items(resume_id, regenerated_items)
+
+        self.assertEqual(result["updated_items"], 1)
+        updated = mock_db.update_resume.call_args.args[1]["processed_data"]
+        self.assertEqual(updated["workExperience"][0]["description"], ["New bullet"])
+
+    async def test_apply_regenerated_matches_joined_multi_role_titles(self) -> None:
+        resume_id = "resume_1"
+        processed_data = {
+            "workExperience": [
+                {
+                    "company": "Google",
+                    "roles": [
+                        {"id": 1, "title": "Engineer I", "years": "2019 - 2021"},
+                        {"id": 2, "title": "Engineer II", "years": "2021 - Present"},
+                    ],
+                    "description": ["Old bullet"],
+                }
+            ],
+            "personalProjects": [],
+            "additional": {"technicalSkills": ["Python"]},
+        }
+
+        mock_db = MagicMock()
+        mock_db.get_resume.return_value = {"processed_data": processed_data}
+        mock_db.update_resume.return_value = None
+
+        regenerated_items = [
+            RegeneratedItem(
+                item_id="exp_0",
+                item_type="experience",
+                title="Engineer I; Engineer II",
+                subtitle="Google",
+                original_content=["Old bullet"],
+                new_content=["New bullet"],
+                diff_summary="Summary",
+            )
+        ]
+
+        with patch.object(enrichment_router, "db", mock_db):
+            result = await enrichment_router.apply_regenerated_items(resume_id, regenerated_items)
+
+        self.assertEqual(result["updated_items"], 1)
+        updated = mock_db.update_resume.call_args.args[1]["processed_data"]
+        self.assertEqual(updated["workExperience"][0]["description"], ["New bullet"])
+
     async def test_apply_regenerated_disambiguates_duplicates_by_original_content(self) -> None:
         resume_id = "resume_1"
         processed_data = {

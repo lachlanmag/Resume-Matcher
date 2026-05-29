@@ -3,9 +3,14 @@
 import copy
 import re
 from enum import Enum
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from app.schemas.work_experience import (
+    normalize_experience_entry,
+    normalize_work_experience_list,
+)
 
 _TEXT_VALUE_KEYS = (
     "text",
@@ -131,20 +136,40 @@ class PersonalInfo(BaseModel):
     github: str | None = None
 
 
-class Experience(BaseModel):
-    """Work experience entry."""
+class ExperienceRole(BaseModel):
+    """Title and dates for one role within an employer job entry."""
 
     id: int = 0
     title: str = ""
+    years: str = ""
+
+
+class Experience(BaseModel):
+    """Work experience job entry (employer with one or more roles)."""
+
+    id: int = 0
     company: str = ""
     location: str | None = None
-    years: str = ""
+    roles: list[ExperienceRole] = Field(default_factory=list)
     description: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_legacy_shape(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            return normalize_experience_entry(data)
+        return data
 
     @field_validator("description", mode="before")
     @classmethod
     def _normalize_description(cls, value: Any) -> list[str]:
         return _coerce_string_list(value)
+
+    @model_validator(mode="after")
+    def _ensure_roles(self) -> Self:
+        if not self.roles:
+            self.roles = [ExperienceRole(id=1, title="", years="")]
+        return self
 
 
 class Education(BaseModel):
@@ -335,6 +360,8 @@ def normalize_resume_data(data: dict[str, Any]) -> dict[str, Any]:
         data["sectionMeta"] = copy.deepcopy(DEFAULT_SECTION_META)
     if "customSections" not in data:
         data["customSections"] = {}
+    if "workExperience" in data:
+        data["workExperience"] = normalize_work_experience_list(data.get("workExperience"))
     return data
 
 

@@ -31,13 +31,39 @@ RESUME_SCHEMA_EXAMPLE = """{
   "workExperience": [
     {
       "id": 1,
-      "title": "Senior Software Engineer",
       "company": "Tech Corp",
       "location": "San Francisco, CA",
-      "years": "Jan 2020 - Present",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Senior Software Engineer",
+          "years": "Jan 2020 - Present"
+        }
+      ],
       "description": [
         "Led development of microservices architecture",
         "Improved system performance by 40%"
+      ]
+    },
+    {
+      "id": 2,
+      "company": "Example Industries",
+      "location": "New York, NY",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Product Owner",
+          "years": "Sep 2021 - Nov 2023"
+        },
+        {
+          "id": 2,
+          "title": "Senior Business Analyst",
+          "years": "Jul 2019 - Sep 2021"
+        }
+      ],
+      "description": [
+        "Led product strategy across multiple platform modules",
+        "Delivered cross-functional initiatives with measurable adoption impact"
       ]
     }
   ],
@@ -94,13 +120,39 @@ IMPROVE_SCHEMA_EXAMPLE = """{
   "workExperience": [
     {
       "id": 1,
-      "title": "Senior Software Engineer",
       "company": "Tech Corp",
       "location": "San Francisco, CA",
-      "years": "Jan 2020 - Present",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Senior Software Engineer",
+          "years": "Jan 2020 - Present"
+        }
+      ],
       "description": [
         "Led development of microservices architecture",
         "Improved system performance by 40%"
+      ]
+    },
+    {
+      "id": 2,
+      "company": "Example Industries",
+      "location": "New York, NY",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Product Owner",
+          "years": "Sep 2021 - Nov 2023"
+        },
+        {
+          "id": 2,
+          "title": "Senior Business Analyst",
+          "years": "Jul 2019 - Sep 2021"
+        }
+      ],
+      "description": [
+        "Led product strategy across multiple platform modules",
+        "Delivered cross-functional initiatives with measurable adoption impact"
       ]
     }
   ],
@@ -171,7 +223,9 @@ Rules:
 - Preserve the original section name as a descriptive key
 - Normalize date separators: "2020-2021" → "2020 - 2021", "Current"/"Ongoing" → "Present". Do NOT discard months.
 - For ambiguous dates like "3 years experience", infer approximate years from context or use "~YYYY"
-- Flag overlapping dates (concurrent roles) by preserving both, don't merge
+- When the source shows multiple job titles under one employer heading, use one workExperience entry with a roles array (title + years per role) and a single shared description list for that employer
+- Do not merge separate employers; only combine roles that clearly belong to the same company in the source document
+- For concurrent roles at different companies, keep separate workExperience entries
 
 Resume to parse:
 {resume_text}"""

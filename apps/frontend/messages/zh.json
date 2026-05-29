@@ -307,7 +307,13 @@
         "addFirstJob": "添加第一条经历",
         "fields": {
           "jobTitle": "职位名称",
+          "roleTitle": "职位名称",
+          "roles": "职位",
           "company": "公司"
+        },
+        "actions": {
+          "addRole": "添加职位",
+          "removeRole": "删除职位"
         },
         "placeholders": {
           "jobTitle": "高级开发工程师",

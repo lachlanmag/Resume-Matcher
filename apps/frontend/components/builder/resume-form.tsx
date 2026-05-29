@@ -23,6 +23,7 @@ import {
   CustomSection,
 } from '@/components/dashboard/resume-component';
 import { PersonalInfoForm } from './forms/personal-info-form';
+import { ensureExperienceRoles } from '@/lib/utils/work-experience';
 import { SummaryForm } from './forms/summary-form';
 import { ExperienceForm } from './forms/experience-form';
 import { EducationForm } from './forms/education-form';
@@ -233,7 +234,9 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({ resumeData, onUpdate }) 
           return (
             <ExperienceForm
               data={resumeData.workExperience || []}
-              onChange={(data) => onUpdate({ ...resumeData, workExperience: data })}
+              onChange={(data) =>
+                onUpdate({ ...resumeData, workExperience: ensureExperienceRoles(data) })
+              }
             />
           );
 
