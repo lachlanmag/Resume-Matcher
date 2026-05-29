@@ -1,3 +1,5 @@
+name: resume-matcher-lm
+
 services:
   resume-matcher:
     image: ghcr.io/lachlanmag/resume-matcher
