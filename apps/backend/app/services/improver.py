@@ -19,9 +19,10 @@ from app.prompts import (
     SKILL_TARGET_PLAN_PROMPT,
     get_language_name,
 )
-from app.prompts.templates import IMPROVE_SCHEMA_EXAMPLE
+from app.prompts.templates import IMPROVE_SCHEMA_EXAMPLE, IMPROVE_WORK_EXPERIENCE_RULES
 from app.schemas import ResumeData, ResumeFieldDiff, ResumeDiffSummary
 from app.schemas.models import ImproveDiffResult, ResumeChange
+from app.schemas.work_experience import compare_work_experience_identity
 
 logger = logging.getLogger(__name__)
 
@@ -411,7 +412,7 @@ def verify_diff_result(
 
     # Check 3: Identity fields unchanged
     for key, id_fields in [
-        ("workExperience", ["company", "title"]),
+        ("workExperience", None),
         ("education", ["institution", "degree"]),
     ]:
         orig_entries = original.get(key, [])
@@ -419,7 +420,10 @@ def verify_diff_result(
         for i, (orig, res) in enumerate(zip(orig_entries, result_entries)):
             if not isinstance(orig, dict) or not isinstance(res, dict):
                 continue
-            for field in id_fields:
+            if key == "workExperience":
+                warnings.extend(compare_work_experience_identity(orig, res, i))
+                continue
+            for field in id_fields or []:
                 o_val = str(orig.get(field, "")).strip()
                 r_val = str(res.get(field, "")).strip()
                 if o_val and o_val != r_val:
@@ -919,6 +923,7 @@ async def improve_resume(
         schema=IMPROVE_SCHEMA_EXAMPLE,
         output_language=output_language,
         critical_truthfulness_rules=truthfulness_rules,
+        work_experience_rules=IMPROVE_WORK_EXPERIENCE_RULES,
     )
 
     result = await complete_json(
@@ -941,12 +946,28 @@ def _format_entry_label(parts: list[str], fallback: str) -> str:
 
 
 def _format_experience_entry(entry: dict[str, Any], index: int) -> str:
+    roles = entry.get("roles", [])
+    role_titles: list[str] = []
+    single_role_years = ""
+    if isinstance(roles, list):
+        for role in roles:
+            if isinstance(role, dict):
+                title = str(role.get("title", "")).strip()
+                if title:
+                    role_titles.append(title)
+        if len(roles) == 1 and isinstance(roles[0], dict):
+            single_role_years = str(roles[0].get("years", "")).strip()
+    if not role_titles:
+        legacy_title = str(entry.get("title", "")).strip()
+        if legacy_title:
+            role_titles.append(legacy_title)
+        single_role_years = str(entry.get("years", "")).strip()
+    roles_label = "; ".join(role_titles)
+    label_parts = [entry.get("company", ""), roles_label]
+    if single_role_years:
+        label_parts.append(single_role_years)
     return _format_entry_label(
-        [
-            entry.get("title", ""),
-            entry.get("company", ""),
-            entry.get("years", ""),
-        ],
+        label_parts,
         f"Work experience #{index + 1}",
     )
 

@@ -18,6 +18,7 @@ import { ArrowLeft, Edit, Download, Loader2, AlertCircle, Sparkles, Pencil } fro
 import { EnrichmentModal } from '@/components/enrichment/enrichment-modal';
 import { useTranslations } from '@/lib/i18n';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
+import { withNormalizedWorkExperience } from '@/lib/utils/work-experience';
 import { useLanguage } from '@/lib/context/language-context';
 import { downloadBlobAsFile, openUrlInNewTab, sanitizeFilename } from '@/lib/utils/download';
 
@@ -70,7 +71,9 @@ export default function ResumeViewerPage() {
 
         // Prioritize processed_resume if available (structured JSON)
         if (data.processed_resume) {
-          setResumeData(data.processed_resume as ResumeData);
+          setResumeData(
+            withNormalizedWorkExperience(data.processed_resume as ResumeData)
+          );
           setError(null);
         } else if (status === 'failed') {
           setError(t('resumeViewer.errors.processingFailed'));
@@ -80,7 +83,7 @@ export default function ResumeViewerPage() {
           // Try to parse raw_resume content as JSON (for tailored resumes stored as JSON)
           try {
             const parsed = JSON.parse(data.raw_resume.content);
-            setResumeData(parsed as ResumeData);
+            setResumeData(withNormalizedWorkExperience(parsed as ResumeData));
           } catch {
             setError(t('resumeViewer.errors.notProcessedYet'));
           }
@@ -150,7 +153,9 @@ export default function ResumeViewerPage() {
     try {
       const data = await fetchResume(resumeId);
       if (data.processed_resume) {
-        setResumeData(data.processed_resume as ResumeData);
+        setResumeData(
+          withNormalizedWorkExperience(data.processed_resume as ResumeData)
+        );
         setError(null);
       }
     } catch (err) {

@@ -31,8 +31,10 @@ export function JDComparisonView({ jobDescription, resumeData }: JDComparisonVie
     if (resumeData.summary) parts.push(resumeData.summary);
 
     resumeData.workExperience?.forEach((exp) => {
-      if (exp.title) parts.push(exp.title);
       if (exp.company) parts.push(exp.company);
+      exp.roles?.forEach((role) => {
+        if (role.title) parts.push(role.title);
+      });
       exp.description?.forEach((d) => parts.push(d));
     });
 

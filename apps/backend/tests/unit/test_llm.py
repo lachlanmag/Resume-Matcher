@@ -149,7 +149,7 @@ class TestAppearsTruncated:
         """Empty education array in resume structure is suspicious."""
         data = {
             "personalInfo": {"name": "John"},
-            "workExperience": [{"title": "Dev"}],
+            "workExperience": [{"company": "Co", "roles": [{"title": "Dev"}]}],
             "education": [],
             "skills": ["Python"],
         }
@@ -159,7 +159,7 @@ class TestAppearsTruncated:
         """Empty skills array in resume structure is suspicious."""
         data = {
             "personalInfo": {"name": "John"},
-            "workExperience": [{"title": "Dev"}],
+            "workExperience": [{"company": "Co", "roles": [{"title": "Dev"}]}],
             "education": [{"degree": "BS"}],
             "skills": [],
         }
@@ -169,7 +169,7 @@ class TestAppearsTruncated:
         """Well-formed resume with all sections present is not truncated."""
         data = {
             "personalInfo": {"name": "John"},
-            "workExperience": [{"title": "Dev"}],
+            "workExperience": [{"company": "Co", "roles": [{"title": "Dev"}]}],
             "education": [{"degree": "BS"}],
             "skills": ["Python"],
         }
@@ -179,7 +179,7 @@ class TestAppearsTruncated:
         """Missing fields are not the same as empty arrays — not flagged."""
         data = {
             "personalInfo": {"name": "John"},
-            "workExperience": [{"title": "Dev"}],
+            "workExperience": [{"company": "Co", "roles": [{"title": "Dev"}]}],
             # education and skills omitted
         }
         assert _appears_truncated(data, schema_type="resume") is False

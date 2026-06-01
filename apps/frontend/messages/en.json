@@ -307,7 +307,13 @@
         "addFirstJob": "Add First Job",
         "fields": {
           "jobTitle": "Job Title",
+          "roleTitle": "Role title",
+          "roles": "Roles",
           "company": "Company"
+        },
+        "actions": {
+          "addRole": "Add role",
+          "removeRole": "Remove role"
         },
         "placeholders": {
           "jobTitle": "Senior Developer",

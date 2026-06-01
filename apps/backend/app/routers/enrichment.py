@@ -5,6 +5,7 @@ import copy
 import json
 import logging
 import re
+from collections.abc import Callable
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
@@ -21,6 +22,7 @@ from app.prompts.enrichment import (
     SUMMARY_MAX_CHARACTERS,
 )
 from app.prompts.templates import get_language_name
+from app.schemas.work_experience import experience_role_titles
 from app.schemas.enrichment import (
     AnalysisResponse,
     AnswerInput,
@@ -66,7 +68,7 @@ def _extract_item_from_resume(processed_data: dict, item_id: str) -> dict:
         return {
             "item_id": item_id,
             "item_type": "experience",
-            "title": entry.get("title", ""),
+            "title": experience_role_titles(entry),
             "subtitle": entry.get("company", ""),
             "current_description": desc if isinstance(desc, list) else [desc] if isinstance(desc, str) and desc else [],
         }
@@ -648,6 +650,7 @@ async def apply_regenerated_items(
         expected_subtitle: str | None,
         expected_original_content: list[str],
         content_key: str,
+        title_resolver: Callable[[dict], str] | None = None,
     ) -> int | None:
         expected_title_norm = _normalize_match_value(expected_title)
         expected_subtitle_norm = _normalize_match_value(expected_subtitle)
@@ -655,11 +658,16 @@ async def apply_regenerated_items(
         if not expected_title_norm:
             return None
 
+        def _entry_title(entry: dict) -> str:
+            if title_resolver is not None:
+                return title_resolver(entry)
+            return str(entry.get(title_key, ""))
+
         matches: list[int] = []
         for i, entry in enumerate(entries):
             if not isinstance(entry, dict):
                 continue
-            entry_title = _normalize_match_value(str(entry.get(title_key, "")))
+            entry_title = _normalize_match_value(_entry_title(entry))
             entry_subtitle = _normalize_match_value(str(entry.get(subtitle_key, "")))
 
             if entry_title != expected_title_norm:
@@ -712,7 +720,7 @@ async def apply_regenerated_items(
             resolved_index: int | None = None
             if 0 <= index < len(experiences):
                 entry = experiences[index] if isinstance(experiences[index], dict) else {}
-                entry_title = _normalize_match_value(str(entry.get("title", "")))
+                entry_title = _normalize_match_value(experience_role_titles(entry))
                 entry_company = _normalize_match_value(str(entry.get("company", "")))
                 if entry_title == _normalize_match_value(expected_title) and (
                     not _normalize_match_value(expected_company)
@@ -729,6 +737,7 @@ async def apply_regenerated_items(
                     expected_subtitle=expected_company,
                     expected_original_content=expected_original_content,
                     content_key="description",
+                    title_resolver=experience_role_titles,
                 )
 
             if resolved_index is None:

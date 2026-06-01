@@ -13,7 +13,8 @@ fi
 # the real workspace + --force so existing `agent login` works non-interactively.
 export CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE="${CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE:-false}"
 export CURSOR_BRIDGE_FORCE="${CURSOR_BRIDGE_FORCE:-true}"
+CURSOR_API_PROXY_VERSION="${CURSOR_API_PROXY_VERSION:-1.1.0}"
 
-echo "Starting cursor-api-proxy on http://127.0.0.1:8765/v1 ..."
+echo "Starting cursor-api-proxy@${CURSOR_API_PROXY_VERSION} on http://127.0.0.1:8765/v1 ..."
 echo "  (CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE=${CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE}, CURSOR_BRIDGE_FORCE=${CURSOR_BRIDGE_FORCE})"
-exec npx cursor-api-proxy
+exec npx --yes "cursor-api-proxy@${CURSOR_API_PROXY_VERSION}"

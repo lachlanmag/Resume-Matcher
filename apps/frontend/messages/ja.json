@@ -307,7 +307,13 @@
         "addFirstJob": "最初の職歴を追加",
         "fields": {
           "jobTitle": "職種",
+          "roleTitle": "役職名",
+          "roles": "役職",
           "company": "会社"
+        },
+        "actions": {
+          "addRole": "役職を追加",
+          "removeRole": "役職を削除"
         },
         "placeholders": {
           "jobTitle": "シニアエンジニア",

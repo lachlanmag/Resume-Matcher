@@ -41,6 +41,7 @@ from app.schemas import (
     UpdateTitleRequest,
     normalize_resume_data,
 )
+from app.schemas.work_experience import preserve_work_experience_identity
 from app.services.parser import parse_document, parse_resume_to_json, restore_dates_from_markdown
 from app.services.improver import (
     MONTH_PATTERN,
@@ -201,6 +202,37 @@ def _restore_original_dates(
                 )
                 result_entries[idx]["years"] = orig_years
 
+            if section_key == "workExperience":
+                orig_roles = orig_entry.get("roles", [])
+                result_roles = result_entries[idx].get("roles", [])
+                if isinstance(orig_roles, list) and isinstance(result_roles, list):
+                    for role_idx, orig_role in enumerate(orig_roles):
+                        if role_idx >= len(result_roles):
+                            break
+                        if not isinstance(orig_role, dict) or not isinstance(
+                            result_roles[role_idx], dict
+                        ):
+                            continue
+                        orig_role_years = orig_role.get("years", "")
+                        result_role_years = result_roles[role_idx].get("years", "")
+                        if (
+                            isinstance(orig_role_years, str)
+                            and isinstance(result_role_years, str)
+                            and orig_role_years
+                            and orig_role_years != result_role_years
+                            and _has_month(orig_role_years)
+                            and not _has_month(result_role_years)
+                        ):
+                            logger.info(
+                                "Restoring date in %s[%d].roles[%d]: %r → %r",
+                                section_key,
+                                idx,
+                                role_idx,
+                                result_role_years,
+                                orig_role_years,
+                            )
+                            result_roles[role_idx]["years"] = orig_role_years
+
     # Custom sections (itemList)
     orig_custom = original_data.get("customSections", {})
     result_custom = result.get("customSections", {})
@@ -357,6 +389,22 @@ def _protect_custom_sections(
 
     result["customSections"] = result_custom
     return result
+
+
+def _finalize_tailored_work_experience(
+    original_data: dict[str, Any] | None,
+    improved_data: dict[str, Any],
+) -> dict[str, Any]:
+    """Restore multi-role work experience identity after LLM tailoring/refinement."""
+    if not original_data:
+        return normalize_resume_data(improved_data)
+
+    result = copy.deepcopy(improved_data)
+    result["workExperience"] = preserve_work_experience_identity(
+        original_data.get("workExperience"),
+        improved_data.get("workExperience"),
+    )
+    return normalize_resume_data(result)
 
 
 def _preserve_personal_info(
@@ -899,6 +947,8 @@ async def _improve_preview_flow(
         if refinement_attempted:
             response_warnings.append(f"Refinement failed: {str(e)}")
 
+    improved_data = _finalize_tailored_work_experience(original_resume_data, improved_data)
+
     improved_text = json.dumps(improved_data, indent=2)
     preview_hash = _hash_improved_data(improved_data)
     preview_hashes = job.get("preview_hashes")
@@ -1248,6 +1298,10 @@ async def improve_resume_endpoint(
             logger.warning("Refinement failed, using unrefined result: %s", e)
             if refinement_attempted:
                 response_warnings.append(f"Refinement failed: {str(e)}")
+
+        improved_data = _finalize_tailored_work_experience(
+            original_resume_data, improved_data
+        )
 
         # Convert improved data to JSON string for storage
         improved_text = json.dumps(improved_data, indent=2)

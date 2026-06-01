@@ -307,7 +307,13 @@
         "addFirstJob": "Adicionar Primeiro Emprego",
         "fields": {
           "jobTitle": "Cargo",
+          "roleTitle": "Título do cargo",
+          "roles": "Cargos",
           "company": "Empresa"
+        },
+        "actions": {
+          "addRole": "Adicionar cargo",
+          "removeRole": "Remover cargo"
         },
         "placeholders": {
           "jobTitle": "Desenvolvedor Sênior",

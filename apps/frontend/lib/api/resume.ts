@@ -19,9 +19,15 @@ interface ProcessedResume {
   summary?: string;
   workExperience?: Array<{
     id: number;
-    title?: string;
     company?: string;
     location?: string | null;
+    roles?: Array<{
+      id: number;
+      title?: string;
+      years?: string;
+    }>;
+    /** @deprecated Legacy flat shape — normalized to roles on save */
+    title?: string;
     years?: string;
     description?: string[];
   }>;

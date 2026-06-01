@@ -68,24 +68,38 @@ def restore_dates_from_markdown(
     if not year_to_full:
         return parsed_data
 
+    def _patch_years_value(years: str) -> str | None:
+        if not isinstance(years, str) or not years:
+            return None
+        if re.search(
+            r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)",
+            years,
+            re.IGNORECASE,
+        ):
+            return None
+        if years in year_to_full:
+            return year_to_full[years]
+        return None
+
     patched = 0
     for section_key in ("workExperience", "education", "personalProjects"):
         for entry in parsed_data.get(section_key, []):
             if not isinstance(entry, dict):
                 continue
+            if section_key == "workExperience":
+                roles = entry.get("roles")
+                if isinstance(roles, list):
+                    for role in roles:
+                        if not isinstance(role, dict):
+                            continue
+                        replacement = _patch_years_value(role.get("years", ""))
+                        if replacement:
+                            role["years"] = replacement
+                            patched += 1
             years = entry.get("years", "")
-            if not isinstance(years, str) or not years:
-                continue
-            # Skip if already has months
-            if re.search(
-                r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)",
-                years,
-                re.IGNORECASE,
-            ):
-                continue
-            # Try to find a matching month-inclusive date
-            if years in year_to_full:
-                entry["years"] = year_to_full[years]
+            replacement = _patch_years_value(years)
+            if replacement:
+                entry["years"] = replacement
                 patched += 1
 
     # Custom sections

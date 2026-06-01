@@ -31,13 +31,39 @@ RESUME_SCHEMA_EXAMPLE = """{
   "workExperience": [
     {
       "id": 1,
-      "title": "Senior Software Engineer",
       "company": "Tech Corp",
       "location": "San Francisco, CA",
-      "years": "Jan 2020 - Present",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Senior Software Engineer",
+          "years": "Jan 2020 - Present"
+        }
+      ],
       "description": [
         "Led development of microservices architecture",
         "Improved system performance by 40%"
+      ]
+    },
+    {
+      "id": 2,
+      "company": "Example Industries",
+      "location": "New York, NY",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Product Owner",
+          "years": "Sep 2021 - Nov 2023"
+        },
+        {
+          "id": 2,
+          "title": "Senior Business Analyst",
+          "years": "Jul 2019 - Sep 2021"
+        }
+      ],
+      "description": [
+        "Led product strategy across multiple platform modules",
+        "Delivered cross-functional initiatives with measurable adoption impact"
       ]
     }
   ],
@@ -94,13 +120,39 @@ IMPROVE_SCHEMA_EXAMPLE = """{
   "workExperience": [
     {
       "id": 1,
-      "title": "Senior Software Engineer",
       "company": "Tech Corp",
       "location": "San Francisco, CA",
-      "years": "Jan 2020 - Present",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Senior Software Engineer",
+          "years": "Jan 2020 - Present"
+        }
+      ],
       "description": [
         "Led development of microservices architecture",
         "Improved system performance by 40%"
+      ]
+    },
+    {
+      "id": 2,
+      "company": "Example Industries",
+      "location": "New York, NY",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Product Owner",
+          "years": "Sep 2021 - Nov 2023"
+        },
+        {
+          "id": 2,
+          "title": "Senior Business Analyst",
+          "years": "Jul 2019 - Sep 2021"
+        }
+      ],
+      "description": [
+        "Led product strategy across multiple platform modules",
+        "Delivered cross-functional initiatives with measurable adoption impact"
       ]
     }
   ],
@@ -171,7 +223,9 @@ Rules:
 - Preserve the original section name as a descriptive key
 - Normalize date separators: "2020-2021" → "2020 - 2021", "Current"/"Ongoing" → "Present". Do NOT discard months.
 - For ambiguous dates like "3 years experience", infer approximate years from context or use "~YYYY"
-- Flag overlapping dates (concurrent roles) by preserving both, don't merge
+- When the source shows multiple job titles under one employer heading, use one workExperience entry with a roles array (title + years per role) and a single shared description list for that employer
+- Do not merge separate employers; only combine roles that clearly belong to the same company in the source document
+- For concurrent roles at different companies, keep separate workExperience entries
 
 Resume to parse:
 {resume_text}"""
@@ -226,6 +280,12 @@ CRITICAL_TRUTHFULNESS_RULES = {
     ),
 }
 
+IMPROVE_WORK_EXPERIENCE_RULES = """- For workExperience: preserve each employer entry's roles array (title + years per role); do not flatten to top-level title/years or split one employer into multiple entries
+- Copy roles[i].years EXACTLY as they appear in the original (including month prefixes like "Jan 2020 - Present"); do not shorten, reformat, or drop months
+- When multiple job titles belong to one employer in the original, keep one workExperience entry with a roles array and a single shared description list
+- Do not merge separate employers; only combine roles that clearly belong to the same company
+- For concurrent roles at different companies, keep separate workExperience entries"""
+
 IMPROVE_RESUME_PROMPT_NUDGE = """Lightly nudge this resume toward the job description. Output ONLY the JSON object, no other text.
 
 {critical_truthfulness_rules}
@@ -241,7 +301,7 @@ Rules:
 - Preserve original bullet count and ordering within each section
 - Keep proper nouns (names, company names, locations) unchanged
 - For customSections: preserve exact structure, item count, titles, subtitles, and years. If an item's description is an empty array [] in the original, keep it empty []. Do NOT generate descriptions for items that had none.
-- Copy the "years" field values EXACTLY as they appear in the original resume (including any month prefixes like "Jan 2020 - Present"). Do not shorten, reformat, or drop months.
+{work_experience_rules}
 - If the resume is non-technical, do NOT add technical jargon
 - Do NOT use em dash ("—") anywhere in the writing/output, even if it exists, remove it
 
@@ -270,7 +330,7 @@ Rules:
 - Do NOT introduce new skills, tools, or certifications not in the resume
 - Do NOT change role, industry, or seniority level
 - For customSections: preserve exact structure, item count, titles, subtitles, and years. If an item's description is an empty array [] in the original, keep it empty []. Do NOT generate descriptions for items that had none.
-- Copy the "years" field values EXACTLY as they appear in the original resume (including any month prefixes like "Jan 2020 - Present"). Do not shorten, reformat, or drop months.
+{work_experience_rules}
 - If resume is non-technical, keep language non-technical while still aligning keywords
 - Do NOT use em dash ("—") anywhere in the writing/output, even if it exists, remove it
 
@@ -301,7 +361,7 @@ Rules:
 - Translate job titles, descriptions, and skills to {output_language}
 - For customSections: preserve exact structure, item count, titles, subtitles, and years. If an item's description is an empty array [] in the original, keep it empty []. Do NOT generate descriptions for items that had none.
 - Improve custom section content the same way as standard sections
-- Copy the "years" field values EXACTLY as they appear in the original resume (including any month prefixes like "Jan 2020 - Present"). Do not shorten, reformat, or drop months.
+{work_experience_rules}
 - Calculate and emphasize total relevant experience duration when it matches requirements
 - Do NOT use em dash ("—") anywhere in the writing/output, even if it exists, remove it
 

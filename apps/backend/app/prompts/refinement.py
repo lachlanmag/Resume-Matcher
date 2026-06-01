@@ -141,7 +141,7 @@ CRITICAL RULES:
 1. Only add keywords where the master resume provides supporting evidence
 2. Do NOT add skills, technologies, or certifications not in the master resume
 3. Rephrase existing bullet points to include keywords - do not invent new content
-4. Maintain the exact same JSON structure
+4. Maintain the exact same JSON structure; preserve workExperience[].roles (title + years per role) — only edit descriptions, summary, and skills
 5. Do not use em-dashes (—) or their variants (---, --)
 
 Keywords to inject (only if supported by master resume):

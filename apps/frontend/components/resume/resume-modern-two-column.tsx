@@ -9,6 +9,7 @@ import { getSortedSections, getSectionMeta } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
 import { DynamicResumeSection } from './dynamic-resume-section';
 import { SafeHtml } from './safe-html';
+import { WorkExperienceBlock } from './work-experience-block';
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/modern-two-column.module.css';
 
@@ -170,40 +171,15 @@ export const ResumeModernTwoColumn: React.FC<ResumeModernTwoColumnProps> = ({
               </h3>
               <div className={baseStyles['resume-items']}>
                 {workExperience.map((exp) => (
-                  <div key={exp.id} className={baseStyles['resume-item']}>
-                    <div
-                      className={`flex justify-between items-baseline ${baseStyles['resume-row-tight']}`}
-                    >
-                      <h4 className={baseStyles['resume-item-title-sm']}>{exp.title}</h4>
-                      <span className={`${baseStyles['resume-date']} ml-4`}>
-                        {formatDateRange(exp.years)}
-                      </span>
-                    </div>
-
-                    <div
-                      className={`flex justify-between items-center ${baseStyles['resume-row-tight']} ${baseStyles['resume-item-subtitle-sm']}`}
-                    >
-                      <span>
-                        {exp.company}
-                        {exp.location && <> • {exp.location}</>}
-                      </span>
-                    </div>
-
-                    {exp.description && exp.description.length > 0 && (
-                      <ul
-                        className={`ml-4 ${baseStyles['resume-list']} ${baseStyles['resume-text-xs']}`}
-                      >
-                        {exp.description.map((desc, index) => (
-                          <li key={index} className="flex">
-                            <span className="mr-1.5 flex-shrink-0">•&nbsp;</span>
-                            <span>
-                              <SafeHtml html={desc} />
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+                  <WorkExperienceBlock
+                    key={exp.id}
+                    job={exp}
+                    titleClassName={baseStyles['resume-item-title-sm']}
+                    roleTitleClassName={baseStyles['resume-item-subtitle-sm']}
+                    dateClassName={baseStyles['resume-date']}
+                    listClassName={baseStyles['resume-list']}
+                    textClassName={baseStyles['resume-text-xs']}
+                  />
                 ))}
               </div>
             </div>

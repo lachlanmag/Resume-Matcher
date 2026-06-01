@@ -9,6 +9,7 @@ import { getSortedSections } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
 import { DynamicResumeSection } from './dynamic-resume-section';
 import { SafeHtml } from './safe-html';
+import { WorkExperienceBlock } from './work-experience-block';
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/swiss-single.module.css';
 
@@ -112,36 +113,7 @@ export const ResumeSingleColumn: React.FC<ResumeSingleColumnProps> = ({
             <h3 className={baseStyles['resume-section-title']}>{section.displayName}</h3>
             <div className={baseStyles['resume-items']}>
               {workExperience.map((exp) => (
-                <div key={exp.id} className={baseStyles['resume-item']}>
-                  <div
-                    className={`flex justify-between items-baseline ${baseStyles['resume-row-tight']}`}
-                  >
-                    <h4 className={baseStyles['resume-item-title']}>{exp.title}</h4>
-                    <span className={`${baseStyles['resume-date']} ml-4`}>
-                      {formatDateRange(exp.years)}
-                    </span>
-                  </div>
-                  <div
-                    className={`flex justify-between items-center ${baseStyles['resume-row']} ${baseStyles['resume-item-subtitle']}`}
-                  >
-                    <span>{exp.company}</span>
-                    {exp.location && <span>{exp.location}</span>}
-                  </div>
-                  {exp.description && exp.description.length > 0 && (
-                    <ul
-                      className={`ml-4 ${baseStyles['resume-list']} ${baseStyles['resume-text-sm']}`}
-                    >
-                      {exp.description.map((desc, index) => (
-                        <li key={index} className="flex">
-                          <span className="mr-1.5 flex-shrink-0">•&nbsp;</span>
-                          <span>
-                            <SafeHtml html={desc} />
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                <WorkExperienceBlock key={exp.id} job={exp} />
               ))}
             </div>
           </div>
