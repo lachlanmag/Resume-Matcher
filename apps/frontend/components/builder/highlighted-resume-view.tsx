@@ -50,7 +50,7 @@ export function HighlightedResumeView({ resumeData, keywords }: HighlightedResum
                   <HighlightedText text={exp.company || ''} keywords={keywords} />
                 </div>
                 {(exp.roles || []).map((role) => (
-                  <div key={role.id} className="text-sm text-ink-soft mb-1">
+                  <div key={`${exp.id}-${role.id}`} className="text-sm text-ink-soft mb-1">
                     <HighlightedText text={role.title || ''} keywords={keywords} />
                     {role.years ? (
                       <span className="text-xs text-steel-grey ml-2">{role.years}</span>

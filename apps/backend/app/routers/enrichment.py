@@ -65,22 +65,10 @@ def _extract_item_from_resume(processed_data: dict, item_id: str) -> dict:
             return {}
         entry = entries[index]
         desc = entry.get("description", [])
-        roles = entry.get("roles", [])
-        role_titles: list[str] = []
-        if isinstance(roles, list):
-            for role in roles:
-                if isinstance(role, dict):
-                    title = str(role.get("title", "")).strip()
-                    if title:
-                        role_titles.append(title)
-        if not role_titles:
-            legacy_title = str(entry.get("title", "")).strip()
-            if legacy_title:
-                role_titles.append(legacy_title)
         return {
             "item_id": item_id,
             "item_type": "experience",
-            "title": "; ".join(role_titles),
+            "title": experience_role_titles(entry),
             "subtitle": entry.get("company", ""),
             "current_description": desc if isinstance(desc, list) else [desc] if isinstance(desc, str) and desc else [],
         }

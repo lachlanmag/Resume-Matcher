@@ -41,6 +41,7 @@ from app.schemas import (
     UpdateTitleRequest,
     normalize_resume_data,
 )
+from app.schemas.work_experience import preserve_work_experience_identity
 from app.services.parser import parse_document, parse_resume_to_json, restore_dates_from_markdown
 from app.services.improver import (
     MONTH_PATTERN,
@@ -388,6 +389,22 @@ def _protect_custom_sections(
 
     result["customSections"] = result_custom
     return result
+
+
+def _finalize_tailored_work_experience(
+    original_data: dict[str, Any] | None,
+    improved_data: dict[str, Any],
+) -> dict[str, Any]:
+    """Restore multi-role work experience identity after LLM tailoring/refinement."""
+    if not original_data:
+        return normalize_resume_data(improved_data)
+
+    result = copy.deepcopy(improved_data)
+    result["workExperience"] = preserve_work_experience_identity(
+        original_data.get("workExperience"),
+        improved_data.get("workExperience"),
+    )
+    return normalize_resume_data(result)
 
 
 def _preserve_personal_info(
@@ -930,6 +947,8 @@ async def _improve_preview_flow(
         if refinement_attempted:
             response_warnings.append(f"Refinement failed: {str(e)}")
 
+    improved_data = _finalize_tailored_work_experience(original_resume_data, improved_data)
+
     improved_text = json.dumps(improved_data, indent=2)
     preview_hash = _hash_improved_data(improved_data)
     preview_hashes = job.get("preview_hashes")
@@ -1279,6 +1298,10 @@ async def improve_resume_endpoint(
             logger.warning("Refinement failed, using unrefined result: %s", e)
             if refinement_attempted:
                 response_warnings.append(f"Refinement failed: {str(e)}")
+
+        improved_data = _finalize_tailored_work_experience(
+            original_resume_data, improved_data
+        )
 
         # Convert improved data to JSON string for storage
         improved_text = json.dumps(improved_data, indent=2)

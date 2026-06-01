@@ -1,6 +1,9 @@
 import type { Experience, ExperienceRole } from '@/components/dashboard/resume-component';
 
-/** Template filler text from Word/PDF forms — treat as empty so placeholders show instead. */
+/** Template filler text from Word/PDF forms — treat as empty so placeholders show instead.
+ * Normalization contract is shared with the backend (`app/schemas/work_experience.py`).
+ * Keep both in sync; golden cases live in `tests/fixtures/work_experience_normalization.json`.
+ */
 const TEMPLATE_PLACEHOLDER_VALUES = new Set(
   [
     'your position title',

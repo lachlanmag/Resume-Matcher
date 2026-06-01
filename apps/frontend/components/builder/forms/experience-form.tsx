@@ -243,7 +243,7 @@ export const ExperienceForm: React.FC<ExperienceFormProps> = ({ data, onChange }
 
                         {roles.map((role) => (
                           <div
-                            key={role.id}
+                            key={`${item.id}-${role.id}`}
                             className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-black/20 bg-white relative"
                           >
                             {roles.length > 1 && (

@@ -43,7 +43,7 @@ export function WorkExperienceBlock({
 
       {roles.map((role) => (
         <div
-          key={role.id}
+          key={`${job.id}-${role.id}`}
           className={`flex justify-between items-baseline ${baseStyles['resume-row-tight']}`}
         >
           <span className={roleTitleClassName}>{role.title}</span>

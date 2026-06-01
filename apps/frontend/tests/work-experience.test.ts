@@ -1,11 +1,33 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   ensureExperienceRoles,
   normalizeExperienceEntry,
   normalizeWorkExperience,
 } from '@/lib/utils/work-experience';
 
+type NormalizationCase = {
+  name: string;
+  input: Record<string, unknown>;
+  expected: Record<string, unknown>;
+};
+
+const fixturePath = resolve(
+  __dirname,
+  '../../../tests/fixtures/work_experience_normalization.json'
+);
+const sharedCases = JSON.parse(readFileSync(fixturePath, 'utf-8')) as NormalizationCase[];
+
 describe('work-experience normalization', () => {
+  it.each(sharedCases)('matches shared fixture: $name', ({ input, expected }) => {
+    const normalized = normalizeExperienceEntry(input);
+    expect(normalized).toEqual({
+      ...expected,
+      location: expected.location ?? undefined,
+    });
+  });
+
   it('wraps legacy flat row into a single role', () => {
     const job = normalizeExperienceEntry({
       id: 1,

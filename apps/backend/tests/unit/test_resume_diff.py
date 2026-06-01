@@ -1,6 +1,24 @@
 from app.services.improver import calculate_resume_diff
 
 
+def _experience_entry(
+    *,
+    company: str = "A",
+    title: str = "Dev",
+    years: str = "2020",
+    location: str | None = None,
+    description: list | None = None,
+) -> dict:
+    entry: dict = {
+        "company": company,
+        "roles": [{"id": 1, "title": title, "years": years}],
+        "description": description if description is not None else [],
+    }
+    if location is not None:
+        entry["location"] = location
+    return entry
+
+
 def test_skill_add_remove_case_insensitive() -> None:
     original = {"additional": {"technicalSkills": ["Python", "React"]}}
     improved = {"additional": {"technicalSkills": ["python", "Go"]}}
@@ -149,11 +167,11 @@ def test_summary_unchanged() -> None:
 
 
 def test_experience_entry_added() -> None:
-    original = {"workExperience": [{"title": "Dev", "company": "A", "years": "2020", "description": []}]}
+    original = {"workExperience": [_experience_entry(company="A", title="Dev", years="2020")]}
     improved = {
         "workExperience": [
-            {"title": "Dev", "company": "A", "years": "2020", "description": []},
-            {"title": "Senior", "company": "B", "years": "2022", "description": []},
+            _experience_entry(company="A", title="Dev", years="2020"),
+            _experience_entry(company="B", title="Senior", years="2022"),
         ]
     }
 
@@ -166,11 +184,11 @@ def test_experience_entry_added() -> None:
 def test_experience_entry_removed() -> None:
     original = {
         "workExperience": [
-            {"title": "Dev", "company": "A", "years": "2020", "description": []},
-            {"title": "Senior", "company": "B", "years": "2022", "description": []},
+            _experience_entry(company="A", title="Dev", years="2020"),
+            _experience_entry(company="B", title="Senior", years="2022"),
         ]
     }
-    improved = {"workExperience": [{"title": "Dev", "company": "A", "years": "2020", "description": []}]}
+    improved = {"workExperience": [_experience_entry(company="A", title="Dev", years="2020")]}
 
     summary, changes = calculate_resume_diff(original, improved)
 
@@ -179,8 +197,14 @@ def test_experience_entry_removed() -> None:
 
 
 def test_experience_entry_modified() -> None:
-    original = {"workExperience": [{"title": "Dev", "company": "A", "location": "NY", "years": "2020", "description": []}]}
-    improved = {"workExperience": [{"title": "Dev", "company": "A", "location": "Remote", "years": "2020", "description": []}]}
+    original = {
+        "workExperience": [_experience_entry(company="A", title="Dev", years="2020", location="NY")]
+    }
+    improved = {
+        "workExperience": [
+            _experience_entry(company="A", title="Dev", years="2020", location="Remote")
+        ]
+    }
 
     summary, changes = calculate_resume_diff(original, improved)
 
@@ -211,7 +235,14 @@ def test_education_entry_added() -> None:
 def test_no_changes_returns_empty() -> None:
     original = {
         "summary": "Same.",
-        "workExperience": [{"title": "Dev", "company": "A", "years": "2020", "description": ["Built stuff"]}],
+        "workExperience": [
+            _experience_entry(
+                company="A",
+                title="Dev",
+                years="2020",
+                description=["Built stuff"],
+            )
+        ],
         "additional": {"technicalSkills": ["Python"], "certificationsTraining": []},
     }
     improved = original.copy()
