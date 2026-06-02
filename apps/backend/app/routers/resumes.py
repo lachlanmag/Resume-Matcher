@@ -16,7 +16,7 @@ from fastapi.responses import Response
 
 from app.config_cache import get_content_language, load_config as _load_config
 from app.database import db
-from app.pdf import render_resume_pdf, PDFRenderError
+from app.pdf import add_pdf_metadata, render_resume_pdf, PDFRenderError
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -595,6 +595,43 @@ ALLOWED_TYPES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 MAX_FILE_SIZE = 4 * 1024 * 1024  # 4MB
+
+
+def _build_resume_pdf_metadata(resume: dict[str, Any]) -> dict[str, str]:
+    """Build ATS-friendly PDF metadata from resume data."""
+    processed = resume.get("processed_data")
+    personal_info = (
+        processed.get("personalInfo", {})
+        if isinstance(processed, dict) and isinstance(processed.get("personalInfo"), dict)
+        else {}
+    )
+    additional = (
+        processed.get("additional", {})
+        if isinstance(processed, dict) and isinstance(processed.get("additional"), dict)
+        else {}
+    )
+
+    author = personal_info.get("name") if isinstance(personal_info.get("name"), str) else ""
+    raw_title = resume.get("title") if isinstance(resume.get("title"), str) else ""
+    fallback_title = f"Resume - {author}" if author else "Resume"
+    title = raw_title.strip() or fallback_title
+
+    technical_skills = (
+        additional.get("technicalSkills")
+        if isinstance(additional.get("technicalSkills"), list)
+        else []
+    )
+    keyword_values = [skill for skill in technical_skills if isinstance(skill, str) and skill.strip()]
+    keywords = ", ".join(keyword_values[:20]) if keyword_values else "resume, cv, skills"
+
+    return {
+        "/Title": title,
+        "/Author": author or "Resume Matcher User",
+        "/Subject": "ATS-optimized resume",
+        "/Keywords": keywords,
+        "/Creator": "Resume Matcher",
+        "/Producer": "Resume Matcher PDF Export",
+    }
 
 
 @router.post("/upload", response_model=ResumeUploadResponse)
@@ -1779,6 +1816,11 @@ async def download_resume_pdf(
         pdf_bytes = await render_resume_pdf(url, pageSize, margins=pdf_margins)
     except PDFRenderError as e:
         raise HTTPException(status_code=503, detail=str(e))
+
+    try:
+        pdf_bytes = add_pdf_metadata(pdf_bytes, _build_resume_pdf_metadata(resume))
+    except Exception as e:
+        logger.warning("Failed to attach PDF metadata for resume %s: %s", resume_id, e)
 
     headers = {"Content-Disposition": f'attachment; filename="resume_{resume_id}.pdf"'}
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)

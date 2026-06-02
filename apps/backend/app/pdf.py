@@ -5,9 +5,11 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+from io import BytesIO
 from pathlib import Path
 from typing import Awaitable, NoReturn, Optional
 
+from pypdf import PdfReader, PdfWriter
 from playwright.async_api import (
     Browser,
     Error as PlaywrightError,
@@ -308,3 +310,28 @@ async def render_resume_pdf(
         return await _render_with_browser(_browser, url, selector, pdf_format, pdf_margins)
     except PlaywrightError as e:
         _raise_playwright_error(e, url)
+
+
+def add_pdf_metadata(pdf_bytes: bytes, metadata: dict[str, str | None]) -> bytes:
+    """Attach standard PDF metadata fields to rendered bytes.
+
+    Uses pypdf to update the document info dictionary. Invalid/empty values
+    are ignored to avoid polluting PDF metadata.
+    """
+    clean_metadata = {
+        key: value.strip()
+        for key, value in metadata.items()
+        if isinstance(value, str) and value.strip()
+    }
+    if not clean_metadata:
+        return pdf_bytes
+
+    reader = PdfReader(BytesIO(pdf_bytes))
+    writer = PdfWriter()
+    for page in reader.pages:
+        writer.add_page(page)
+
+    writer.add_metadata(clean_metadata)
+    output = BytesIO()
+    writer.write(output)
+    return output.getvalue()
