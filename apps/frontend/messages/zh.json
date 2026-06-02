@@ -394,7 +394,11 @@
         "blue": "蓝色",
         "green": "绿色",
         "orange": "橙色",
-        "red": "红色"
+        "red": "红色",
+        "blue-muted": "蓝色（柔和）",
+        "green-muted": "绿色（柔和）",
+        "orange-muted": "橙色（柔和）",
+        "red-muted": "红色（柔和）"
       },
       "pageSize": "纸张尺寸",
       "margins": "页边距（mm）",

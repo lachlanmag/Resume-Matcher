@@ -7,6 +7,7 @@ import {
   type HeaderFontFamily,
   type BodyFontFamily,
   type AccentColor,
+  ACCENT_COLOR_MAP,
   DEFAULT_TEMPLATE_SETTINGS,
 } from '@/lib/types/template-settings';
 import { API_BASE } from '@/lib/api/client';
@@ -62,8 +63,8 @@ function parseBodyFont(value: string | undefined): BodyFontFamily {
  * Parse accent color
  */
 function parseAccentColor(value: string | undefined): AccentColor {
-  if (value === 'blue' || value === 'green' || value === 'orange' || value === 'red') {
-    return value;
+  if (value && value in ACCENT_COLOR_MAP) {
+    return value as AccentColor;
   }
   return DEFAULT_TEMPLATE_SETTINGS.accentColor;
 }

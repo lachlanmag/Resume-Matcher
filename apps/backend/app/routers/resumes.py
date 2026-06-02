@@ -1761,7 +1761,9 @@ async def download_resume_pdf(
     bodyFont: str = Query("sans-serif", pattern="^(serif|sans-serif|mono)$"),
     compactMode: bool = Query(False),
     showContactIcons: bool = Query(False),
-    accentColor: str = Query("blue", pattern="^(blue|green|orange|red)$"),
+    accentColor: str = Query(
+        "blue", pattern="^(blue|green|orange|red|blue-muted|green-muted|orange-muted|red-muted)$"
+    ),
     lang: str | None = Query(None, pattern="^[a-z]{2}(-[A-Z]{2})?$"),
 ) -> Response:
     """Generate a PDF for a resume using headless Chromium.

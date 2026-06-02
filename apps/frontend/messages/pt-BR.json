@@ -391,7 +391,11 @@
         "blue": "Azul",
         "green": "Verde",
         "orange": "Laranja",
-        "red": "Vermelho"
+        "red": "Vermelho",
+        "blue-muted": "Azul (Suave)",
+        "green-muted": "Verde (Suave)",
+        "orange-muted": "Laranja (Suave)",
+        "red-muted": "Vermelho (Suave)"
       },
       "fontNames": {
         "serif": "Serifada",

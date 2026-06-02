@@ -145,6 +145,14 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
     return t('builder.formatting.fontNames.mono');
   };
 
+  const originalAccentColors: AccentColor[] = ['blue', 'green', 'orange', 'red'];
+  const mutedAccentColors: AccentColor[] = [
+    'blue-muted',
+    'green-muted',
+    'orange-muted',
+    'red-muted',
+  ];
+
   return (
     <div className="border border-black bg-white shadow-sw-default">
       {/* Header - Always Visible */}
@@ -209,25 +217,47 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
               <h4 className="font-mono text-xs font-bold uppercase tracking-wider mb-3 text-ink-soft">
                 {t('builder.formatting.accentColor')}
               </h4>
-              <div className="flex gap-2">
-                {(Object.keys(ACCENT_COLOR_MAP) as AccentColor[]).map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => handleAccentColorChange(color)}
-                    className={`flex items-center gap-2 px-3 py-2 border font-mono text-xs transition-all ${
-                      settings.accentColor === color
-                        ? 'border-blue-700 bg-white shadow-[2px_2px_0px_0px_#1D4ED8]'
-                        : 'border-black bg-white hover:bg-paper-tint'
-                    }`}
-                    title={t(`builder.formatting.accentColors.${color}`)}
-                  >
-                    <span
-                      className="w-4 h-4 border border-steel-grey"
-                      style={{ backgroundColor: ACCENT_COLOR_MAP[color].primary }}
-                    />
-                    <span>{t(`builder.formatting.accentColors.${color}`)}</span>
-                  </button>
-                ))}
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {originalAccentColors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => handleAccentColorChange(color)}
+                      className={`flex items-center gap-2 px-3 py-2 border font-mono text-xs transition-all ${
+                        settings.accentColor === color
+                          ? 'border-blue-700 bg-white shadow-[2px_2px_0px_0px_#1D4ED8]'
+                          : 'border-black bg-white hover:bg-paper-tint'
+                      }`}
+                      title={t(`builder.formatting.accentColors.${color}`)}
+                    >
+                      <span
+                        className="w-4 h-4 border border-steel-grey"
+                        style={{ backgroundColor: ACCENT_COLOR_MAP[color].primary }}
+                      />
+                      <span>{t(`builder.formatting.accentColors.${color}`)}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {mutedAccentColors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => handleAccentColorChange(color)}
+                      className={`flex items-center gap-2 px-3 py-2 border font-mono text-xs transition-all ${
+                        settings.accentColor === color
+                          ? 'border-blue-700 bg-white shadow-[2px_2px_0px_0px_#1D4ED8]'
+                          : 'border-black bg-white hover:bg-paper-tint'
+                      }`}
+                      title={t(`builder.formatting.accentColors.${color}`)}
+                    >
+                      <span
+                        className="w-4 h-4 border border-steel-grey"
+                        style={{ backgroundColor: ACCENT_COLOR_MAP[color].primary }}
+                      />
+                      <span>{t(`builder.formatting.accentColors.${color}`)}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}

@@ -394,7 +394,11 @@
         "blue": "Azul",
         "green": "Verde",
         "orange": "Naranja",
-        "red": "Rojo"
+        "red": "Rojo",
+        "blue-muted": "Azul (Suave)",
+        "green-muted": "Verde (Suave)",
+        "orange-muted": "Naranja (Suave)",
+        "red-muted": "Rojo (Suave)"
       },
       "pageSize": "Tamaño de página",
       "margins": "Márgenes (mm)",

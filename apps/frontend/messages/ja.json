@@ -394,7 +394,11 @@
         "blue": "青",
         "green": "緑",
         "orange": "オレンジ",
-        "red": "赤"
+        "red": "赤",
+        "blue-muted": "青（ミュート）",
+        "green-muted": "緑（ミュート）",
+        "orange-muted": "オレンジ（ミュート）",
+        "red-muted": "赤（ミュート）"
       },
       "pageSize": "ページサイズ",
       "margins": "余白（mm）",

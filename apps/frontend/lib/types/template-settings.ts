@@ -9,7 +9,15 @@ export type TemplateType = 'swiss-single' | 'swiss-two-column' | 'modern' | 'mod
 
 export type PageSize = 'A4' | 'LETTER';
 
-export type AccentColor = 'blue' | 'green' | 'orange' | 'red';
+export type AccentColor =
+  | 'blue'
+  | 'green'
+  | 'orange'
+  | 'red'
+  | 'blue-muted'
+  | 'green-muted'
+  | 'orange-muted'
+  | 'red-muted';
 
 export type SpacingLevel = 1 | 2 | 3 | 4 | 5;
 
@@ -145,6 +153,10 @@ export const ACCENT_COLOR_MAP: Record<
   green: { primary: '#15803D', light: '#DCFCE7', name: 'Green' },
   orange: { primary: '#EA580C', light: '#FED7AA', name: 'Orange' },
   red: { primary: '#DC2626', light: '#FEE2E2', name: 'Red' },
+  'blue-muted': { primary: '#35506B', light: '#E3ECF5', name: 'Blue (Muted)' },
+  'green-muted': { primary: '#3B6A53', light: '#E2EFE7', name: 'Green (Muted)' },
+  'orange-muted': { primary: '#94613A', light: '#F0E7DF', name: 'Orange (Muted)' },
+  'red-muted': { primary: '#7F4545', light: '#F1E6E6', name: 'Red (Muted)' },
 };
 
 // Compact mode multiplier (applied to spacing values only, NOT line-height)

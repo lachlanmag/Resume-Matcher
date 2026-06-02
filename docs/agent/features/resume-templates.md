@@ -25,7 +25,7 @@
 | Body Font | serif/sans-serif/mono | sans-serif | Font family for body text |
 | Compact Mode | boolean | false | Apply 0.6x spacing multiplier (spacing only; margins unchanged) |
 | Contact Icons | boolean | false | Show icons next to contact info |
-| Accent Color | blue/green/orange/red | blue | Accent color for Modern templates (modern, modern-two-column) |
+| Accent Color | blue/green/orange/red, blue-muted/green-muted/orange-muted/red-muted | blue | Accent color for Modern templates (modern, modern-two-column) |
 
 ## Key Files
 

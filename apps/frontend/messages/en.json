@@ -394,7 +394,11 @@
         "blue": "Blue",
         "green": "Green",
         "orange": "Orange",
-        "red": "Red"
+        "red": "Red",
+        "blue-muted": "Blue (Muted)",
+        "green-muted": "Green (Muted)",
+        "orange-muted": "Orange (Muted)",
+        "red-muted": "Red (Muted)"
       },
       "pageSize": "Page Size",
       "margins": "Margins (mm)",
