@@ -356,7 +356,17 @@ def apply_diffs(
                 continue
             expected_original = change.original
             if isinstance(expected_original, str):
-                expected_original = parse_original_list(expected_original)
+                parsed = parse_original_list(expected_original)
+                # Malformed "original" must not bypass verification.
+                # `parse_original_list()` returns `None` for invalid JSON or non-list JSON.
+                if parsed is None:
+                    logger.info(
+                        "Diff rejected (replace_list malformed original): %s",
+                        path,
+                    )
+                    rejected.append(change)
+                    continue
+                expected_original = parsed
             if not _verify_original_matches(actual_value, expected_original):
                 logger.info(
                     "Diff rejected (replace_list original mismatch): %s", path

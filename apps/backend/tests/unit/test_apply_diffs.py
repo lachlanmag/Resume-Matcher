@@ -582,3 +582,21 @@ class TestApplyDiffsReplaceList:
     assert len(applied) == 1
     assert len(rejected) == 0
     assert result["workExperience"][0]["description"] == new_list
+
+  def test_replace_list_rejects_malformed_original(self, sample_resume):
+    original_list = list(sample_resume["workExperience"][0]["description"])
+    new_list = [original_list[0], "Selected and rephrased second bullet"]
+    changes = [
+      ResumeChange(
+        path="workExperience[0].description",
+        action="replace_list",
+        # Must be valid JSON list for verification; malformed JSON should be rejected.
+        original="NOT_JSON",
+        value=new_list,
+        reason="length selection",
+      )
+    ]
+    result, applied, rejected = apply_diffs(sample_resume, changes)
+    assert len(applied) == 0
+    assert len(rejected) == 1
+    assert result["workExperience"][0]["description"] == original_list

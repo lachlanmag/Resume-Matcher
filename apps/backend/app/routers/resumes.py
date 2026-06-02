@@ -998,6 +998,8 @@ async def _improve_preview_flow(
         if refinement_attempted:
             response_warnings.append(f"Refinement failed: {str(e)}")
 
+    improved_data = _finalize_tailored_work_experience(original_resume_data, improved_data)
+
     if master_for_length and improved_data:
         improved_data, length_warnings = _apply_length_safety_net(
             improved_data,
@@ -1005,8 +1007,6 @@ async def _improve_preview_flow(
             tailor_length_settings,
         )
         response_warnings.extend(length_warnings)
-
-    improved_data = _finalize_tailored_work_experience(original_resume_data, improved_data)
 
     improved_text = json.dumps(improved_data, indent=2)
     preview_hash = _hash_improved_data(improved_data)
@@ -1208,13 +1208,12 @@ async def improve_resume_confirm_endpoint(
         improvements_payload = [imp.model_dump() for imp in request.improvements]
         stage = "create_improvement"
         request_id = str(uuid4())
-        if not replace_id:
-            db.create_improvement(
-                original_resume_id=request.resume_id,
-                tailored_resume_id=tailored_resume_id,
-                job_id=request.job_id,
-                improvements=improvements_payload,
-            )
+        db.upsert_improvement(
+            original_resume_id=request.resume_id,
+            tailored_resume_id=tailored_resume_id,
+            job_id=request.job_id,
+            improvements=improvements_payload,
+        )
 
         return ImproveResumeResponse(
             request_id=request_id,
@@ -1398,6 +1397,10 @@ async def improve_resume_endpoint(
             if refinement_attempted:
                 response_warnings.append(f"Refinement failed: {str(e)}")
 
+        improved_data = _finalize_tailored_work_experience(
+            original_resume_data, improved_data
+        )
+
         if master_for_length and improved_data:
             improved_data, length_warnings = _apply_length_safety_net(
                 improved_data,
@@ -1405,10 +1408,6 @@ async def improve_resume_endpoint(
                 tailor_length_settings,
             )
             response_warnings.extend(length_warnings)
-
-        improved_data = _finalize_tailored_work_experience(
-            original_resume_data, improved_data
-        )
 
         # Convert improved data to JSON string for storage
         improved_text = json.dumps(improved_data, indent=2)
@@ -1483,13 +1482,12 @@ async def improve_resume_endpoint(
 
         # Store improvement record
         request_id = str(uuid4())
-        if not replace_id:
-            db.create_improvement(
-                original_resume_id=request.resume_id,
-                tailored_resume_id=tailored_resume_id,
-                job_id=request.job_id,
-                improvements=improvements,
-            )
+        db.upsert_improvement(
+            original_resume_id=request.resume_id,
+            tailored_resume_id=tailored_resume_id,
+            job_id=request.job_id,
+            improvements=improvements,
+        )
 
         return ImproveResumeResponse(
             request_id=request_id,
@@ -1675,19 +1673,16 @@ async def apply_tailor_length_endpoint(
             warnings.append(
                 f"{len(rejected)} length selection change(s) rejected during verification"
             )
-        improved_data, length_warnings = _apply_length_safety_net(
-            improved_data, master_data, settings
-        )
-        warnings.extend(length_warnings)
     except Exception as e:
         logger.warning("Length selection LLM failed, using safety net only: %s", e)
         warnings.append(f"Selection pass failed: {e}")
-        improved_data, length_warnings = _apply_length_safety_net(
-            copy.deepcopy(tailored_data), master_data, settings
-        )
-        warnings.extend(length_warnings)
+        improved_data = copy.deepcopy(tailored_data)
 
     improved_data = _finalize_tailored_work_experience(tailored_data, improved_data)
+    improved_data, length_warnings = _apply_length_safety_net(
+        improved_data, master_data, settings
+    )
+    warnings.extend(length_warnings)
     improved_text = json.dumps(improved_data, indent=2)
     db.update_resume(
         resume_id,
