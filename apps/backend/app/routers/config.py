@@ -21,6 +21,8 @@ from app.schemas import (
     PromptConfigRequest,
     PromptConfigResponse,
     PromptOption,
+    TailorLengthConfigRequest,
+    TailorLengthConfigResponse,
     ApiKeyProviderStatus,
     ApiKeyStatusResponse,
     ApiKeysUpdateRequest,
@@ -41,6 +43,7 @@ from app.config import (
 )
 from app.config_cache import invalidate_config_cache
 from app.database import db
+from app.services.tailor_length import tailor_length_settings_from_config
 
 router = APIRouter(prefix="/config", tags=["Configuration"])
 
@@ -414,6 +417,42 @@ async def update_prompt_config(
         default_prompt_id=default_prompt_id,
         prompt_options=options,
     )
+
+
+@router.get("/tailor-length", response_model=TailorLengthConfigResponse)
+async def get_tailor_length_config() -> TailorLengthConfigResponse:
+    """Get default tailor length settings (pages, bullets per job)."""
+    stored = _load_config()
+    return TailorLengthConfigResponse.model_validate(
+        tailor_length_settings_from_config(stored).model_dump()
+    )
+
+
+@router.put("/tailor-length", response_model=TailorLengthConfigResponse)
+async def update_tailor_length_config(
+    request: TailorLengthConfigRequest,
+) -> TailorLengthConfigResponse:
+    """Update default tailor length settings."""
+    stored = _load_config()
+    current = tailor_length_settings_from_config(stored)
+
+    if request.target_pages is not None:
+        stored["tailor_target_pages"] = request.target_pages
+        current.target_pages = request.target_pages
+    if request.bullets_per_job_min is not None:
+        stored["tailor_bullets_per_job_min"] = request.bullets_per_job_min
+        current.bullets_per_job_min = request.bullets_per_job_min
+    if request.bullets_per_job_max is not None:
+        stored["tailor_bullets_per_job_max"] = request.bullets_per_job_max
+        current.bullets_per_job_max = request.bullets_per_job_max
+
+    try:
+        validated = TailorLengthConfigResponse.model_validate(current.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    _save_config(stored)
+    return validated
 
 
 @router.get("/feature-prompts", response_model=FeaturePromptsResponse)

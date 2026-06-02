@@ -1,5 +1,6 @@
 import { ImprovedResult } from '@/components/common/resume_previewer_context';
 import type { ResumeData } from '@/components/dashboard/resume-component';
+import { type TailorLengthSettings } from '@/lib/types/tailor-length';
 import { type TemplateSettings } from '@/lib/types/template-settings';
 import { type Locale } from '@/i18n/config';
 import { API_BASE, apiPost, apiPatch, apiDelete, apiFetch } from './client';
@@ -71,8 +72,11 @@ interface ResumeResponse {
     outreach_message?: string | null;
     parent_id?: string | null; // For determining if resume is tailored
     title?: string | null;
+    tailor_settings?: TailorLengthSettings | null;
   };
 }
+
+export type { TailorLengthSettings };
 
 /** Response from resume upload endpoint */
 export interface ResumeUploadResponse {
@@ -83,7 +87,7 @@ export interface ResumeUploadResponse {
   is_master: boolean;
 }
 
-interface ImproveResumeConfirmRequest {
+export interface ImproveResumeConfirmRequest {
   resume_id: string;
   job_id: string;
   improved_data: ResumeData;
@@ -91,6 +95,14 @@ interface ImproveResumeConfirmRequest {
     suggestion: string;
     lineNumber?: number | null;
   }>;
+  tailor_length_settings?: TailorLengthSettings;
+  replace_resume_id?: string | null;
+}
+
+export interface ImproveResumeOptions {
+  promptId?: string;
+  tailorLengthSettings?: TailorLengthSettings;
+  replaceResumeId?: string;
 }
 
 function normalizeResumeId(resumeId: string): string {
@@ -155,29 +167,39 @@ export async function uploadJobDescriptions(
 }
 
 /** Improves the resume and returns the full preview object */
+function buildImprovePayload(
+  resumeId: string,
+  jobId: string,
+  options?: ImproveResumeOptions
+): Record<string, unknown> {
+  return {
+    resume_id: resumeId,
+    job_id: jobId,
+    prompt_id: options?.promptId ?? null,
+    tailor_length_settings: options?.tailorLengthSettings ?? null,
+    replace_resume_id: options?.replaceResumeId ?? null,
+  };
+}
+
 export async function improveResume(
   resumeId: string,
   jobId: string,
-  promptId?: string
+  options?: ImproveResumeOptions | string
 ): Promise<ImprovedResult> {
-  return postImprove('/resumes/improve', {
-    resume_id: resumeId,
-    job_id: jobId,
-    prompt_id: promptId ?? null,
-  });
+  const opts: ImproveResumeOptions | undefined =
+    typeof options === 'string' ? { promptId: options } : options;
+  return postImprove('/resumes/improve', buildImprovePayload(resumeId, jobId, opts));
 }
 
 /** Previews the resume improvement without saving */
 export async function previewImproveResume(
   resumeId: string,
   jobId: string,
-  promptId?: string
+  options?: ImproveResumeOptions | string
 ): Promise<ImprovedResult> {
-  return postImprove('/resumes/improve/preview', {
-    resume_id: resumeId,
-    job_id: jobId,
-    prompt_id: promptId ?? null,
-  });
+  const opts: ImproveResumeOptions | undefined =
+    typeof options === 'string' ? { promptId: options } : options;
+  return postImprove('/resumes/improve/preview', buildImprovePayload(resumeId, jobId, opts));
 }
 
 /** Confirms and saves a tailored resume */
@@ -197,6 +219,38 @@ export async function fetchResume(resumeId: string): Promise<ResumeResponse['dat
   // Support both raw_resume content (initial) and processed_resume (if available)
   // The viewer/builder logic should prioritize processed data if present
   return payload.data;
+}
+
+export async function patchTailorSettings(
+  resumeId: string,
+  settings: Partial<TailorLengthSettings>
+): Promise<ResumeResponse['data']> {
+  const res = await apiPatch(
+    `/resumes/${encodeURIComponent(resumeId)}/tailor-settings`,
+    settings
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to update tailor settings (status ${res.status}): ${text}`);
+  }
+  const payload = (await res.json()) as ResumeResponse;
+  return payload.data;
+}
+
+export async function applyTailorLength(
+  resumeId: string,
+  settings?: Partial<TailorLengthSettings>
+): Promise<{ resume_preview: ResumeData; warnings: string[] }> {
+  const res = await apiPost(
+    `/resumes/${encodeURIComponent(resumeId)}/apply-tailor-length`,
+    settings ?? {},
+    240_000
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to apply length constraints (status ${res.status}): ${text}`);
+  }
+  return res.json();
 }
 
 export async function fetchResumeList(includeMaster = false): Promise<ResumeListItem[]> {

@@ -190,6 +190,26 @@ def test_preserve_restores_single_entry_when_tailored_splits_company():
     assert result[0]["description"] == ["Tailored shared bullets"]
 
 
+def test_preserve_keeps_intentionally_empty_tailored_description():
+    """Length trimming uses []; must not restore the master bullet pool."""
+    original = [
+        {
+            "company": "For The Record",
+            "roles": [{"title": "PM", "years": "2021"}],
+            "description": ["Master bullet one", "Master bullet two"],
+        }
+    ]
+    tailored = [
+        {
+            "company": "For The Record",
+            "roles": [{"title": "PM", "years": "2021"}],
+            "description": [],
+        }
+    ]
+    result = preserve_work_experience_identity(original, tailored)
+    assert result[0]["description"] == []
+
+
 def test_preserve_keeps_tailored_descriptions_per_index():
     original = [
         {

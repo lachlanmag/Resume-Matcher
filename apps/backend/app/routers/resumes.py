@@ -21,6 +21,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 from app.schemas import (
+    ApplyTailorLengthResponse,
     GenerateContentResponse,
     ImproveResumeConfirmRequest,
     ImproveResumeRequest,
@@ -36,6 +37,8 @@ from app.schemas import (
     ResumeSummary,
     ResumeUploadResponse,
     RawResume,
+    TailorLengthSettings,
+    TailorLengthSettingsPatch,
     UpdateCoverLetterRequest,
     UpdateOutreachMessageRequest,
     UpdateTitleRequest,
@@ -48,11 +51,17 @@ from app.services.improver import (
     apply_diffs,
     extract_job_keywords,
     generate_improvements,
+    generate_length_selection_diffs,
     generate_skill_target_plan,
     generate_resume_diffs,
     improve_resume,
     verify_skill_target_plan,
     verify_diff_result,
+)
+from app.services.tailor_length import (
+    enforce_tailor_length,
+    resolve_tailor_length_settings,
+    tailor_length_settings_from_resume_doc,
 )
 from app.services.refiner import refine_resume, calculate_keyword_match
 from app.schemas.refinement import RefinementConfig
@@ -70,6 +79,38 @@ def _get_default_prompt_id() -> str:
     option_ids = {option["id"] for option in IMPROVE_PROMPT_OPTIONS}
     prompt_id = config.get("default_prompt_id", DEFAULT_IMPROVE_PROMPT_ID)
     return prompt_id if prompt_id in option_ids else DEFAULT_IMPROVE_PROMPT_ID
+
+
+def _ensure_master_resume_for_tailor(resume: dict[str, Any]) -> None:
+    """Tailoring must run against the master resume, not a tailored child."""
+    if resume.get("parent_id"):
+        raise HTTPException(
+            status_code=400,
+            detail="Tailoring must use the master resume. For re-tailor, pass the master resume_id.",
+        )
+
+
+def _resolve_tailor_length(
+    request_settings: TailorLengthSettings | None,
+    resume: dict[str, Any],
+) -> TailorLengthSettings:
+    return resolve_tailor_length_settings(
+        request_settings=request_settings,
+        resume=resume,
+        config=_load_config(),
+    )
+
+
+def _tailor_settings_to_doc(settings: TailorLengthSettings) -> dict[str, Any]:
+    return settings.model_dump()
+
+
+def _apply_length_safety_net(
+    improved_data: dict[str, Any],
+    master_data: dict[str, Any],
+    settings: TailorLengthSettings,
+) -> tuple[dict[str, Any], list[str]]:
+    return enforce_tailor_length(improved_data, master_data, settings)
 
 
 def _hash_job_content(content: str) -> str:
@@ -678,6 +719,8 @@ async def get_resume(resume_id: str = Query(...)) -> ResumeFetchResponse:
         ResumeData.model_validate(processed_data) if processed_data else None
     )
 
+    tailor_settings = tailor_length_settings_from_resume_doc(resume)
+
     return ResumeFetchResponse(
         request_id=str(uuid4()),
         data=ResumeFetchData(
@@ -688,6 +731,7 @@ async def get_resume(resume_id: str = Query(...)) -> ResumeFetchResponse:
             outreach_message=resume.get("outreach_message"),
             parent_id=resume.get("parent_id"),
             title=resume.get("title"),
+            tailor_settings=tailor_settings,
         ),
     )
 
@@ -729,6 +773,7 @@ async def improve_resume_preview_endpoint(
     resume = db.get_resume(request.resume_id)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
+    _ensure_master_resume_for_tailor(resume)
 
     job = db.get_job(request.job_id)
     if not job:
@@ -736,6 +781,7 @@ async def improve_resume_preview_endpoint(
 
     language = get_content_language()
     prompt_id = request.prompt_id or _get_default_prompt_id()
+    tailor_length = _resolve_tailor_length(request.tailor_length_settings, resume)
 
     stage = "load_job_keywords"
     detail = "Failed to preview resume. Please try again."
@@ -747,6 +793,7 @@ async def improve_resume_preview_endpoint(
                 job=job,
                 language=language,
                 prompt_id=prompt_id,
+                tailor_length_settings=tailor_length,
             ),
             timeout=240.0,  # 4-minute hard limit
         )
@@ -771,6 +818,7 @@ async def _improve_preview_flow(
     job: dict[str, Any],
     language: str,
     prompt_id: str,
+    tailor_length_settings: TailorLengthSettings,
 ) -> ImproveResumeResponse:
     """Inner flow for improve/preview, extracted so it can be wrapped in wait_for."""
     job_keywords = job.get("job_keywords")
@@ -839,6 +887,7 @@ async def _improve_preview_flow(
             prompt_id=prompt_id,
             original_resume_data=original_resume_data,
             skill_targets=skill_targets,
+            tailor_length_settings=tailor_length_settings,
         )
 
         improved_data, applied_changes, rejected_changes = apply_diffs(
@@ -895,6 +944,7 @@ async def _improve_preview_flow(
     refinement_stats: RefinementStats | None = None
     refinement_attempted = False
     refinement_successful = False
+    master_for_length = original_resume_data
     try:
         # Get master resume for alignment validation
         master_resume = db.get_master_resume()
@@ -904,6 +954,7 @@ async def _improve_preview_flow(
             else _get_original_resume_data(resume)
         )
         if master_data:
+            master_for_length = master_data
             initial_match = calculate_keyword_match(improved_data, job_keywords)
             refinement_attempted = True
             refinement_result = await refine_resume(
@@ -948,6 +999,14 @@ async def _improve_preview_flow(
             response_warnings.append(f"Refinement failed: {str(e)}")
 
     improved_data = _finalize_tailored_work_experience(original_resume_data, improved_data)
+
+    if master_for_length and improved_data:
+        improved_data, length_warnings = _apply_length_safety_net(
+            improved_data,
+            master_for_length,
+            tailor_length_settings,
+        )
+        response_warnings.extend(length_warnings)
 
     improved_text = json.dumps(improved_data, indent=2)
     preview_hash = _hash_improved_data(improved_data)
@@ -1018,6 +1077,7 @@ async def improve_resume_confirm_endpoint(
     resume = db.get_resume(request.resume_id)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
+    _ensure_master_resume_for_tailor(resume)
 
     job = db.get_job(request.job_id)
     if not job:
@@ -1098,26 +1158,59 @@ async def improve_resume_confirm_endpoint(
         )
         response_warnings.extend(aux_warnings)
 
+        tailor_length = _resolve_tailor_length(request.tailor_length_settings, resume)
+        tailor_settings_doc = _tailor_settings_to_doc(tailor_length)
+
         stage = "create_resume"
-        tailored_resume = db.create_resume(
-            content=improved_text,
-            content_type="json",
-            filename=f"tailored_{resume.get('filename', 'resume')}",
-            is_master=False,
-            parent_id=request.resume_id,
-            processed_data=improved_data,
-            processing_status="ready",
-            cover_letter=cover_letter,
-            outreach_message=outreach_message,
-            title=title,
-        )
+        replace_id = request.replace_resume_id
+        if replace_id:
+            existing_tailored = db.get_resume(replace_id)
+            if not existing_tailored:
+                raise HTTPException(status_code=404, detail="Tailored resume to replace not found")
+            if existing_tailored.get("parent_id") != request.resume_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="replace_resume_id must be a tailored resume of the master resume_id",
+                )
+            updated = db.update_resume(
+                replace_id,
+                {
+                    "content": improved_text,
+                    "content_type": "json",
+                    "processed_data": improved_data,
+                    "processing_status": "ready",
+                    "cover_letter": cover_letter,
+                    "outreach_message": outreach_message,
+                    "title": title,
+                    "tailor_settings": tailor_settings_doc,
+                },
+            )
+            if not updated:
+                raise HTTPException(status_code=500, detail="Failed to update tailored resume")
+            tailored_resume = updated
+            tailored_resume_id = replace_id
+        else:
+            tailored_resume = db.create_resume(
+                content=improved_text,
+                content_type="json",
+                filename=f"tailored_{resume.get('filename', 'resume')}",
+                is_master=False,
+                parent_id=request.resume_id,
+                processed_data=improved_data,
+                processing_status="ready",
+                cover_letter=cover_letter,
+                outreach_message=outreach_message,
+                title=title,
+            )
+            tailored_resume_id = tailored_resume["resume_id"]
+            db.update_resume(tailored_resume_id, {"tailor_settings": tailor_settings_doc})
 
         improvements_payload = [imp.model_dump() for imp in request.improvements]
         stage = "create_improvement"
         request_id = str(uuid4())
-        db.create_improvement(
+        db.upsert_improvement(
             original_resume_id=request.resume_id,
-            tailored_resume_id=tailored_resume["resume_id"],
+            tailored_resume_id=tailored_resume_id,
             job_id=request.job_id,
             improvements=improvements_payload,
         )
@@ -1126,7 +1219,7 @@ async def improve_resume_confirm_endpoint(
             request_id=request_id,
             data=ImproveResumeData(
                 request_id=request_id,
-                resume_id=tailored_resume["resume_id"],
+                resume_id=tailored_resume_id,
                 job_id=request.job_id,
                 resume_preview=request.improved_data,
                 improvements=request.improvements,
@@ -1160,6 +1253,7 @@ async def improve_resume_endpoint(
     resume = db.get_resume(request.resume_id)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
+    _ensure_master_resume_for_tailor(resume)
 
     # Fetch job description
     job = db.get_job(request.job_id)
@@ -1171,6 +1265,7 @@ async def improve_resume_endpoint(
     enable_cover_letter = feature_config.get("enable_cover_letter", False)
     enable_outreach = feature_config.get("enable_outreach_message", False)
     language = get_content_language()
+    tailor_length_settings = _resolve_tailor_length(request.tailor_length_settings, resume)
 
     try:
         # Extract keywords from job description
@@ -1192,6 +1287,7 @@ async def improve_resume_endpoint(
                 language=language,
                 prompt_id=prompt_id,
                 original_resume_data=original_resume_data,
+                tailor_length_settings=tailor_length_settings,
             )
 
             improved_data, applied_changes, rejected_changes = apply_diffs(
@@ -1213,7 +1309,7 @@ async def improve_resume_endpoint(
                 )
 
             logger.info(
-                "Diff-based improve (legacy): %d applied, %d rejected, %d warnings",
+                "Diff-based improve: %d applied, %d rejected, %d warnings",
                 len(applied_changes),
                 len(rejected_changes),
                 len(diff_warnings),
@@ -1247,6 +1343,7 @@ async def improve_resume_endpoint(
         refinement_stats: RefinementStats | None = None
         refinement_attempted = False
         refinement_successful = False
+        master_for_length = original_resume_data
         try:
             # Get master resume for alignment validation
             master_resume = db.get_master_resume()
@@ -1256,6 +1353,7 @@ async def improve_resume_endpoint(
                 else _get_original_resume_data(resume)
             )
             if master_data:
+                master_for_length = master_data
                 initial_match = calculate_keyword_match(improved_data, job_keywords)
                 refinement_attempted = True
                 refinement_result = await refine_resume(
@@ -1303,6 +1401,14 @@ async def improve_resume_endpoint(
             original_resume_data, improved_data
         )
 
+        if master_for_length and improved_data:
+            improved_data, length_warnings = _apply_length_safety_net(
+                improved_data,
+                master_for_length,
+                tailor_length_settings,
+            )
+            response_warnings.extend(length_warnings)
+
         # Convert improved data to JSON string for storage
         improved_text = json.dumps(improved_data, indent=2)
 
@@ -1333,24 +1439,52 @@ async def improve_resume_endpoint(
         response_warnings.extend(aux_warnings)
 
         # Store the tailored resume with cover letter, outreach message, and title
-        tailored_resume = db.create_resume(
-            content=improved_text,
-            content_type="json",
-            filename=f"tailored_{resume.get('filename', 'resume')}",
-            is_master=False,
-            parent_id=request.resume_id,
-            processed_data=improved_data,
-            processing_status="ready",
-            cover_letter=cover_letter,
-            outreach_message=outreach_message,
-            title=title,
-        )
+        tailor_settings_doc = _tailor_settings_to_doc(tailor_length_settings)
+        replace_id = request.replace_resume_id
+        if replace_id:
+            existing_tailored = db.get_resume(replace_id)
+            if not existing_tailored:
+                raise HTTPException(status_code=404, detail="Tailored resume to replace not found")
+            if existing_tailored.get("parent_id") != request.resume_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="replace_resume_id must be a tailored resume of the master resume_id",
+                )
+            tailored_resume = db.update_resume(
+                replace_id,
+                {
+                    "content": improved_text,
+                    "content_type": "json",
+                    "processed_data": improved_data,
+                    "processing_status": "ready",
+                    "cover_letter": cover_letter,
+                    "outreach_message": outreach_message,
+                    "title": title,
+                    "tailor_settings": tailor_settings_doc,
+                },
+            )
+            tailored_resume_id = replace_id
+        else:
+            tailored_resume = db.create_resume(
+                content=improved_text,
+                content_type="json",
+                filename=f"tailored_{resume.get('filename', 'resume')}",
+                is_master=False,
+                parent_id=request.resume_id,
+                processed_data=improved_data,
+                processing_status="ready",
+                cover_letter=cover_letter,
+                outreach_message=outreach_message,
+                title=title,
+            )
+            tailored_resume_id = tailored_resume["resume_id"]
+            db.update_resume(tailored_resume_id, {"tailor_settings": tailor_settings_doc})
 
         # Store improvement record
         request_id = str(uuid4())
-        db.create_improvement(
+        db.upsert_improvement(
             original_resume_id=request.resume_id,
-            tailored_resume_id=tailored_resume["resume_id"],
+            tailored_resume_id=tailored_resume_id,
             job_id=request.job_id,
             improvements=improvements,
         )
@@ -1359,7 +1493,7 @@ async def improve_resume_endpoint(
             request_id=request_id,
             data=ImproveResumeData(
                 request_id=request_id,
-                resume_id=tailored_resume["resume_id"],
+                resume_id=tailored_resume_id,
                 job_id=request.job_id,
                 resume_preview=ResumeData.model_validate(improved_data),
                 improvements=[
@@ -1436,7 +1570,134 @@ async def update_resume_endpoint(
             resume_id=resume_id,
             raw_resume=raw_resume,
             processed_resume=processed_resume,
+            tailor_settings=tailor_length_settings_from_resume_doc(updated),
         ),
+    )
+
+
+@router.patch("/{resume_id}/tailor-settings", response_model=ResumeFetchResponse)
+async def patch_tailor_settings(
+    resume_id: str,
+    patch: TailorLengthSettingsPatch,
+) -> ResumeFetchResponse:
+    """Update tailor length settings for a tailored resume."""
+    resume = db.get_resume(resume_id)
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    if not resume.get("parent_id"):
+        raise HTTPException(
+            status_code=400,
+            detail="Tailor settings can only be set on tailored resumes.",
+        )
+
+    current = tailor_length_settings_from_resume_doc(resume) or _resolve_tailor_length(
+        None, resume
+    )
+    updates = patch.model_dump(exclude_unset=True)
+    merged = current.model_copy(update=updates)
+    try:
+        validated = TailorLengthSettings.model_validate(merged.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    updated = db.update_resume(
+        resume_id,
+        {"tailor_settings": _tailor_settings_to_doc(validated)},
+    )
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to update tailor settings")
+
+    return await get_resume(resume_id=resume_id)
+
+
+@router.post("/{resume_id}/apply-tailor-length", response_model=ApplyTailorLengthResponse)
+async def apply_tailor_length_endpoint(
+    resume_id: str,
+    body: TailorLengthSettingsPatch | None = None,
+) -> ApplyTailorLengthResponse:
+    """Re-select bullets from the master resume to satisfy length constraints."""
+    tailored = db.get_resume(resume_id)
+    if not tailored:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    parent_id = tailored.get("parent_id")
+    if not parent_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Apply length constraints is only for tailored resumes.",
+        )
+
+    master = db.get_resume(parent_id)
+    if not master:
+        raise HTTPException(status_code=404, detail="Master resume not found")
+
+    improvement = db.get_improvement_by_tailored_resume(resume_id)
+    if not improvement:
+        raise HTTPException(status_code=400, detail="No job context for this tailored resume.")
+
+    job = db.get_job(improvement["job_id"])
+    if not job:
+        raise HTTPException(status_code=404, detail="Job description not found")
+
+    master_data = _get_original_resume_data(master)
+    tailored_data = _get_original_resume_data(tailored)
+    if not master_data or not tailored_data:
+        raise HTTPException(status_code=400, detail="Resume missing processed data.")
+
+    current_settings = tailor_length_settings_from_resume_doc(tailored) or _resolve_tailor_length(
+        None, tailored
+    )
+    if body is not None:
+        updates = body.model_dump(exclude_unset=True)
+        settings = TailorLengthSettings.model_validate(
+            {**current_settings.model_dump(), **updates}
+        )
+    else:
+        settings = current_settings
+
+    language = get_content_language()
+    warnings: list[str] = []
+
+    try:
+        selection = await generate_length_selection_diffs(
+            master_data=master_data,
+            tailored_data=tailored_data,
+            job_description=job["content"],
+            tailor_length_settings=settings,
+            language=language,
+        )
+        improved_data, applied, rejected = apply_diffs(
+            original=tailored_data,
+            changes=selection.changes,
+        )
+        if rejected:
+            warnings.append(
+                f"{len(rejected)} length selection change(s) rejected during verification"
+            )
+    except Exception as e:
+        logger.warning("Length selection LLM failed, using safety net only: %s", e)
+        warnings.append(f"Selection pass failed: {e}")
+        improved_data = copy.deepcopy(tailored_data)
+
+    improved_data = _finalize_tailored_work_experience(tailored_data, improved_data)
+    improved_data, length_warnings = _apply_length_safety_net(
+        improved_data, master_data, settings
+    )
+    warnings.extend(length_warnings)
+    improved_text = json.dumps(improved_data, indent=2)
+    db.update_resume(
+        resume_id,
+        {
+            "content": improved_text,
+            "processed_data": improved_data,
+            "tailor_settings": _tailor_settings_to_doc(settings),
+        },
+    )
+
+    return ApplyTailorLengthResponse(
+        request_id=str(uuid4()),
+        resume_id=resume_id,
+        resume_preview=ResumeData.model_validate(improved_data),
+        warnings=warnings,
     )
 
 

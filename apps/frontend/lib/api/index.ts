@@ -25,9 +25,13 @@ export {
   fetchResume,
   fetchResumeList,
   updateResume,
+  patchTailorSettings,
+  applyTailorLength,
   downloadResumePdf,
   deleteResume,
   type ResumeListItem,
+  type TailorLengthSettings as ResumeTailorLengthSettings,
+  type ImproveResumeOptions,
 } from './resume';
 
 // Config operations
@@ -51,4 +55,7 @@ export {
   type PromptOption,
   type PromptConfig,
   type PromptConfigUpdate,
+  fetchTailorLengthConfig,
+  updateTailorLengthConfig,
+  type TailorLengthSettings,
 } from './config';

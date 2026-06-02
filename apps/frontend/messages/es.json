@@ -250,6 +250,17 @@
         "networkError": "Error de red. Verifica tu conexión."
       }
     },
+    "tailorLength": {
+      "title": "Longitud de personalización",
+      "applyConstraints": "Aplicar restricciones",
+      "reTailor": "Volver a personalizar",
+      "reTailorConfirm": "¿Volver a ejecutar la personalización completa desde el currículum maestro con estos ajustes?",
+      "errors": {
+        "saveFailed": "No se pudieron guardar los ajustes.",
+        "applyFailed": "No se pudieron aplicar las restricciones de longitud.",
+        "reTailorFailed": "Error al volver a personalizar."
+      }
+    },
     "jdMatch": {
       "yourResume": "Tu currículum",
       "matchingKeywordsHighlighted": "(palabras clave resaltadas)",
@@ -698,6 +709,13 @@
       "customPromptHelp": "Debe incluir estos marcadores (cada uno entre llaves): job_description, resume_data, output_language. Déjalo en blanco para usar el prompt por defecto.",
       "customPromptResetButton": "Restablecer al predeterminado",
       "customPromptErrorMissing": "Faltan marcadores requeridos: {missing}"
+    },
+    "tailorLength": {
+      "title": "Longitud de personalización (predeterminado)",
+      "description": "Páginas y rango de viñetas por empleo para nuevos currículums personalizados. La IA selecciona las mejores viñetas del currículum maestro.",
+      "targetPages": "Páginas objetivo",
+      "bulletsMin": "Mín. viñetas por empleo",
+      "bulletsMax": "Máx. viñetas por empleo"
     },
     "promptSettings": {
       "title": "Configuración de Prompts",

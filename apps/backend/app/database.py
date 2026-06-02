@@ -252,6 +252,35 @@ class Database:
         self.improvements.insert(doc)
         return doc
 
+    def upsert_improvement(
+        self,
+        original_resume_id: str,
+        tailored_resume_id: str,
+        job_id: str,
+        improvements: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Upsert improvement record for a tailored resume.
+
+        The app uses improvement records as job context for on-demand actions
+        (cover letter / outreach generation / apply-tailor-length).
+        When re-tailoring an existing tailored resume via `replace_resume_id`,
+        we must ensure the stored job_id matches the latest tailoring call.
+        """
+        # Remove any existing improvement docs for this tailored resume.
+        # TinyDB doesn't provide a direct "update" for nested records here,
+        # so we delete and re-insert a fresh document.
+        Improvement = Query()
+        self.improvements.remove(
+            Improvement.tailored_resume_id == tailored_resume_id
+        )
+
+        return self.create_improvement(
+            original_resume_id=original_resume_id,
+            tailored_resume_id=tailored_resume_id,
+            job_id=job_id,
+            improvements=improvements,
+        )
+
     def get_improvement_by_tailored_resume(
         self, tailored_resume_id: str
     ) -> dict[str, Any] | None:

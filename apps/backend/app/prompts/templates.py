@@ -514,7 +514,32 @@ Output this exact JSON format:
   "strategy_notes": "brief notes for the next editing pass"
 }}"""
 
+LENGTH_SELECTION_PROMPT = """Select and tailor work experience bullets from the MASTER resume pools to fit length constraints.
+
+{length_constraints}
+
+RULES:
+1. For each workExperience[i], output ONE change with action "replace_list" on path "workExperience[i].description"
+2. "value" must be the full list of selected bullets (at most the per-job target count)
+3. Choose bullets from the MASTER pool for that job; rephrase for JD fit without inventing facts
+4. "original" must be the JSON array of the current tailored bullets at that path (copy exactly)
+5. Generate all text in {output_language}
+6. Do not change companies, dates, or job entries
+
+Job Description:
+{job_description}
+
+Master resume (bullet pools):
+{master_resume}
+
+Current tailored resume:
+{tailored_resume}
+
+Output JSON: {{ "changes": [ ... ], "strategy_notes": "..." }}"""
+
 DIFF_IMPROVE_PROMPT = """Given this resume and job description, output a JSON object with targeted changes to better align the resume with the job.
+
+{length_constraints}
 
 RULES:
 1. Only modify content — never change names, companies, dates, institutions, or degrees
@@ -528,13 +553,14 @@ RULES:
 9. Keep changes minimal and targeted — do not rewrite content that already aligns well
 10. Exception to rule 2: you may add a skill only if it appears in the verified skill targets below
 11. Improve work and project bullets around the verified skill targets when the original text supports that alignment
+12. When length constraints specify a per-job bullet target, prefer ONE "replace_list" change per workExperience[i].description selecting from the master pool
 
 PATHS you can target:
 - "summary" — the resume summary text
 - "workExperience[i].description[j]" — a specific bullet (i = entry index, j = bullet index)
-- "workExperience[i].description" — append a new bullet (action: "append")
+- "workExperience[i].description" — append a new bullet (action: "append") OR replace entire list (action: "replace_list")
 - "personalProjects[i].description[j]" — a specific project bullet
-- "personalProjects[i].description" — append a new project bullet
+- "personalProjects[i].description" — append a new project bullet (or replace_list)
 - "additional.technicalSkills" — reorder the skills list (action: "reorder") or add one verified skill (action: "add_skill")
 
 Do NOT target: personalInfo, dates/years, company names, education, customSections.
@@ -548,12 +574,19 @@ Verified skill targets:
 Job Description:
 {job_description}
 
-Original Resume:
+Original Resume (MASTER — full bullet pools):
 {original_resume}
 
 Output this exact JSON format, nothing else:
 {{
   "changes": [
+    {{
+      "path": "workExperience[0].description",
+      "action": "replace_list",
+      "original": ["bullet one from master", "bullet two"],
+      "value": ["selected tailored bullet 1", "selected tailored bullet 2"],
+      "reason": "selected strongest JD-aligned bullets within length target"
+    }},
     {{
       "path": "workExperience[0].description[1]",
       "action": "replace",

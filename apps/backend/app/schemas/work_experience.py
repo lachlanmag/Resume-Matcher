@@ -95,15 +95,19 @@ def preserve_work_experience_identity(
         tailored_entry = (
             tailored_list[index] if index < len(tailored_list) else None
         )
-        tailored_description: list[Any] = []
-        if isinstance(tailored_entry, dict):
-            desc = tailored_entry.get("description", [])
+        if isinstance(tailored_entry, dict) and "description" in tailored_entry:
+            desc = tailored_entry["description"]
             if isinstance(desc, list):
                 tailored_description = copy.deepcopy(desc)
-            elif desc is not None:
-                tailored_description = [desc]
-        if not tailored_description:
-            tailored_description = copy.deepcopy(orig_normalized.get("description", []))
+            elif desc is None:
+                tailored_description = []
+            else:
+                tailored_description = [copy.deepcopy(desc)]
+        else:
+            # Missing tailored row or no description field — keep master/original pool.
+            tailored_description = copy.deepcopy(
+                orig_normalized.get("description", [])
+            )
 
         preserved.append(
             {
