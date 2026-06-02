@@ -1665,6 +1665,7 @@ async def apply_tailor_length_endpoint(
             tailored_data=tailored_data,
             job_description=job["content"],
             tailor_length_settings=settings,
+            language=language,
         )
         improved_data, applied, rejected = apply_diffs(
             original=tailored_data,
@@ -1686,7 +1687,7 @@ async def apply_tailor_length_endpoint(
         )
         warnings.extend(length_warnings)
 
-    improved_data = _finalize_tailored_work_experience(master_data, improved_data)
+    improved_data = _finalize_tailored_work_experience(tailored_data, improved_data)
     improved_text = json.dumps(improved_data, indent=2)
     db.update_resume(
         resume_id,
