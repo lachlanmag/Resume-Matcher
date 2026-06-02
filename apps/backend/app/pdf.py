@@ -335,3 +335,61 @@ def add_pdf_metadata(pdf_bytes: bytes, metadata: dict[str, str | None]) -> bytes
     output = BytesIO()
     writer.write(output)
     return output.getvalue()
+
+
+def evaluate_pdf_ats_extractability(pdf_bytes: bytes) -> tuple[list[str], list[str]]:
+    """Run ATS-oriented extractability checks on PDF bytes.
+
+    Returns:
+        (warnings, errors) where warnings indicate risky ordering and
+        errors indicate missing baseline extractable content.
+    """
+    warnings: list[str] = []
+    errors: list[str] = []
+
+    reader = PdfReader(BytesIO(pdf_bytes))
+    extracted_pages: list[str] = []
+    for page in reader.pages:
+        text = page.extract_text() or ""
+        extracted_pages.append(text)
+
+    extracted_text = "\n".join(extracted_pages).strip()
+    if not extracted_text:
+        errors.append(
+            "Extracted text is empty. PDF may be image-based or inaccessible to ATS."
+        )
+        return warnings, errors
+
+    lower_text = extracted_text.casefold()
+    required_terms = ("experience", "education", "skills")
+    for term in required_terms:
+        if term not in lower_text:
+            errors.append(f"Missing expected section term: {term}")
+
+    lines = extracted_text.splitlines()
+
+    def _first_line_index(term: str) -> int | None:
+        target = term.casefold()
+        for idx, line in enumerate(lines, start=1):
+            if target in line.casefold():
+                return idx
+        return None
+
+    experience_line = _first_line_index("experience")
+    education_line = _first_line_index("education")
+    skills_line = _first_line_index("skills")
+
+    if (
+        experience_line is not None
+        and education_line is not None
+        and experience_line > education_line
+    ):
+        warnings.append("Education appears before Experience in extracted text.")
+    if (
+        experience_line is not None
+        and skills_line is not None
+        and skills_line < experience_line
+    ):
+        warnings.append("Skills appears before Experience in extracted text.")
+
+    return warnings, errors

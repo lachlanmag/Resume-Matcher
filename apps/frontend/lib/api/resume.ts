@@ -78,6 +78,12 @@ interface ResumeResponse {
 
 export type { TailorLengthSettings };
 
+export interface ResumePdfDownloadResult {
+  blob: Blob;
+  warnings: string[];
+  errors: string[];
+}
+
 /** Response from resume upload endpoint */
 export interface ResumeUploadResponse {
   message: string;
@@ -315,14 +321,33 @@ export async function downloadResumePdf(
   resumeId: string,
   settings?: TemplateSettings,
   locale?: Locale
-): Promise<Blob> {
+): Promise<ResumePdfDownloadResult> {
   const url = getResumePdfUrl(resumeId, settings, locale);
   const res = await apiFetch(url);
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`Failed to download resume (status ${res.status}): ${text}`);
   }
-  return await res.blob();
+
+  const parseMessageHeader = (headerName: string): string[] => {
+    const raw = res.headers.get(headerName);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === 'string' && item.trim());
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
+  return {
+    blob: await res.blob(),
+    warnings: parseMessageHeader('X-Resume-Pdf-Warnings'),
+    errors: parseMessageHeader('X-Resume-Pdf-Errors'),
+  };
 }
 
 /** Deletes a resume by ID */

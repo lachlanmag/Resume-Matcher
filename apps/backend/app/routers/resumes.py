@@ -16,7 +16,12 @@ from fastapi.responses import Response
 
 from app.config_cache import get_content_language, load_config as _load_config
 from app.database import db
-from app.pdf import add_pdf_metadata, render_resume_pdf, PDFRenderError
+from app.pdf import (
+    add_pdf_metadata,
+    evaluate_pdf_ats_extractability,
+    render_resume_pdf,
+    PDFRenderError,
+)
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -1817,12 +1822,29 @@ async def download_resume_pdf(
     except PDFRenderError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
+    pdf_warnings: list[str] = []
+    pdf_errors: list[str] = []
+
     try:
         pdf_bytes = add_pdf_metadata(pdf_bytes, _build_resume_pdf_metadata(resume))
     except Exception as e:
         logger.warning("Failed to attach PDF metadata for resume %s: %s", resume_id, e)
+        pdf_warnings.append("Failed to attach PDF metadata.")
+
+    try:
+        ats_warnings, ats_errors = evaluate_pdf_ats_extractability(pdf_bytes)
+        pdf_warnings.extend(ats_warnings)
+        pdf_errors.extend(ats_errors)
+    except Exception as e:
+        logger.warning("ATS extractability checks failed for resume %s: %s", resume_id, e)
+        pdf_warnings.append("ATS extractability checks could not be completed.")
 
     headers = {"Content-Disposition": f'attachment; filename="resume_{resume_id}.pdf"'}
+    if pdf_warnings:
+        headers["X-Resume-Pdf-Warnings"] = json.dumps(pdf_warnings, ensure_ascii=False)
+    if pdf_errors:
+        headers["X-Resume-Pdf-Errors"] = json.dumps(pdf_errors, ensure_ascii=False)
+
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
 
 
