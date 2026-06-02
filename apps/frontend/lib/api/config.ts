@@ -1,4 +1,7 @@
 import { apiFetch } from './client';
+import type { TailorLengthSettings } from '@/lib/types/tailor-length';
+
+export type { TailorLengthSettings };
 
 // Supported LLM providers
 export type LLMProvider =
@@ -283,7 +286,30 @@ export async function fetchPromptConfig(): Promise<PromptConfig> {
   return res.json();
 }
 
-// Update prompt configuration
+export async function fetchTailorLengthConfig(): Promise<TailorLengthSettings> {
+  const res = await apiFetch('/config/tailor-length', { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error(`Failed to load tailor length config (status ${res.status}).`);
+  }
+  return res.json();
+}
+
+export async function updateTailorLengthConfig(
+  update: Partial<TailorLengthSettings>
+): Promise<TailorLengthSettings> {
+  const res = await apiFetch('/config/tailor-length', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(update),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `Failed to update tailor length config (status ${res.status}).`);
+  }
+  return res.json();
+}
+
 export async function updatePromptConfig(update: PromptConfigUpdate): Promise<PromptConfig> {
   const res = await apiFetch('/config/prompts', {
     method: 'PUT',

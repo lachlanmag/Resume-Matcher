@@ -407,6 +407,70 @@ class RawResume(BaseModel):
     processing_status: str = "pending"  # pending, processing, ready, failed
 
 
+DEFAULT_TARGET_PAGES = 2
+DEFAULT_BULLETS_PER_JOB_MIN = 3
+DEFAULT_BULLETS_PER_JOB_MAX = 5
+MIN_TARGET_PAGES = 1
+MAX_TARGET_PAGES = 3
+MIN_BULLETS_PER_JOB = 1
+MAX_BULLETS_PER_JOB = 10
+
+
+class TailorLengthSettings(BaseModel):
+    """Length targets for resume tailoring (pages and bullets per job)."""
+
+    target_pages: int = Field(default=DEFAULT_TARGET_PAGES, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    bullets_per_job_min: int = Field(
+        default=DEFAULT_BULLETS_PER_JOB_MIN, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+    bullets_per_job_max: int = Field(
+        default=DEFAULT_BULLETS_PER_JOB_MAX, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+
+    @model_validator(mode="after")
+    def max_gte_min(self) -> Self:
+        if self.bullets_per_job_max < self.bullets_per_job_min:
+            raise ValueError("bullets_per_job_max must be >= bullets_per_job_min")
+        return self
+
+
+class TailorLengthConfigRequest(BaseModel):
+    """Request to update global tailor length defaults."""
+
+    target_pages: int | None = Field(default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    bullets_per_job_min: int | None = Field(
+        default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+    bullets_per_job_max: int | None = Field(
+        default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+
+
+class TailorLengthConfigResponse(TailorLengthSettings):
+    """Response for tailor length configuration."""
+
+
+class TailorLengthSettingsPatch(BaseModel):
+    """Partial update for per-resume tailor length settings."""
+
+    target_pages: int | None = Field(default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    bullets_per_job_min: int | None = Field(
+        default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+    bullets_per_job_max: int | None = Field(
+        default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+
+
+class ApplyTailorLengthResponse(BaseModel):
+    """Response after applying length constraints to a tailored resume."""
+
+    request_id: str
+    resume_id: str
+    resume_preview: ResumeData
+    warnings: list[str] = Field(default_factory=list)
+
+
 class ResumeFetchData(BaseModel):
     """Data payload for resume fetch response."""
 
@@ -417,6 +481,7 @@ class ResumeFetchData(BaseModel):
     outreach_message: str | None = None
     parent_id: str | None = None  # For determining if resume is tailored
     title: str | None = None
+    tailor_settings: TailorLengthSettings | None = None
 
 
 class ResumeFetchResponse(BaseModel):
@@ -469,6 +534,11 @@ class ImproveResumeRequest(BaseModel):
     resume_id: str
     job_id: str
     prompt_id: str | None = None
+    tailor_length_settings: TailorLengthSettings | None = None
+    replace_resume_id: str | None = Field(
+        default=None,
+        description="When set, confirm updates this tailored resume instead of creating a new one",
+    )
 
 
 class ImprovementSuggestion(BaseModel):
@@ -575,6 +645,8 @@ class ImproveResumeConfirmRequest(BaseModel):
     job_id: str
     improved_data: ResumeData
     improvements: list[ImprovementSuggestion]
+    tailor_length_settings: TailorLengthSettings | None = None
+    replace_resume_id: str | None = None
 
 
 # Config Models
@@ -786,8 +858,8 @@ class ResumeChange(BaseModel):
     path: str = Field(
         description="Dot+bracket path, e.g. 'workExperience[0].description[1]'"
     )
-    action: Literal["replace", "append", "reorder", "add_skill"]
-    original: str | None = Field(
+    action: Literal["replace", "append", "reorder", "add_skill", "replace_list"]
+    original: str | list[str] | None = Field(
         default=None, description="Current text at path — for verification"
     )
     value: str | list[str] = Field(description="New content")

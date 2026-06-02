@@ -13,7 +13,12 @@ import {
   previewImproveResume,
   confirmImproveResume,
 } from '@/lib/api/resume';
-import { fetchPromptConfig, type PromptOption } from '@/lib/api/config';
+import { fetchPromptConfig, fetchTailorLengthConfig, type PromptOption } from '@/lib/api/config';
+import { TailorLengthControls } from '@/components/tailor/tailor-length-controls';
+import {
+  DEFAULT_TAILOR_LENGTH_SETTINGS,
+  type TailorLengthSettings,
+} from '@/lib/types/tailor-length';
 import { Dropdown } from '@/components/ui/dropdown';
 import { useStatusCache } from '@/lib/context/status-cache';
 import { Loader2, ArrowLeft, AlertTriangle, Settings } from 'lucide-react';
@@ -30,6 +35,9 @@ export default function TailorPage() {
   const [promptOptions, setPromptOptions] = useState<PromptOption[]>([]);
   const [selectedPromptId, setSelectedPromptId] = useState('keywords');
   const [promptLoading, setPromptLoading] = useState(false);
+  const [tailorLengthSettings, setTailorLengthSettings] = useState<TailorLengthSettings>(
+    DEFAULT_TAILOR_LENGTH_SETTINGS
+  );
   const hasUserSelectedPrompt = useRef(false);
   const missingDiffConfirmInFlight = useRef(false);
 
@@ -93,12 +101,16 @@ export default function TailorPage() {
     const loadPromptConfig = async () => {
       setPromptLoading(true);
       try {
-        const config = await fetchPromptConfig();
+        const [config, lengthConfig] = await Promise.all([
+          fetchPromptConfig(),
+          fetchTailorLengthConfig().catch(() => DEFAULT_TAILOR_LENGTH_SETTINGS),
+        ]);
         if (!cancelled) {
           setPromptOptions(config.prompt_options || []);
           if (!hasUserSelectedPrompt.current) {
             setSelectedPromptId(config.default_prompt_id || 'keywords');
           }
+          setTailorLengthSettings(lengthConfig);
         }
       } catch (err) {
         console.error('Failed to load prompt config', err);
@@ -144,6 +156,7 @@ export default function TailorPage() {
           suggestion: item.suggestion,
           lineNumber: typeof item.lineNumber === 'number' ? item.lineNumber : null,
         })) ?? [],
+      tailor_length_settings: tailorLengthSettings,
     };
   };
 
@@ -177,7 +190,10 @@ export default function TailorPage() {
       incrementJobs(); // Update cached counter
 
       // 2. Preview Resume
-      const result = await previewImproveResume(resumeId, jobId, selectedPromptId);
+      const result = await previewImproveResume(resumeId, jobId, {
+        promptId: selectedPromptId,
+        tailorLengthSettings,
+      });
 
       if (!result?.data?.diff_summary || !result?.data?.detailed_changes) {
         console.warn('Diff data missing for tailor preview; requesting user confirmation.');
@@ -372,6 +388,17 @@ export default function TailorPage() {
         )}
 
         <div className="space-y-6">
+          <div className="border-2 border-black bg-white p-4">
+            <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-ink-soft mb-3">
+              {t('settings.tailorLength.title')}
+            </h3>
+            <TailorLengthControls
+              settings={tailorLengthSettings}
+              onChange={setTailorLengthSettings}
+              disabled={isLoading || promptLoading}
+            />
+          </div>
+
           <Dropdown
             options={
               promptOptions.length > 0

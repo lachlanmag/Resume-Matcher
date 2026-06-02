@@ -11,6 +11,8 @@ import {
   updateFeatureConfig,
   fetchPromptConfig,
   updatePromptConfig,
+  fetchTailorLengthConfig,
+  updateTailorLengthConfig,
   clearAllApiKeys,
   resetDatabase,
   PROVIDER_INFO,
@@ -34,6 +36,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dropdown } from '@/components/ui/dropdown';
+import { TailorLengthControls } from '@/components/tailor/tailor-length-controls';
+import {
+  DEFAULT_TAILOR_LENGTH_SETTINGS,
+  type TailorLengthSettings,
+  validateTailorLengthSettings,
+} from '@/lib/types/tailor-length';
 import {
   Save,
   Key,
@@ -140,6 +148,10 @@ export default function SettingsPage() {
   const [promptConfigLoading, setPromptConfigLoading] = useState(false);
   const [promptOptions, setPromptOptions] = useState<PromptOption[]>([]);
   const [defaultPromptId, setDefaultPromptId] = useState('keywords');
+  const [tailorLengthSettings, setTailorLengthSettings] = useState<TailorLengthSettings>(
+    DEFAULT_TAILOR_LENGTH_SETTINGS
+  );
+  const [tailorLengthLoading, setTailorLengthLoading] = useState(false);
 
   // Custom feature prompts (cover letter, cold outreach). Empty string
   // means "use default"; the backend's *_default fields give us the
@@ -270,12 +282,14 @@ export default function SettingsPage() {
 
     async function loadConfig() {
       try {
-        const [llmConfig, featureConfig, promptConfig, featurePrompts] = await Promise.all([
-          fetchLlmConfig().catch(() => null),
-          fetchFeatureConfig().catch(() => null),
-          fetchPromptConfig().catch(() => null),
-          fetchFeaturePrompts().catch(() => null),
-        ]);
+        const [llmConfig, featureConfig, promptConfig, featurePrompts, lengthConfig] =
+          await Promise.all([
+            fetchLlmConfig().catch(() => null),
+            fetchFeatureConfig().catch(() => null),
+            fetchPromptConfig().catch(() => null),
+            fetchFeaturePrompts().catch(() => null),
+            fetchTailorLengthConfig().catch(() => DEFAULT_TAILOR_LENGTH_SETTINGS),
+          ]);
 
         if (cancelled) return;
 
@@ -306,6 +320,10 @@ export default function SettingsPage() {
         if (promptConfig) {
           setPromptOptions(promptConfig.prompt_options || []);
           setDefaultPromptId(promptConfig.default_prompt_id || 'keywords');
+        }
+
+        if (lengthConfig) {
+          setTailorLengthSettings(lengthConfig);
         }
 
         if (featurePrompts) {
@@ -507,6 +525,25 @@ export default function SettingsPage() {
       setError((err as Error).message || t('settings.errors.unableToSaveConfiguration'));
     } finally {
       setPromptConfigLoading(false);
+    }
+  };
+
+  const handleTailorLengthSave = async () => {
+    const validationError = validateTailorLengthSettings(tailorLengthSettings);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setTailorLengthLoading(true);
+    setError(null);
+    try {
+      const updated = await updateTailorLengthConfig(tailorLengthSettings);
+      setTailorLengthSettings(updated);
+    } catch (err) {
+      console.error('Failed to update tailor length config', err);
+      setError((err as Error).message || t('settings.errors.unableToSaveConfiguration'));
+    } finally {
+      setTailorLengthLoading(false);
     }
   };
 
@@ -1168,7 +1205,29 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              <div className="pt-4 border-t border-paper-tint">
+              <div className="pt-4 border-t border-paper-tint space-y-4">
+                <div>
+                  <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-ink-soft mb-2">
+                    {t('settings.tailorLength.title')}
+                  </h3>
+                  <TailorLengthControls
+                    settings={tailorLengthSettings}
+                    onChange={setTailorLengthSettings}
+                    disabled={tailorLengthLoading}
+                  />
+                  <Button
+                    variant="outline"
+                    className="mt-3"
+                    onClick={handleTailorLengthSave}
+                    disabled={tailorLengthLoading}
+                  >
+                    {tailorLengthLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      t('common.save')
+                    )}
+                  </Button>
+                </div>
                 <Dropdown
                   options={localizedPromptOptions}
                   value={defaultPromptId}

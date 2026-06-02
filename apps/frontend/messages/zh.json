@@ -250,6 +250,17 @@
         "networkError": "网络错误，请检查您的连接。"
       }
     },
+    "tailorLength": {
+      "title": "定制长度",
+      "applyConstraints": "应用长度限制",
+      "reTailor": "重新定制",
+      "reTailorConfirm": "是否使用当前长度设置从主简历重新运行完整 AI 定制？",
+      "errors": {
+        "saveFailed": "保存定制设置失败。",
+        "applyFailed": "应用长度限制失败。",
+        "reTailorFailed": "重新定制失败。"
+      }
+    },
     "jdMatch": {
       "yourResume": "你的简历",
       "matchingKeywordsHighlighted": "（已高亮匹配关键词）",
@@ -698,6 +709,13 @@
       "customPromptHelp": "必须包含以下占位符（各自使用大括号括起来）：job_description、resume_data、output_language。留空则使用默认提示词。",
       "customPromptResetButton": "恢复默认",
       "customPromptErrorMissing": "缺少必需的占位符：{missing}"
+    },
+    "tailorLength": {
+      "title": "定制长度默认值",
+      "description": "新定制简历的默认页数与每段工作经历要点数范围。AI 会在限制内从主简历中选择最佳要点。",
+      "targetPages": "目标页数",
+      "bulletsMin": "每份工作最少要点",
+      "bulletsMax": "每份工作最多要点"
     },
     "promptSettings": {
       "title": "提示词设置",

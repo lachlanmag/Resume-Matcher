@@ -250,6 +250,17 @@
         "networkError": "Network error. Please check your connection."
       }
     },
+    "tailorLength": {
+      "title": "Tailoring length",
+      "applyConstraints": "Apply constraints",
+      "reTailor": "Re-tailor",
+      "reTailorConfirm": "Re-run full AI tailoring from your master resume with these length settings?",
+      "errors": {
+        "saveFailed": "Failed to save tailoring settings.",
+        "applyFailed": "Failed to apply length constraints.",
+        "reTailorFailed": "Failed to re-tailor resume."
+      }
+    },
     "jdMatch": {
       "yourResume": "Your Resume",
       "matchingKeywordsHighlighted": "(matching keywords highlighted)",
@@ -698,6 +709,13 @@
       "customPromptHelp": "Must include these placeholders (each in curly braces): job_description, resume_data, output_language. Leave blank to use the default prompt.",
       "customPromptResetButton": "Reset to default",
       "customPromptErrorMissing": "Missing required placeholders: {missing}"
+    },
+    "tailorLength": {
+      "title": "Tailor length defaults",
+      "description": "Default page and bullet targets for new tailored resumes. The AI selects the best bullets from your master resume within these limits.",
+      "targetPages": "Target pages",
+      "bulletsMin": "Min bullets per job",
+      "bulletsMax": "Max bullets per job"
     },
     "promptSettings": {
       "title": "Prompt Settings",

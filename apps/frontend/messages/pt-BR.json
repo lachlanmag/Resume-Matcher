@@ -250,6 +250,17 @@
         "networkError": "Erro de rede. Verifique sua conexão."
       }
     },
+    "tailorLength": {
+      "title": "Comprimento da personalização",
+      "applyConstraints": "Aplicar restrições",
+      "reTailor": "Personalizar novamente",
+      "reTailorConfirm": "Executar novamente a personalização completa a partir do currículo mestre com estas configurações?",
+      "errors": {
+        "saveFailed": "Falha ao salvar configurações.",
+        "applyFailed": "Falha ao aplicar restrições de comprimento.",
+        "reTailorFailed": "Falha ao personalizar novamente."
+      }
+    },
     "jdMatch": {
       "yourResume": "Seu Currículo",
       "matchingKeywordsHighlighted": "(palavras-chave correspondentes destacadas)",
@@ -698,6 +709,13 @@
       "customPromptHelp": "Deve incluir estes marcadores (cada um entre chaves): job_description, resume_data, output_language. Deixe em branco para usar o prompt padrão.",
       "customPromptResetButton": "Restaurar padrão",
       "customPromptErrorMissing": "Marcadores obrigatórios ausentes: {missing}"
+    },
+    "tailorLength": {
+      "title": "Comprimento da personalização (padrão)",
+      "description": "Páginas e intervalo de tópicos por emprego para novos currículos personalizados. A IA seleciona os melhores tópicos do currículo mestre.",
+      "targetPages": "Páginas alvo",
+      "bulletsMin": "Mín. tópicos por emprego",
+      "bulletsMax": "Máx. tópicos por emprego"
     },
     "promptSettings": {
       "title": "Configurações de Prompt",

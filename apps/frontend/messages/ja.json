@@ -250,6 +250,17 @@
         "networkError": "ネットワークエラー。接続を確認してください。"
       }
     },
+    "tailorLength": {
+      "title": "カスタマイズの長さ",
+      "applyConstraints": "制約を適用",
+      "reTailor": "再カスタマイズ",
+      "reTailorConfirm": "これらの長さ設定でマスター履歴書から完全な AI カスタマイズを再実行しますか？",
+      "errors": {
+        "saveFailed": "設定の保存に失敗しました。",
+        "applyFailed": "長さ制約の適用に失敗しました。",
+        "reTailorFailed": "再カスタマイズに失敗しました。"
+      }
+    },
     "jdMatch": {
       "yourResume": "あなたの履歴書",
       "matchingKeywordsHighlighted": "（一致キーワードをハイライト）",
@@ -698,6 +709,13 @@
       "customPromptHelp": "次のプレースホルダーを中括弧で囲んで含めてください：job_description, resume_data, output_language。空欄の場合は既定のプロンプトを使用します。",
       "customPromptResetButton": "デフォルトにリセット",
       "customPromptErrorMissing": "必須のプレースホルダーが不足しています：{missing}"
+    },
+    "tailorLength": {
+      "title": "カスタマイズの長さ（既定）",
+      "description": "新しいカスタマイズ履歴書のページ数と職歴あたりの箇条書き範囲。AI はマスター履歴書から最適な箇条書きを選択します。",
+      "targetPages": "目標ページ数",
+      "bulletsMin": "職歴あたりの最小箇条書き",
+      "bulletsMax": "職歴あたりの最大箇条書き"
     },
     "promptSettings": {
       "title": "プロンプト設定",

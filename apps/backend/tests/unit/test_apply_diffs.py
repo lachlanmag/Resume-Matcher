@@ -563,3 +563,22 @@ class TestApplyDiffsEdgeCases:
         assert result["workExperience"][1]["description"][0] == "Updated payment system description"
         # First entry unchanged
         assert result["workExperience"][0]["description"][0] == sample_resume["workExperience"][0]["description"][0]
+
+
+class TestApplyDiffsReplaceList:
+  def test_replace_list_description(self, sample_resume):
+    original_list = list(sample_resume["workExperience"][0]["description"])
+    new_list = [original_list[0], "Selected and rephrased second bullet"]
+    changes = [
+      ResumeChange(
+        path="workExperience[0].description",
+        action="replace_list",
+        original=original_list,
+        value=new_list,
+        reason="length selection",
+      )
+    ]
+    result, applied, rejected = apply_diffs(sample_resume, changes)
+    assert len(applied) == 1
+    assert len(rejected) == 0
+    assert result["workExperience"][0]["description"] == new_list

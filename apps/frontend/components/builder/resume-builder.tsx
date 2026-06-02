@@ -42,6 +42,9 @@ import {
 } from '@/lib/api/resume';
 import { JDComparisonView } from './jd-comparison-view';
 import { RegenerateWizard } from './regenerate-wizard';
+import { TailorSettingsPanel } from '@/components/tailor/tailor-settings-panel';
+import { DEFAULT_TAILOR_LENGTH_SETTINGS } from '@/lib/types/tailor-length';
+import type { TailorLengthSettings } from '@/lib/types/tailor-length';
 import { useRegenerateWizard } from '@/hooks/use-regenerate-wizard';
 import { useTranslations } from '@/lib/i18n';
 import { type TemplateSettings, DEFAULT_TEMPLATE_SETTINGS } from '@/lib/types/template-settings';
@@ -151,6 +154,9 @@ const ResumeBuilderContent = () => {
 
   // On-demand generation state
   const [isTailoredResume, setIsTailoredResume] = useState(false);
+  const [parentResumeId, setParentResumeId] = useState<string | null>(null);
+  const [tailorJobId, setTailorJobId] = useState<string | null>(null);
+  const [tailorSettings, setTailorSettings] = useState<TailorLengthSettings | null>(null);
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
   const [isGeneratingOutreach, setIsGeneratingOutreach] = useState(false);
   const [showRegenerateDialog, setShowRegenerateDialog] = useState<
@@ -309,6 +315,8 @@ const ResumeBuilderContent = () => {
           const data = await fetchResume(resumeId);
           // Track if this is a tailored resume (has parent_id)
           setIsTailoredResume(Boolean(data.parent_id));
+          setParentResumeId(data.parent_id ?? null);
+          setTailorSettings(data.tailor_settings ?? null);
           // Store resume title for downloads
           setResumeTitle(data.title ?? null);
           // Load cover letter and outreach message if available
@@ -397,6 +405,7 @@ const ResumeBuilderContent = () => {
           const data = await fetchJobDescription(resumeId);
           if (!cancelled) {
             setJobDescription(data.content);
+            setTailorJobId(data.job_id);
           }
         } catch (err) {
           // JD might not be available for older resumes
@@ -408,6 +417,7 @@ const ResumeBuilderContent = () => {
       } else {
         // Clear job description when switching to non-tailored resume
         setJobDescription(null);
+        setTailorJobId(null);
       }
     };
 
@@ -785,6 +795,25 @@ const ResumeBuilderContent = () => {
               {activeTab === 'resume' && (
                 <>
                   <FormattingControls settings={templateSettings} onChange={handleSettingsChange} />
+                  {isTailoredResume &&
+                    resumeId &&
+                    parentResumeId &&
+                    tailorJobId && (
+                      <TailorSettingsPanel
+                        resumeId={resumeId}
+                        masterResumeId={parentResumeId}
+                        jobId={tailorJobId}
+                        initialSettings={tailorSettings ?? DEFAULT_TAILOR_LENGTH_SETTINGS}
+                        onResumeUpdated={(data) => {
+                          const normalized = withNormalizedWorkExperience(data);
+                          setResumeData(normalized);
+                          setLastSavedData(normalized);
+                          setHasUnsavedChanges(false);
+                          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+                        }}
+                        onError={(msg) => showNotification(msg, 'warning')}
+                      />
+                    )}
                   <ResumeForm resumeData={resumeData} onUpdate={handleUpdate} />
                 </>
               )}
