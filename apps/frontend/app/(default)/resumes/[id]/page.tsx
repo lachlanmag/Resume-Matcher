@@ -38,6 +38,11 @@ export default function ResumeViewerPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDeleteSuccessDialog, setShowDeleteSuccessDialog] = useState(false);
   const [showDownloadSuccessDialog, setShowDownloadSuccessDialog] = useState(false);
+  const [downloadNotice, setDownloadNotice] = useState<{
+    title: string;
+    description: string;
+    variant: 'warning' | 'danger';
+  } | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showEnrichmentModal, setShowEnrichmentModal] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -171,10 +176,23 @@ export default function ResumeViewerPage() {
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const blob = await downloadResumePdf(resumeId, undefined, uiLanguage);
+      const { blob, warnings, errors } = await downloadResumePdf(resumeId, undefined, uiLanguage);
       const filename = sanitizeFilename(resumeTitle, resumeId, 'resume');
       downloadBlobAsFile(blob, filename);
       setShowDownloadSuccessDialog(true);
+      if (errors.length > 0) {
+        setDownloadNotice({
+          title: t('common.error'),
+          description: `PDF ATS check: ${errors.join(' ')}`,
+          variant: 'danger',
+        });
+      } else if (warnings.length > 0) {
+        setDownloadNotice({
+          title: 'PDF Warning',
+          description: warnings.join(' '),
+          variant: 'warning',
+        });
+      }
     } catch (err) {
       console.error('Failed to download resume:', err);
       if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
@@ -216,6 +234,10 @@ export default function ResumeViewerPage() {
 
   const handleDownloadSuccessConfirm = () => {
     setShowDownloadSuccessDialog(false);
+  };
+
+  const handleDownloadNoticeConfirm = () => {
+    setDownloadNotice(null);
   };
 
   if (loading) {
@@ -439,6 +461,19 @@ export default function ResumeViewerPage() {
           confirmLabel={t('common.ok')}
           onConfirm={() => setDeleteError(null)}
           variant="danger"
+          showCancelButton={false}
+        />
+      )}
+
+      {downloadNotice && (
+        <ConfirmDialog
+          open={!!downloadNotice}
+          onOpenChange={() => setDownloadNotice(null)}
+          title={downloadNotice.title}
+          description={downloadNotice.description}
+          confirmLabel={t('common.ok')}
+          onConfirm={handleDownloadNoticeConfirm}
+          variant={downloadNotice.variant}
           showCancelButton={false}
         />
       )}

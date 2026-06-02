@@ -5,9 +5,11 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+from io import BytesIO
 from pathlib import Path
 from typing import Awaitable, NoReturn, Optional
 
+from pypdf import PdfReader, PdfWriter
 from playwright.async_api import (
     Browser,
     Error as PlaywrightError,
@@ -308,3 +310,86 @@ async def render_resume_pdf(
         return await _render_with_browser(_browser, url, selector, pdf_format, pdf_margins)
     except PlaywrightError as e:
         _raise_playwright_error(e, url)
+
+
+def add_pdf_metadata(pdf_bytes: bytes, metadata: dict[str, str | None]) -> bytes:
+    """Attach standard PDF metadata fields to rendered bytes.
+
+    Uses pypdf to update the document info dictionary. Invalid/empty values
+    are ignored to avoid polluting PDF metadata.
+    """
+    clean_metadata = {
+        key: value.strip()
+        for key, value in metadata.items()
+        if isinstance(value, str) and value.strip()
+    }
+    if not clean_metadata:
+        return pdf_bytes
+
+    reader = PdfReader(BytesIO(pdf_bytes))
+    writer = PdfWriter()
+    for page in reader.pages:
+        writer.add_page(page)
+
+    writer.add_metadata(clean_metadata)
+    output = BytesIO()
+    writer.write(output)
+    return output.getvalue()
+
+
+def evaluate_pdf_ats_extractability(pdf_bytes: bytes) -> tuple[list[str], list[str]]:
+    """Run ATS-oriented extractability checks on PDF bytes.
+
+    Returns:
+        (warnings, errors) where warnings indicate risky ordering and
+        errors indicate missing baseline extractable content.
+    """
+    warnings: list[str] = []
+    errors: list[str] = []
+
+    reader = PdfReader(BytesIO(pdf_bytes))
+    extracted_pages: list[str] = []
+    for page in reader.pages:
+        text = page.extract_text() or ""
+        extracted_pages.append(text)
+
+    extracted_text = "\n".join(extracted_pages).strip()
+    if not extracted_text:
+        errors.append(
+            "Extracted text is empty. PDF may be image-based or inaccessible to ATS."
+        )
+        return warnings, errors
+
+    lower_text = extracted_text.casefold()
+    required_terms = ("experience", "education", "skills")
+    for term in required_terms:
+        if term not in lower_text:
+            errors.append(f"Missing expected section term: {term}")
+
+    lines = extracted_text.splitlines()
+
+    def _first_line_index(term: str) -> int | None:
+        target = term.casefold()
+        for idx, line in enumerate(lines, start=1):
+            if target in line.casefold():
+                return idx
+        return None
+
+    experience_line = _first_line_index("experience")
+    education_line = _first_line_index("education")
+    skills_line = _first_line_index("skills")
+
+    if (
+        experience_line is not None
+        and education_line is not None
+        and experience_line > education_line
+    ):
+        warnings.append("Education appears before Experience in extracted text.")
+    if (
+        experience_line is not None
+        and skills_line is not None
+        and skills_line < experience_line
+    ):
+        warnings.append("Skills appears before Experience in extracted text.")
+
+    return warnings, errors
