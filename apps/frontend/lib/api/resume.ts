@@ -335,7 +335,7 @@ export async function downloadResumePdf(
     try {
       const parsed = JSON.parse(raw) as unknown;
       if (Array.isArray(parsed)) {
-        return parsed.filter((item): item is string => typeof item === 'string' && item.trim());
+        return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
       }
       return [];
     } catch {
