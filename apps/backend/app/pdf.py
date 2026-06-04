@@ -223,8 +223,9 @@ def _raise_playwright_error(error: PlaywrightError, url: str) -> NoReturn:
             f"Cannot connect to frontend for PDF generation. "
             f"Attempted URL: {url}. "
             f"Please ensure: 1) The frontend is running, "
-            f"2) The FRONTEND_BASE_URL environment variable in the backend .env file "
-            f"matches the URL where your frontend is accessible."
+            f"2) FRONTEND_PDF_BASE_URL (or FRONTEND_BASE_URL) in the backend .env "
+            f"matches where Playwright can reach the frontend "
+            f"(inside Docker this is usually http://localhost:3000, not the host port)."
         ) from error
     raise PDFRenderError(f"PDF rendering failed: {error_msg}") from error
 

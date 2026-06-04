@@ -1806,7 +1806,7 @@ async def download_resume_pdf(
     )
     if lang:
         params = f"{params}&lang={lang}"
-    url = f"{settings.frontend_base_url}/print/resumes/{resume_id}?{params}"
+    url = f"{settings.pdf_render_base_url}/print/resumes/{resume_id}?{params}"
 
     # Use the exact margins provided; compact mode only affects spacing.
     pdf_margins = {
@@ -2157,7 +2157,7 @@ async def download_cover_letter_pdf(
         )
 
     # Build print URL (same pattern as resume PDF)
-    url = f"{settings.frontend_base_url}/print/cover-letter/{resume_id}?pageSize={pageSize}"
+    url = f"{settings.pdf_render_base_url}/print/cover-letter/{resume_id}?pageSize={pageSize}"
     if lang:
         url = f"{url}&lang={lang}"
 

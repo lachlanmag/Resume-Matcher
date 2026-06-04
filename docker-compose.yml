@@ -12,8 +12,10 @@ services:
     #secrets:
     #  - llm_api_key
     environment:
-      # domain in reverse proxy
+      # Browser-facing URL (host port). Used for CORS.
       - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3001}
+      # In-container URL for Playwright PDF rendering (frontend listens on 3000 inside).
+      - FRONTEND_PDF_BASE_URL=${FRONTEND_PDF_BASE_URL:-http://localhost:3000}
       # Logging configuration: DEBUG, INFO, WARNING, ERROR
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       #- LOG_LEVEL_FILE=${LOG_LEVEL_FILE:-}
