@@ -9,7 +9,8 @@
 #   - uv, Node.js 22+, npm
 #   - Configure Settings → Cursor (http://127.0.0.1:8765/v1, model: auto)
 #
-# Press Ctrl+C to stop all services.
+# Press Ctrl+C to stop backend and frontend. The Cursor proxy keeps running
+# (shared with Docker via host.docker.internal:8765).
 
 set -euo pipefail
 
@@ -23,7 +24,6 @@ BACKEND_HEALTH_URL="${BACKEND_HEALTH_URL:-${BACKEND_URL}/api/v1/health}"
 FRONTEND_URL="${FRONTEND_URL:-http://localhost:3000}"
 CURSOR_API_PROXY_VERSION="${CURSOR_API_PROXY_VERSION:-1.1.0}"
 
-PROXY_PID=""
 BACKEND_PID=""
 FRONTEND_PID=""
 
@@ -58,7 +58,7 @@ wait_for_url() {
 }
 
 cleanup() {
-  log "Shutting down..."
+  log "Shutting down backend and frontend (cursor-api-proxy stays running)..."
   if [[ -n "$FRONTEND_PID" ]] && kill -0 "$FRONTEND_PID" 2>/dev/null; then
     kill "$FRONTEND_PID" 2>/dev/null || true
     wait "$FRONTEND_PID" 2>/dev/null || true
@@ -66,10 +66,6 @@ cleanup() {
   if [[ -n "$BACKEND_PID" ]] && kill -0 "$BACKEND_PID" 2>/dev/null; then
     kill "$BACKEND_PID" 2>/dev/null || true
     wait "$BACKEND_PID" 2>/dev/null || true
-  fi
-  if [[ -n "$PROXY_PID" ]] && kill -0 "$PROXY_PID" 2>/dev/null; then
-    kill "$PROXY_PID" 2>/dev/null || true
-    wait "$PROXY_PID" 2>/dev/null || true
   fi
 }
 
@@ -113,13 +109,15 @@ if [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
   (cd "$FRONTEND_DIR" && npm install)
 fi
 
-log "Starting cursor-api-proxy@${CURSOR_API_PROXY_VERSION} on ${CURSOR_PROXY_URL}/v1 ..."
-log "  CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE=${CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE}"
-log "  CURSOR_BRIDGE_FORCE=${CURSOR_BRIDGE_FORCE}"
-npx --yes "cursor-api-proxy@${CURSOR_API_PROXY_VERSION}" >/tmp/resume-matcher-cursor-proxy.log 2>&1 &
-PROXY_PID=$!
-
-wait_for_url "cursor-api-proxy" "${CURSOR_PROXY_URL}/health" 90
+if curl -fsS "${CURSOR_PROXY_URL}/health" >/dev/null 2>&1; then
+  log "cursor-api-proxy already running at ${CURSOR_PROXY_URL}/v1 (reusing)"
+else
+  log "Starting cursor-api-proxy@${CURSOR_API_PROXY_VERSION} on ${CURSOR_PROXY_URL}/v1 ..."
+  log "  CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE=${CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE}"
+  log "  CURSOR_BRIDGE_FORCE=${CURSOR_BRIDGE_FORCE}"
+  npx --yes "cursor-api-proxy@${CURSOR_API_PROXY_VERSION}" >/tmp/resume-matcher-cursor-proxy.log 2>&1 &
+  wait_for_url "cursor-api-proxy" "${CURSOR_PROXY_URL}/health" 90
+fi
 
 # Verify Cursor auth through the proxy (health alone is not enough).
 if ! curl -fsS -X POST "${CURSOR_PROXY_URL}/v1/chat/completions" \
@@ -162,6 +160,6 @@ log "  Proxy:    /tmp/resume-matcher-cursor-proxy.log"
 log "  Backend:  /tmp/resume-matcher-backend.log"
 log "  Frontend: /tmp/resume-matcher-frontend.log"
 log ""
-log "Press Ctrl+C to stop all services."
+log "Press Ctrl+C to stop backend and frontend (proxy keeps running)."
 
 wait "$FRONTEND_PID"

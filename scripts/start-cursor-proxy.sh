@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Long-running Cursor API proxy for local dev and Docker (host.docker.internal:8765).
+# Start once and leave running; dev-with-cursor.sh will not stop it on exit.
+# Stop with: ./scripts/stop-cursor-proxy.sh
 set -euo pipefail
 
 if ! command -v agent >/dev/null 2>&1; then
