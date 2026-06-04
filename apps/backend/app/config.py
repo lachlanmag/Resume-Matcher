@@ -161,6 +161,10 @@ class Settings(BaseSettings):
     reload: bool = False
     log_level: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"] = "INFO"
     frontend_base_url: str = "http://localhost:3000"
+    # URL Playwright uses to load /print/* pages. Defaults to frontend_base_url.
+    # In Docker, set this to the in-container frontend (usually http://localhost:3000)
+    # while frontend_base_url stays at the host-mapped URL (e.g. http://localhost:3001).
+    frontend_pdf_base_url: str | None = None
 
     # Reasoning effort for models that support it (OpenAI gpt-5 family,
     # Anthropic Claude 3.7+, DeepSeek R1, etc.). None means "do not send the
@@ -190,6 +194,13 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
+
+    @property
+    def pdf_render_base_url(self) -> str:
+        """Base URL for headless Chromium when rendering /print/* pages to PDF."""
+        if self.frontend_pdf_base_url and self.frontend_pdf_base_url.strip():
+            return self.frontend_pdf_base_url.strip().rstrip("/")
+        return self.frontend_base_url.strip().rstrip("/")
 
     @property
     def effective_cors_origins(self) -> list[str]:

@@ -566,12 +566,17 @@ Your backend can't reach the frontend. Check:
 2. `FRONTEND_BASE_URL` in `.env` matches your frontend URL
 3. `CORS_ORIGINS` includes your frontend URL
 
-If frontend runs on port 3001:
+If you run **local dev on 3000 and Docker on 3001** at the same time:
+
+- **Local** (`apps/backend/.env`): `FRONTEND_BASE_URL=http://localhost:3000` (no extra vars needed)
+- **Docker** (`docker-compose.yml` defaults): host URL on 3001 for CORS, in-container URL on 3000 for PDF:
 
 ```env
 FRONTEND_BASE_URL=http://localhost:3001
-CORS_ORIGINS=["http://localhost:3001", "http://127.0.0.1:3001"]
+FRONTEND_PDF_BASE_URL=http://localhost:3000
 ```
+
+Playwright runs inside the container and must hit port **3000** there; your browser uses **3001** on the host.
 
 ### Ollama connection fails
 
