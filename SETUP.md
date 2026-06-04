@@ -563,8 +563,8 @@ npm run dev
 Your backend can't reach the frontend. Check:
 
 1. Frontend is running
-2. `FRONTEND_BASE_URL` in `.env` matches your frontend URL
-3. `CORS_ORIGINS` includes your frontend URL
+2. `FRONTEND_PDF_BASE_URL` (or `FRONTEND_BASE_URL` if unset) points to where Playwright can reach the frontend — in Docker this is `http://localhost:3000`, not the host-mapped port
+3. `FRONTEND_BASE_URL` matches your browser URL and `CORS_ORIGINS` includes it
 
 If you run **local dev on 3000 and Docker on 3001** at the same time:
 
