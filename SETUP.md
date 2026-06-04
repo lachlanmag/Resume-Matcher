@@ -278,7 +278,7 @@ To launch everything in one terminal:
 ./scripts/dev-with-cursor.sh
 ```
 
-This starts the Cursor proxy, backend, and frontend. Press Ctrl+C to stop all three. Logs go to `/tmp/resume-matcher-*.log`.
+This starts the Cursor proxy (if not already running), backend, and frontend. Press Ctrl+C to stop backend and frontend only—the proxy keeps running so Docker (`host.docker.internal:8765`) and future dev sessions can reuse it. Logs go to `/tmp/resume-matcher-*.log`.
 
 #### Step 2: Start the proxy only (keep this terminal open)
 
