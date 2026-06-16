@@ -1,0 +1,85 @@
+name: Auto-assign issues
+
+on:
+  issues:
+    types: [opened, reopened, transferred]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  assign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign issue to maintainer
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const assignee = 'lachlanmag';
+            const issue = context.payload.issue;
+            const alreadyAssigned = issue.assignees.some(
+              (user) => user.login === assignee
+            );
+
+            if (!alreadyAssigned) {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: [assignee],
+              });
+            }
+
+      - name: Backfill unassigned issues
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const assignee = 'lachlanmag';
+            const { owner, repo } = context.repo;
+            let page = 1;
+            let updated = 0;
+
+            while (true) {
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner,
+                repo,
+                state: 'all',
+                per_page: 100,
+                page,
+              });
+
+              if (issues.length === 0) {
+                break;
+              }
+
+              for (const issue of issues) {
+                if (issue.pull_request) {
+                  continue;
+                }
+
+                const alreadyAssigned = issue.assignees.some(
+                  (user) => user.login === assignee
+                );
+
+                if (!alreadyAssigned) {
+                  await github.rest.issues.addAssignees({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    assignees: [assignee],
+                  });
+                  updated += 1;
+                }
+              }
+
+              if (issues.length < 100) {
+                break;
+              }
+
+              page += 1;
+            }
+
+            core.info(`Assigned ${assignee} to ${updated} issue(s).`);
