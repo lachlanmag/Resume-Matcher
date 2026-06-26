@@ -169,7 +169,7 @@ class TestRegenerateEndpoints(unittest.IsolatedAsyncioTestCase):
             output_language="en",
         )
 
-        mock_db = MagicMock()
+        mock_db = AsyncMock()
         mock_db.get_resume.return_value = {"processed_data": {"summary": "Old summary"}}
 
         summary_item = RegeneratedItem(
@@ -256,7 +256,7 @@ class TestRegenerateEndpoints(unittest.IsolatedAsyncioTestCase):
             "additional": {"technicalSkills": ["Python"]},
         }
 
-        mock_db = MagicMock()
+        mock_db = AsyncMock()
         mock_db.get_resume.return_value = {"processed_data": processed_data}
         mock_db.update_resume.return_value = None
 
@@ -296,7 +296,7 @@ class TestRegenerateEndpoints(unittest.IsolatedAsyncioTestCase):
             "additional": {"technicalSkills": ["Python"]},
         }
 
-        mock_db = MagicMock()
+        mock_db = AsyncMock()
         mock_db.get_resume.return_value = {"processed_data": processed_data}
         mock_db.update_resume.return_value = None
 
@@ -458,7 +458,7 @@ class TestRegenerateEndpoints(unittest.IsolatedAsyncioTestCase):
             "additional": {"technicalSkills": ["Python"]},
         }
 
-        mock_db = MagicMock()
+        mock_db = AsyncMock()
         mock_db.get_resume.return_value = {"processed_data": processed_data}
         mock_db.update_resume.return_value = None
 
@@ -494,7 +494,7 @@ class TestRegenerateEndpoints(unittest.IsolatedAsyncioTestCase):
             "additional": {"technicalSkills": ["Python"]},
         }
 
-        mock_db = MagicMock()
+        mock_db = AsyncMock()
         mock_db.get_resume.return_value = {"processed_data": processed_data}
         mock_db.update_resume.return_value = None
 
@@ -531,7 +531,7 @@ class TestRegenerateEndpoints(unittest.IsolatedAsyncioTestCase):
             "additional": {"technicalSkills": ["Python"]},
         }
 
-        mock_db = MagicMock()
+        mock_db = AsyncMock()
         mock_db.get_resume.return_value = {"processed_data": processed_data}
 
         regenerated_items = [
@@ -563,7 +563,7 @@ class TestRegenerateEndpoints(unittest.IsolatedAsyncioTestCase):
             "additional": {"technicalSkills": ["Python"]},
         }
 
-        mock_db = MagicMock()
+        mock_db = AsyncMock()
         mock_db.get_resume.return_value = {"processed_data": processed_data}
 
         regenerated_items = [

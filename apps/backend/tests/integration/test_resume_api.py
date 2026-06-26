@@ -179,7 +179,7 @@ class TestDownloadResumePdf:
     @patch("app.routers.resumes.evaluate_pdf_ats_extractability")
     @patch("app.routers.resumes.add_pdf_metadata")
     @patch("app.routers.resumes.render_resume_pdf", new_callable=AsyncMock)
-    @patch("app.routers.resumes.db")
+    @patch("app.routers.resumes.db", new_callable=AsyncMock)
     async def test_download_resume_pdf_includes_warning_header(
         self,
         mock_db,
@@ -211,7 +211,7 @@ class TestDownloadResumePdf:
     @patch("app.routers.resumes.evaluate_pdf_ats_extractability")
     @patch("app.routers.resumes.add_pdf_metadata")
     @patch("app.routers.resumes.render_resume_pdf", new_callable=AsyncMock)
-    @patch("app.routers.resumes.db")
+    @patch("app.routers.resumes.db", new_callable=AsyncMock)
     async def test_download_resume_pdf_includes_error_header(
         self,
         mock_db,

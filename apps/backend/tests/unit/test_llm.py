@@ -341,7 +341,7 @@ class TestCompleteJsonFallback:
         router = MagicMock()
         router.acompletion = AsyncMock(side_effect=[rejection, good_response])
         config = MagicMock()
-        config.provider = "openai_compatible"
+        config.provider = "openai"
         config.reasoning_effort = None
         mock_get_router.return_value = (router, config)
 
@@ -392,7 +392,7 @@ class TestCompleteJsonFallback:
         router = MagicMock()
         router.acompletion = AsyncMock(side_effect=[rejection, good_response])
         config = MagicMock()
-        config.provider = "openai_compatible"
+        config.provider = "openai"
         config.reasoning_effort = None
         mock_get_router.return_value = (router, config)
 
