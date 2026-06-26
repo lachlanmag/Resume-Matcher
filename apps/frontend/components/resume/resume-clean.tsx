@@ -7,6 +7,10 @@ import type {
 } from '@/components/dashboard/resume-component';
 import { getSortedSections } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
+import {
+  getExperienceRoleTitles,
+  getExperienceYearsLine,
+} from '@/lib/utils/work-experience';
 import { SafeHtml } from './safe-html';
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/clean.module.css';
@@ -162,7 +166,12 @@ export const ResumeClean: React.FC<ResumeCleanProps> = ({
             <div className={baseStyles['resume-items']}>
               {workExperience.map((exp) => (
                 <div key={exp.id} className={baseStyles['resume-item']}>
-                  {renderEntryHeader(exp.company, exp.title, exp.location, exp.years)}
+                  {renderEntryHeader(
+                    exp.company,
+                    getExperienceRoleTitles(exp),
+                    exp.location,
+                    getExperienceYearsLine(exp)
+                  )}
                   {renderBullets(exp.description)}
                 </div>
               ))}

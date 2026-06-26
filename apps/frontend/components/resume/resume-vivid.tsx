@@ -8,6 +8,10 @@ import type {
 } from '@/components/dashboard/resume-component';
 import { getSortedSections, getSectionMeta } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
+import {
+  getExperienceRoleTitles,
+  getExperienceYearsLine,
+} from '@/lib/utils/work-experience';
 import { SafeHtml } from './safe-html';
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/vivid.module.css';
@@ -198,16 +202,18 @@ export const ResumeVivid: React.FC<ResumeVividProps> = ({
                     >
                       <span>
                         <span className={styles.entryCompany}>{exp.company}</span>
-                        {exp.title && (
+                        {getExperienceRoleTitles(exp) && (
                           <>
                             <span className={styles.entrySep}>|</span>
-                            <span className={styles.entryRole}>{exp.title}</span>
+                            <span className={styles.entryRole}>
+                              {getExperienceRoleTitles(exp)}
+                            </span>
                           </>
                         )}
                       </span>
                     </div>
                     <div className={`${baseStyles['resume-row-tight']} ${styles.entryMeta}`}>
-                      {[formatDateRange(exp.years), exp.location].filter(Boolean).join(' | ')}
+                      {[getExperienceYearsLine(exp), exp.location].filter(Boolean).join(' | ')}
                     </div>
                     {renderArrowBullets(exp.description)}
                   </div>

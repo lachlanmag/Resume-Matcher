@@ -7,6 +7,10 @@ import type {
 } from '@/components/dashboard/resume-component';
 import { getSortedSections } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
+import {
+  getExperienceRoleTitles,
+  getExperienceYearsLine,
+} from '@/lib/utils/work-experience';
 import { SafeHtml } from './safe-html';
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/latex.module.css';
@@ -157,7 +161,12 @@ export const ResumeLatex: React.FC<ResumeLatexProps> = ({
             <div className={baseStyles['resume-items']}>
               {workExperience.map((exp) => (
                 <div key={exp.id} className={baseStyles['resume-item']}>
-                  {renderEntryHeader(exp.company, exp.years, exp.title, exp.location)}
+                  {renderEntryHeader(
+                    exp.company,
+                    getExperienceYearsLine(exp),
+                    getExperienceRoleTitles(exp),
+                    exp.location
+                  )}
                   {renderBullets(exp.description)}
                 </div>
               ))}

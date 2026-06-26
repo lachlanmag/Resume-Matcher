@@ -1702,7 +1702,7 @@ async def patch_tailor_settings(
     patch: TailorLengthSettingsPatch,
 ) -> ResumeFetchResponse:
     """Update tailor length settings for a tailored resume."""
-    resume = db.get_resume(resume_id)
+    resume = await db.get_resume(resume_id)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
     if not resume.get("parent_id"):
@@ -1721,7 +1721,7 @@ async def patch_tailor_settings(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    updated = db.update_resume(
+    updated = await db.update_resume(
         resume_id,
         {"tailor_settings": _tailor_settings_to_doc(validated)},
     )
@@ -1737,7 +1737,7 @@ async def apply_tailor_length_endpoint(
     body: TailorLengthSettingsPatch | None = None,
 ) -> ApplyTailorLengthResponse:
     """Re-select bullets from the master resume to satisfy length constraints."""
-    tailored = db.get_resume(resume_id)
+    tailored = await db.get_resume(resume_id)
     if not tailored:
         raise HTTPException(status_code=404, detail="Resume not found")
     parent_id = tailored.get("parent_id")
@@ -1747,15 +1747,15 @@ async def apply_tailor_length_endpoint(
             detail="Apply length constraints is only for tailored resumes.",
         )
 
-    master = db.get_resume(parent_id)
+    master = await db.get_resume(parent_id)
     if not master:
         raise HTTPException(status_code=404, detail="Master resume not found")
 
-    improvement = db.get_improvement_by_tailored_resume(resume_id)
+    improvement = await db.get_improvement_by_tailored_resume(resume_id)
     if not improvement:
         raise HTTPException(status_code=400, detail="No job context for this tailored resume.")
 
-    job = db.get_job(improvement["job_id"])
+    job = await db.get_job(improvement["job_id"])
     if not job:
         raise HTTPException(status_code=404, detail="Job description not found")
 
@@ -1805,7 +1805,7 @@ async def apply_tailor_length_endpoint(
     )
     warnings.extend(length_warnings)
     improved_text = json.dumps(improved_data, indent=2)
-    db.update_resume(
+    await db.update_resume(
         resume_id,
         {
             "content": improved_text,

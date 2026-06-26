@@ -19,7 +19,12 @@ describe('LivePreview', () => {
     const data = createInitialResumeWizardState().resume_data;
     data.personalInfo = { name: 'Priya Shah' };
     data.workExperience = [
-      { id: 1, title: 'Senior PM', company: 'Acme', years: '2021', description: ['Cut churn 18%'] },
+      {
+        id: 1,
+        company: 'Acme',
+        roles: [{ id: 1, title: 'Senior PM', years: '2021' }],
+        description: ['Cut churn 18%'],
+      },
     ];
     data.additional = { technicalSkills: ['SQL', 'Roadmapping'] };
 

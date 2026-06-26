@@ -41,23 +41,28 @@ def seed_master_db(data_dir: Path, master: dict[str, Any]) -> str:
 
     The upload endpoint only accepts documents (and runs a non-deterministic LLM
     parse), so for a controlled, deterministic master we write it straight into
-    the isolated TinyDB file via app.database.Database — the same file the server
-    opens once booted with DATA_DIR=<data_dir>. Returns the master's resume_id.
+    the isolated SQLite file via app.database.Database — the same file the
+    server opens once booted with DATA_DIR=<data_dir>. Returns the master's resume_id.
     """
+    import asyncio
+
     from app.database import Database
 
-    db = Database(db_path=data_dir / "database.json")
-    try:
-        doc = db.create_resume(
-            content="(seeded master resume)",
-            content_type="md",
-            is_master=True,
-            processed_data=master,
-            processing_status="ready",
-        )
-        return doc["resume_id"]
-    finally:
-        db.close()
+    async def _seed() -> str:
+        db = Database(db_path=data_dir / "resume_matcher.db")
+        try:
+            doc = await db.create_resume(
+                content="(seeded master resume)",
+                content_type="md",
+                is_master=True,
+                processed_data=master,
+                processing_status="ready",
+            )
+            return doc["resume_id"]
+        finally:
+            await db.close()
+
+    return asyncio.run(_seed())
 
 
 def tailor(
