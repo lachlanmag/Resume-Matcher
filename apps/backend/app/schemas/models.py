@@ -560,6 +560,8 @@ class ResumeFieldDiff(BaseModel):
         "experience",
         "education",
         "project",
+        "language",
+        "award",
     ]
     change_type: Literal["added", "removed", "modified"]
     original_value: str | None = None
@@ -791,6 +793,9 @@ class ApiKeysUpdateRequest(BaseModel):
     openrouter: str | None = None
     deepseek: str | None = None
     groq: str | None = None
+    # Local/self-hosted providers that may sit behind an auth proxy.
+    openai_compatible: str | None = None
+    ollama: str | None = None
 
 
 class ApiKeysUpdateResponse(BaseModel):
@@ -860,10 +865,25 @@ class ResumeChange(BaseModel):
     )
     action: Literal["replace", "append", "reorder", "add_skill", "replace_list"]
     original: str | list[str] | None = Field(
-        default=None, description="Current text at path — for verification"
+        default=None,
+        description="Current text at path — for verification. May be a list (the "
+        "current items) for the reorder/replace_list actions; only used for text "
+        "verification of replace/append/replace_list, ignored otherwise.",
     )
     value: str | list[str] = Field(description="New content")
     reason: str = Field(description="Why this change helps match the JD")
+
+    @model_validator(mode="after")
+    def _list_original_only_for_reorder(self) -> "ResumeChange":
+        """A list ``original`` is only meaningful for ``reorder`` (the LLM sends
+        the current items). For the text actions it must stay a string/None — a
+        list there would silently bypass the replace verification gate and crash
+        the invented-metrics check, so reject it at parse time."""
+        if isinstance(self.original, list) and self.action not in ("reorder", "replace_list"):
+            raise ValueError(
+                "'original' may be a list only for the reorder or replace_list actions"
+            )
+        return self
 
 
 class ImproveDiffResult(BaseModel):

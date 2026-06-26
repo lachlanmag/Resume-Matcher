@@ -33,6 +33,11 @@ uv.lock
 # SQLite databases
 *.sqlite3
 *.db
+*.db-wal
+*.db-shm
+
+# Encryption secret for API keys at rest - NEVER COMMIT
+**/data/.secret_key
 
 # Test artifacts
 .pytest_cache/
@@ -124,8 +129,14 @@ next-env.d.ts
 config.json
 **/config.json
 
-# cusor llm setup
-
+# Cursor LLM setup (local dev)
 LLM_PROVIDER=cursor
 LLM_MODEL=auto
 LLM_API_BASE=http://host.docker.internal:8765/v1
+
+# Agentic E2E monitor — runtime evidence bundles and the local-only skill
+/artifacts/
+/.claude/skills/monitor-e2e/
+
+# Superpowers brainstorming visual-companion scratch (local only)
+/.superpowers/
