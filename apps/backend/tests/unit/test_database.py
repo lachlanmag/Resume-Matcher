@@ -61,6 +61,72 @@ class TestResumeCrud:
         fetched = await db.get_resume(with_md["resume_id"])
         assert fetched["original_markdown"] == "# raw"
 
+    async def test_tailor_settings_round_trip(self, db):
+        created = await db.create_resume(content="x")
+        assert "tailor_settings" not in created
+
+        settings = {
+            "target_pages": 2,
+            "bullets_per_job_min": 3,
+            "bullets_per_job_max": 5,
+        }
+        updated = await db.update_resume(
+            created["resume_id"], {"tailor_settings": settings}
+        )
+        assert updated["tailor_settings"] == settings
+
+        fetched = await db.get_resume(created["resume_id"])
+        assert fetched["tailor_settings"] == settings
+
+    async def test_tailor_settings_schema_patch_on_legacy_db(self, tmp_path):
+        """Databases created before tailor_settings existed get the column on init."""
+        from sqlalchemy import create_engine, text
+
+        from app.db_engine import init_models_sync
+
+        db_path = tmp_path / "legacy.db"
+        engine = create_engine(f"sqlite:///{db_path}")
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE resumes (
+                        resume_id VARCHAR NOT NULL PRIMARY KEY,
+                        content TEXT NOT NULL,
+                        content_type VARCHAR NOT NULL,
+                        filename VARCHAR,
+                        is_master BOOLEAN NOT NULL,
+                        parent_id VARCHAR,
+                        processed_data JSON,
+                        processing_status VARCHAR NOT NULL,
+                        cover_letter TEXT,
+                        outreach_message TEXT,
+                        title VARCHAR,
+                        original_markdown TEXT,
+                        created_at VARCHAR NOT NULL,
+                        updated_at VARCHAR NOT NULL
+                    )
+                    """
+                )
+            )
+        init_models_sync(engine)
+        engine.dispose()
+
+        database = Database(db_path=db_path)
+        try:
+            created = await database.create_resume(content="x")
+            settings = {
+                "target_pages": 1,
+                "bullets_per_job_min": 2,
+                "bullets_per_job_max": 4,
+            }
+            updated = await database.update_resume(
+                created["resume_id"], {"tailor_settings": settings}
+            )
+            assert updated["tailor_settings"] == settings
+        finally:
+            await database.close()
+
 
 class TestMasterResume:
     async def test_no_master_initially(self, db):

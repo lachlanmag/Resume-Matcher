@@ -47,6 +47,8 @@ class Resume(Base):
     # omitted entirely when None. The facade reproduces that by only emitting
     # the key when this column is non-null.
     original_markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Per-resume tailor length overrides (target pages, bullets per job).
+    tailor_settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)
     updated_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)
 

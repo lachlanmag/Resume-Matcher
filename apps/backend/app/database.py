@@ -133,6 +133,8 @@ class Database:
         # Preserve TinyDB absence semantics: omit the key entirely when None.
         if row.original_markdown is not None:
             doc["original_markdown"] = row.original_markdown
+        if row.tailor_settings is not None:
+            doc["tailor_settings"] = row.tailor_settings
         return doc
 
     @staticmethod

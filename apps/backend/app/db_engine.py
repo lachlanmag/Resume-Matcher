@@ -9,7 +9,7 @@ spin up fully isolated engines against a temp-file database.
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
@@ -59,6 +59,18 @@ def make_sync_engine(path: Path) -> Engine:
     return engine
 
 
+def _apply_schema_patches(engine: Engine) -> None:
+    """Add columns missing from databases created before model updates."""
+    inspector = inspect(engine)
+    if not inspector.has_table("resumes"):
+        return
+    columns = {col["name"] for col in inspector.get_columns("resumes")}
+    if "tailor_settings" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE resumes ADD COLUMN tailor_settings JSON"))
+
+
 def init_models_sync(engine: Engine) -> None:
     """Create all tables (idempotent) using a sync engine connection."""
     Base.metadata.create_all(engine)
+    _apply_schema_patches(engine)

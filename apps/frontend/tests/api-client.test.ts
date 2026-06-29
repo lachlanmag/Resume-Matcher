@@ -27,6 +27,24 @@ describe('api client', () => {
     });
   });
 
+  describe('server-side API base (print/PDF SSR)', () => {
+    it('uses BACKEND_ORIGIN for internal fetches when window is undefined', async () => {
+      vi.stubEnv('BACKEND_ORIGIN', 'http://127.0.0.1:8001');
+      vi.resetModules();
+      const originalWindow = globalThis.window;
+      // @ts-expect-error simulate Next.js server render environment
+      delete globalThis.window;
+      try {
+        const { API_BASE: serverApiBase } = await import('@/lib/api/client');
+        expect(serverApiBase).toBe('http://127.0.0.1:8001/api/v1');
+      } finally {
+        globalThis.window = originalWindow;
+        vi.unstubAllEnvs();
+        vi.resetModules();
+      }
+    });
+  });
+
   describe('apiFetch URL resolution', () => {
     it('prefixes a relative endpoint with API_BASE and passes an abort signal', async () => {
       await apiFetch('/health');
