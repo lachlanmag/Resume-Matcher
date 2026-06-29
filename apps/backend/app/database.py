@@ -306,17 +306,19 @@ class Database:
         """Update resume by ID.
 
         Raises:
-            ValueError: If resume not found.
+            ValueError: If resume not found or ``updates`` contains unknown fields.
         """
         async with self._session() as session:
             row = await session.get(Resume, resume_id)
             if row is None:
                 raise ValueError(f"Resume not found: {resume_id}")
+            unknown = [key for key in updates if not hasattr(row, key)]
+            if unknown:
+                raise ValueError(
+                    f"Unknown resume field(s): {', '.join(sorted(unknown))}"
+                )
             for key, value in updates.items():
-                if hasattr(row, key):
-                    setattr(row, key, value)
-                else:
-                    logger.warning("Ignoring unknown resume field on update: %s", key)
+                setattr(row, key, value)
             row.updated_at = _now()
             await session.commit()
             return self._resume_to_dict(row)
