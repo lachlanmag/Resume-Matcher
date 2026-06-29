@@ -131,3 +131,11 @@ export function getExperienceRoleTitles(job: Experience): string {
     .filter(Boolean)
     .join('; ');
 }
+
+/** Combined years line across roles (for compact single-line templates). */
+export function getExperienceYearsLine(job: Experience): string {
+  return (job.roles ?? [])
+    .map((r) => r.years?.trim())
+    .filter(Boolean)
+    .join(' · ');
+}
