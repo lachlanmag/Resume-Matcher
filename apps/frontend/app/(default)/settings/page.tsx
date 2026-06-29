@@ -158,8 +158,10 @@ export default function SettingsPage() {
   // actual default text for placeholder display.
   const [coverLetterPrompt, setCoverLetterPrompt] = useState('');
   const [outreachPrompt, setOutreachPrompt] = useState('');
+  const [feedbackPrompt, setFeedbackPrompt] = useState('');
   const [coverLetterDefault, setCoverLetterDefault] = useState('');
   const [outreachDefault, setOutreachDefault] = useState('');
+  const [feedbackDefault, setFeedbackDefault] = useState('');
   const [featurePromptSaving, setFeaturePromptSaving] = useState<string | null>(null);
   const [featurePromptError, setFeaturePromptError] = useState<{
     field: string;
@@ -329,8 +331,10 @@ export default function SettingsPage() {
         if (featurePrompts) {
           setCoverLetterPrompt(featurePrompts.cover_letter_prompt);
           setOutreachPrompt(featurePrompts.outreach_message_prompt);
+          setFeedbackPrompt(featurePrompts.resume_feedback_prompt);
           setCoverLetterDefault(featurePrompts.cover_letter_default);
           setOutreachDefault(featurePrompts.outreach_message_default);
+          setFeedbackDefault(featurePrompts.resume_feedback_default);
         }
 
         setStatus('idle');
@@ -488,7 +492,7 @@ export default function SettingsPage() {
   };
 
   const handleFeaturePromptSave = async (
-    field: 'cover_letter_prompt' | 'outreach_message_prompt',
+    field: 'cover_letter_prompt' | 'outreach_message_prompt' | 'resume_feedback_prompt',
     value: string
   ) => {
     setFeaturePromptSaving(field);
@@ -500,6 +504,7 @@ export default function SettingsPage() {
       const fresh = await updateFeaturePrompts(update);
       setCoverLetterPrompt(fresh.cover_letter_prompt);
       setOutreachPrompt(fresh.outreach_message_prompt);
+      setFeedbackPrompt(fresh.resume_feedback_prompt);
     } catch (err) {
       if (err instanceof FeaturePromptsError) {
         setFeaturePromptError({ field: err.detail.field, missing: err.detail.missing });
@@ -1203,6 +1208,60 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+
+                <div className="border-2 border-black bg-background p-4 space-y-2">
+                  <div>
+                    <p className="font-mono text-sm font-bold uppercase tracking-wider">
+                      {t('settings.contentGeneration.resumeFeedback.label')}
+                    </p>
+                    <p className="text-xs text-steel-grey mt-1">
+                      {t('settings.contentGeneration.resumeFeedback.description')}
+                    </p>
+                  </div>
+                  <Label htmlFor="feedbackPrompt">
+                    {t('settings.contentGeneration.customPromptLabel')}
+                  </Label>
+                  <textarea
+                    id="feedbackPrompt"
+                    rows={8}
+                    value={feedbackPrompt}
+                    onChange={(e) => setFeedbackPrompt(e.target.value)}
+                    placeholder={feedbackDefault}
+                    className="w-full rounded-none border border-black bg-white p-3 font-mono text-xs break-words focus:outline-none focus:shadow-[4px_4px_0_0_#000]"
+                  />
+                  <p className="text-xs text-steel-grey font-mono">
+                    {t('settings.contentGeneration.customPromptHelp')}
+                  </p>
+                  {featurePromptError?.field === 'resume_feedback_prompt' && (
+                    <p className="text-xs text-red-600 font-mono break-words">
+                      {t('settings.contentGeneration.customPromptErrorMissing', {
+                        missing: featurePromptError.missing.join(', '),
+                      })}
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        handleFeaturePromptSave('resume_feedback_prompt', feedbackPrompt)
+                      }
+                      disabled={featurePromptSaving === 'resume_feedback_prompt'}
+                    >
+                      {featurePromptSaving === 'resume_feedback_prompt' ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        t('common.save')
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleFeaturePromptSave('resume_feedback_prompt', '')}
+                      disabled={featurePromptSaving === 'resume_feedback_prompt'}
+                    >
+                      {t('settings.contentGeneration.customPromptResetButton')}
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               <div className="pt-4 border-t border-paper-tint space-y-4">

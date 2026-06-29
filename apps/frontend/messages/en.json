@@ -175,6 +175,7 @@
       "resume": "RESUME",
       "coverLetter": "COVER LETTER",
       "outreach": "OUTREACH MAIL",
+      "feedback": "FEEDBACK",
       "jdMatch": "JD MATCH"
     },
     "footer": {
@@ -192,9 +193,11 @@
       "generateTitle": "Generate {title}",
       "coverLetterDescription": "Generate a tailored cover letter based on your resume and job description.",
       "outreachDescription": "Generate a concise outreach message for LinkedIn or email based on your resume and job description.",
+      "feedbackDescription": "Review this tailored resume against the job description with HR-style feedback and ATS analysis.",
       "generateButton": "Generate {title}",
       "coverLetterFooter": "Tip: tailor first for best results.",
-      "outreachFooter": "Tip: keep it short and personalized."
+      "outreachFooter": "Tip: keep it short and personalized.",
+      "feedbackFooter": "Tip: use gaps and questions to guide your edits before applying."
     },
     "regenerateDialog": {
       "title": "Regenerate {title}?",
@@ -449,7 +452,12 @@
       "editorPanel": "Editor Panel",
       "coverLetterEditor": "Cover Letter Editor",
       "outreachEditor": "Outreach Message Editor",
+      "feedbackAnalysis": "Resume Feedback",
       "jdMatchAnalysis": "JD Match Analysis"
+    },
+    "feedback": {
+      "aboutTitle": "About this report",
+      "aboutDescription": "AI-generated hiring and ATS feedback for this tailored resume versus the linked job description. Reports are not saved automatically. Copy useful sections before leaving the builder."
     },
     "alerts": {
       "saveNotAvailable": "Save is only available when editing an existing resume.",
@@ -466,7 +474,8 @@
       "coverLetterDownloadFailed": "Failed to download cover letter: {error}",
       "outreachSaveFailed": "Failed to save outreach message. Please try again.",
       "coverLetterGenerateFailed": "Failed to generate cover letter: {error}",
-      "outreachGenerateFailed": "Failed to generate outreach message: {error}"
+      "outreachGenerateFailed": "Failed to generate outreach message: {error}",
+      "feedbackGenerateFailed": "Failed to generate resume feedback: {error}"
     }
   },
   "enrichment": {
@@ -705,6 +714,10 @@
         "label": "Cold Outreach Message",
         "description": "Generate a networking message for LinkedIn or email"
       },
+      "resumeFeedback": {
+        "label": "Resume feedback prompt",
+        "description": "Optional override for on-demand tailored resume feedback in the builder."
+      },
       "customPromptLabel": "Custom prompt (optional)",
       "customPromptHelp": "Must include these placeholders (each in curly braces): job_description, resume_data, output_language. Leave blank to use the default prompt.",
       "customPromptResetButton": "Reset to default",
@@ -826,6 +839,12 @@
     "print": {
       "emptyContent": "No cover letter content available."
     }
+  },
+  "feedback": {
+    "title": "Resume Feedback",
+    "regenerate": "Regenerate",
+    "copyToClipboard": "Copy to Clipboard",
+    "copied": "Copied!"
   },
   "outreach": {
     "title": "Outreach Message",

@@ -438,6 +438,17 @@ export async function generateOutreachMessage(resumeId: string): Promise<string>
   return data.content;
 }
 
+/** Generates HR-style feedback on-demand for a tailored resume (not persisted). */
+export async function generateResumeFeedback(resumeId: string): Promise<string> {
+  const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/generate-feedback`, {});
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to generate resume feedback (status ${res.status}): ${text}`);
+  }
+  const data = await res.json();
+  return data.content;
+}
+
 /** Retries AI processing for a failed resume */
 export async function retryProcessing(resumeId: string): Promise<ResumeUploadResponse> {
   const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/retry-processing`, {});

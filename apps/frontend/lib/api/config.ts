@@ -330,13 +330,16 @@ export async function updatePromptConfig(update: PromptConfigUpdate): Promise<Pr
 export interface FeaturePrompts {
   cover_letter_prompt: string;
   outreach_message_prompt: string;
+  resume_feedback_prompt: string;
   cover_letter_default: string;
   outreach_message_default: string;
+  resume_feedback_default: string;
 }
 
 export interface FeaturePromptsUpdate {
   cover_letter_prompt?: string;
   outreach_message_prompt?: string;
+  resume_feedback_prompt?: string;
 }
 
 // 422 response shape when the user submits a prompt missing required
@@ -344,7 +347,7 @@ export interface FeaturePromptsUpdate {
 // users at exactly what's absent.
 export interface FeaturePromptsValidationError {
   code: 'missing_placeholders';
-  field: 'cover_letter_prompt' | 'outreach_message_prompt';
+  field: 'cover_letter_prompt' | 'outreach_message_prompt' | 'resume_feedback_prompt';
   missing: string[];
 }
 

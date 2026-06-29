@@ -175,6 +175,7 @@
       "resume": "CURRÍCULUM",
       "coverLetter": "CARTA",
       "outreach": "MENSAJE",
+      "feedback": "FEEDBACK",
       "jdMatch": "COINCIDENCIA JD"
     },
     "footer": {
@@ -194,7 +195,9 @@
       "outreachDescription": "Genera un mensaje de contacto breve para LinkedIn o email según tu currículum y la descripción del puesto.",
       "generateButton": "Generar {title}",
       "coverLetterFooter": "Consejo: adapta primero para mejores resultados.",
-      "outreachFooter": "Consejo: manténlo breve y personalizado."
+      "outreachFooter": "Consejo: manténlo breve y personalizado.",
+      "feedbackDescription": "Revisa este currículum personalizado frente a la descripción del puesto con feedback de RR. HH. y análisis ATS.",
+      "feedbackFooter": "Consejo: usa lagunas y preguntas para guiar tus ediciones antes de aplicar."
     },
     "regenerateDialog": {
       "title": "¿Regenerar {title}?",
@@ -449,7 +452,12 @@
       "editorPanel": "Panel de edición",
       "coverLetterEditor": "Editor de carta",
       "outreachEditor": "Editor de mensaje",
+      "feedbackAnalysis": "Feedback del currículum",
       "jdMatchAnalysis": "Análisis de coincidencia JD"
+    },
+    "feedback": {
+      "aboutTitle": "Sobre este informe",
+      "aboutDescription": "Feedback de contratación y ATS generado por IA para este currículum personalizado frente a la vacante vinculada. Los informes no se guardan automáticamente. Copia las secciones útiles antes de salir del editor."
     },
     "alerts": {
       "saveNotAvailable": "Guardar solo está disponible al editar un currículum existente.",
@@ -466,7 +474,8 @@
       "coverLetterDownloadFailed": "No se pudo descargar la carta de presentación: {error}",
       "outreachSaveFailed": "No se pudo guardar el mensaje de contacto. Por favor, inténtalo de nuevo.",
       "coverLetterGenerateFailed": "No se pudo generar la carta de presentación: {error}",
-      "outreachGenerateFailed": "No se pudo generar el mensaje de contacto: {error}"
+      "outreachGenerateFailed": "No se pudo generar el mensaje de contacto: {error}",
+      "feedbackGenerateFailed": "No se pudo generar el feedback del currículum: {error}"
     }
   },
   "enrichment": {
@@ -705,6 +714,10 @@
         "label": "Mensaje de acercamiento en frío",
         "description": "Genera un mensaje de networking para LinkedIn o correo electrónico"
       },
+      "resumeFeedback": {
+        "label": "Prompt de feedback del currículum",
+        "description": "Anulación opcional para el feedback bajo demanda de currículums personalizados en el editor."
+      },
       "customPromptLabel": "Prompt personalizado (opcional)",
       "customPromptHelp": "Debe incluir estos marcadores (cada uno entre llaves): job_description, resume_data, output_language. Déjalo en blanco para usar el prompt por defecto.",
       "customPromptResetButton": "Restablecer al predeterminado",
@@ -825,6 +838,12 @@
     "print": {
       "emptyContent": "No hay contenido de carta de presentación."
     },
+    "copied": "¡Copiado!"
+  },
+  "feedback": {
+    "title": "Feedback del currículum",
+    "regenerate": "Regenerar",
+    "copyToClipboard": "Copiar al Portapapeles",
     "copied": "¡Copiado!"
   },
   "outreach": {

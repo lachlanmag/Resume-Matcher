@@ -175,6 +175,7 @@
       "resume": "简历",
       "coverLetter": "求职信",
       "outreach": "联系邮件",
+      "feedback": "反馈",
       "jdMatch": "JD 匹配"
     },
     "footer": {
@@ -194,7 +195,9 @@
       "outreachDescription": "基于你的简历与职位描述生成用于 LinkedIn 或邮件的外联消息。",
       "generateButton": "生成 {title}",
       "coverLetterFooter": "提示：先完成简历定制效果更佳。",
-      "outreachFooter": "提示：尽量简短并加入个性化细节。"
+      "outreachFooter": "提示：尽量简短并加入个性化细节。",
+      "feedbackDescription": "对照职位描述审阅这份定制简历，获取 HR 风格反馈与 ATS 分析。",
+      "feedbackFooter": "提示：在投递前，根据缺口与问题指引你的修改。"
     },
     "regenerateDialog": {
       "title": "重新生成 {title}？",
@@ -449,7 +452,12 @@
       "editorPanel": "编辑面板",
       "coverLetterEditor": "求职信编辑",
       "outreachEditor": "联系邮件编辑",
+      "feedbackAnalysis": "简历反馈",
       "jdMatchAnalysis": "JD 匹配分析"
+    },
+    "feedback": {
+      "aboutTitle": "关于此报告",
+      "aboutDescription": "针对这份定制简历与关联职位描述生成的 AI 招聘与 ATS 反馈。报告不会自动保存。离开编辑器前请复制有用内容。"
     },
     "alerts": {
       "saveNotAvailable": "仅在编辑现有简历时可保存。",
@@ -466,7 +474,8 @@
       "coverLetterDownloadFailed": "下载求职信失败：{error}",
       "outreachSaveFailed": "保存联系邮件失败，请重试。",
       "coverLetterGenerateFailed": "生成求职信失败：{error}",
-      "outreachGenerateFailed": "生成联系邮件失败：{error}"
+      "outreachGenerateFailed": "生成联系邮件失败：{error}",
+      "feedbackGenerateFailed": "生成简历反馈失败：{error}"
     }
   },
   "enrichment": {
@@ -705,6 +714,10 @@
         "label": "冷启动外联消息",
         "description": "生成用于 LinkedIn 或邮件的社交/外联消息"
       },
+      "resumeFeedback": {
+        "label": "简历反馈提示词",
+        "description": "可选覆盖编辑器中按需生成的定制简历反馈。"
+      },
       "customPromptLabel": "自定义提示词（可选）",
       "customPromptHelp": "必须包含以下占位符（各自使用大括号括起来）：job_description、resume_data、output_language。留空则使用默认提示词。",
       "customPromptResetButton": "恢复默认",
@@ -826,6 +839,12 @@
     "print": {
       "emptyContent": "暂无求职信内容。"
     }
+  },
+  "feedback": {
+    "title": "简历反馈",
+    "regenerate": "重新生成",
+    "copyToClipboard": "复制到剪贴板",
+    "copied": "已复制！"
   },
   "outreach": {
     "title": "联系邮件",

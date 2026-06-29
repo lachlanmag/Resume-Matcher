@@ -1,4 +1,4 @@
-"""Cover letter, outreach message, and resume title generation service."""
+"""Cover letter, outreach message, resume title, and feedback generation."""
 
 import json
 import logging
@@ -10,6 +10,7 @@ from app.prompts.templates import (
     COVER_LETTER_PROMPT,
     GENERATE_TITLE_PROMPT,
     OUTREACH_MESSAGE_PROMPT,
+    TAILORED_RESUME_FEEDBACK_PROMPT,
 )
 from app.prompts import get_language_name
 
@@ -131,6 +132,57 @@ async def generate_outreach_message(
         prompt=prompt,
         system_prompt="You are a professional networking coach. Write genuine, engaging cold outreach messages.",
         max_tokens=1024,
+    )
+
+    return result.strip()
+
+
+async def generate_tailored_resume_feedback(
+    resume_data: dict[str, Any],
+    job_description: str,
+    language: str = "en",
+) -> str:
+    """Generate HR-style feedback for a tailored resume against a job description.
+
+    Args:
+        resume_data: Structured resume data (ResumeData format)
+        job_description: Target job description text
+        language: Output language code (en, es, zh, ja, pt)
+
+    Returns:
+        Markdown feedback report
+    """
+    output_language = get_language_name(language)
+
+    template, is_custom = _resolve_feature_prompt(
+        "resume_feedback_prompt", TAILORED_RESUME_FEEDBACK_PROMPT
+    )
+    try:
+        prompt = template.format(
+            job_description=job_description,
+            resume_data=json.dumps(resume_data, ensure_ascii=False),
+            output_language=output_language,
+        )
+    except (KeyError, IndexError, ValueError) as e:
+        if not is_custom:
+            raise
+        logging.warning(
+            "Custom resume feedback prompt failed to format (%s); falling back to default",
+            e,
+        )
+        prompt = TAILORED_RESUME_FEEDBACK_PROMPT.format(
+            job_description=job_description,
+            resume_data=json.dumps(resume_data, ensure_ascii=False),
+            output_language=output_language,
+        )
+
+    result = await complete(
+        prompt=prompt,
+        system_prompt=(
+            "You are an HR representative at a SaaS company. "
+            "Review tailored resumes objectively and provide actionable feedback."
+        ),
+        max_tokens=8192,
     )
 
     return result.strip()

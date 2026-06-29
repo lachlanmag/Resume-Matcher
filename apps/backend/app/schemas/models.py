@@ -751,6 +751,7 @@ class FeaturePromptsRequest(BaseModel):
 
     cover_letter_prompt: str | None = None
     outreach_message_prompt: str | None = None
+    resume_feedback_prompt: str | None = None
 
 
 class FeaturePromptsResponse(BaseModel):
@@ -763,8 +764,10 @@ class FeaturePromptsResponse(BaseModel):
 
     cover_letter_prompt: str
     outreach_message_prompt: str
+    resume_feedback_prompt: str
     cover_letter_default: str
     outreach_message_default: str
+    resume_feedback_default: str
 
 
 # API Key Management Models

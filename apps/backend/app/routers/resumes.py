@@ -74,6 +74,7 @@ from app.services.cover_letter import (
     generate_cover_letter,
     generate_outreach_message,
     generate_resume_title,
+    generate_tailored_resume_feedback,
 )
 from app.prompts import DEFAULT_IMPROVE_PROMPT_ID, IMPROVE_PROMPT_OPTIONS
 
@@ -2088,6 +2089,65 @@ async def generate_outreach_endpoint(resume_id: str) -> GenerateContentResponse:
     return GenerateContentResponse(
         content=outreach_content,
         message="Outreach message generated successfully",
+    )
+
+
+@router.post("/{resume_id}/generate-feedback", response_model=GenerateContentResponse)
+async def generate_feedback_endpoint(resume_id: str) -> GenerateContentResponse:
+    """Generate HR-style feedback on-demand for an existing tailored resume.
+
+    Returns markdown feedback without persisting it to the resume record.
+    Requires a tailored resume with linked job context.
+    """
+    resume = db.get_resume(resume_id)
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    if not resume.get("parent_id"):
+        raise HTTPException(
+            status_code=400,
+            detail="Feedback can only be generated for tailored resumes. "
+            "Please tailor this resume to a job description first.",
+        )
+
+    improvement = db.get_improvement_by_tailored_resume(resume_id)
+    if not improvement:
+        raise HTTPException(
+            status_code=400,
+            detail="No job context found for this resume. "
+            "The resume may have been created before job tracking was implemented.",
+        )
+
+    job = db.get_job(improvement["job_id"])
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail="The associated job description was not found.",
+        )
+
+    resume_data = resume.get("processed_data")
+    if not resume_data:
+        raise HTTPException(
+            status_code=400,
+            detail="Resume has no processed data. Please re-upload the resume.",
+        )
+
+    language = get_content_language()
+
+    try:
+        feedback_content = await generate_tailored_resume_feedback(
+            resume_data, job["content"], language
+        )
+    except Exception as e:
+        logger.error(f"Resume feedback generation failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate resume feedback. Please try again.",
+        )
+
+    return GenerateContentResponse(
+        content=feedback_content,
+        message="Resume feedback generated successfully",
     )
 
 

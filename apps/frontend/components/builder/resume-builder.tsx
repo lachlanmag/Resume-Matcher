@@ -10,6 +10,7 @@ import { CoverLetterEditor } from './cover-letter-editor';
 import { OutreachEditor } from './outreach-editor';
 import { CoverLetterPreview } from './cover-letter-preview';
 import { OutreachPreview } from './outreach-preview';
+import { FeedbackPreview } from './feedback-preview';
 import { GeneratePrompt } from './generate-prompt';
 import { Button } from '@/components/ui/button';
 import { RetroTabs } from '@/components/ui/retro-tabs';
@@ -38,6 +39,7 @@ import {
   updateOutreachMessage,
   generateCoverLetter,
   generateOutreachMessage,
+  generateResumeFeedback,
   fetchJobDescription,
 } from '@/lib/api/resume';
 import { JDComparisonView } from './jd-comparison-view';
@@ -57,7 +59,7 @@ import { useLanguage } from '@/lib/context/language-context';
 import { buildResumeFilename, downloadBlobAsFile, openUrlInNewTab } from '@/lib/utils/download';
 import type { RegenerateItemInput } from '@/lib/api/enrichment';
 
-type TabId = 'resume' | 'cover-letter' | 'outreach' | 'jd-match';
+type TabId = 'resume' | 'cover-letter' | 'outreach' | 'feedback' | 'jd-match';
 
 const STORAGE_KEY = 'resume_builder_draft';
 const SETTINGS_STORAGE_KEY = 'resume_builder_settings';
@@ -159,8 +161,11 @@ const ResumeBuilderContent = () => {
   const [tailorSettings, setTailorSettings] = useState<TailorLengthSettings | null>(null);
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
   const [isGeneratingOutreach, setIsGeneratingOutreach] = useState(false);
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+  const [resumeFeedback, setResumeFeedback] = useState('');
+  const [isFeedbackCopied, setIsFeedbackCopied] = useState(false);
   const [showRegenerateDialog, setShowRegenerateDialog] = useState<
-    'cover-letter' | 'outreach' | null
+    'cover-letter' | 'outreach' | 'feedback' | null
   >(null);
 
   // JD comparison state
@@ -651,6 +656,44 @@ const ResumeBuilderContent = () => {
     doGenerateOutreach();
   };
 
+  const doGenerateFeedback = async () => {
+    if (!resumeId) return;
+    setIsGeneratingFeedback(true);
+    setShowRegenerateDialog(null);
+    try {
+      const content = await generateResumeFeedback(resumeId);
+      setResumeFeedback(content);
+    } catch (error) {
+      console.error('Failed to generate resume feedback:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      showNotification(
+        t('builder.alerts.feedbackGenerateFailed', { error: errorMessage }),
+        'danger'
+      );
+    } finally {
+      setIsGeneratingFeedback(false);
+    }
+  };
+
+  const handleGenerateFeedback = () => {
+    if (!resumeId) return;
+    if (resumeFeedback) {
+      setShowRegenerateDialog('feedback');
+      return;
+    }
+    doGenerateFeedback();
+  };
+
+  const handleCopyFeedback = async () => {
+    try {
+      await navigator.clipboard.writeText(resumeFeedback);
+      setIsFeedbackCopied(true);
+      setTimeout(() => setIsFeedbackCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
+
   return (
     <div className="h-screen w-full bg-background flex justify-center items-center p-4 md:p-8">
       {/* Main Container */}
@@ -782,6 +825,38 @@ const ResumeBuilderContent = () => {
                   </Button>
                 </>
               )}
+
+              {/* Feedback tab actions */}
+              {activeTab === 'feedback' && resumeFeedback && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateFeedback}
+                    disabled={isGeneratingFeedback}
+                  >
+                    {isGeneratingFeedback ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    {t('feedback.regenerate')}
+                  </Button>
+                  <Button variant="success" size="sm" onClick={handleCopyFeedback}>
+                    {isFeedbackCopied ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        {t('feedback.copied')}
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        {t('feedback.copyToClipboard')}
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -797,6 +872,7 @@ const ResumeBuilderContent = () => {
                   {activeTab === 'resume' && t('builder.leftPanel.editorPanel')}
                   {activeTab === 'cover-letter' && t('builder.leftPanel.coverLetterEditor')}
                   {activeTab === 'outreach' && t('builder.leftPanel.outreachEditor')}
+                  {activeTab === 'feedback' && t('builder.leftPanel.feedbackAnalysis')}
                   {activeTab === 'jd-match' && t('builder.leftPanel.jdMatchAnalysis')}
                 </h2>
               </div>
@@ -863,6 +939,20 @@ const ResumeBuilderContent = () => {
                     isTailoredResume={isTailoredResume}
                   />
                 ))}
+
+              {/* Feedback info panel */}
+              {activeTab === 'feedback' && (
+                <div className="space-y-4">
+                  <div className="border-2 border-black bg-white p-4">
+                    <h3 className="font-mono text-sm font-bold uppercase mb-2">
+                      {t('builder.feedback.aboutTitle')}
+                    </h3>
+                    <p className="text-sm text-ink-soft leading-relaxed">
+                      {t('builder.feedback.aboutDescription')}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* JD Match Info Panel */}
               {activeTab === 'jd-match' && (
@@ -933,6 +1023,11 @@ const ResumeBuilderContent = () => {
                     disabled: !outreachMessage,
                   },
                   {
+                    id: 'feedback',
+                    label: t('builder.previewTabs.feedback'),
+                    disabled: !isTailoredResume || !jobDescription,
+                  },
+                  {
                     id: 'jd-match',
                     label: t('builder.previewTabs.jdMatch'),
                     disabled: !jobDescription,
@@ -987,6 +1082,19 @@ const ResumeBuilderContent = () => {
                   />
                 ))}
 
+              {/* Feedback Preview */}
+              {activeTab === 'feedback' &&
+                (resumeFeedback ? (
+                  <FeedbackPreview content={resumeFeedback} />
+                ) : (
+                  <GeneratePrompt
+                    type="feedback"
+                    isGenerating={isGeneratingFeedback}
+                    onGenerate={handleGenerateFeedback}
+                    isTailoredResume={isTailoredResume}
+                  />
+                ))}
+
               {/* JD Match Comparison */}
               {activeTab === 'jd-match' && jobDescription && (
                 <JDComparisonView jobDescription={jobDescription} resumeData={resumeData} />
@@ -1031,21 +1139,35 @@ const ResumeBuilderContent = () => {
         onOpenChange={(open) => !open && setShowRegenerateDialog(null)}
         title={t('builder.regenerateDialog.title', {
           title:
-            showRegenerateDialog === 'cover-letter' ? t('coverLetter.title') : t('outreach.title'),
+            showRegenerateDialog === 'cover-letter'
+              ? t('coverLetter.title')
+              : showRegenerateDialog === 'outreach'
+                ? t('outreach.title')
+                : t('feedback.title'),
         })}
         description={t('builder.regenerateDialog.description', {
           title:
-            showRegenerateDialog === 'cover-letter' ? t('coverLetter.title') : t('outreach.title'),
+            showRegenerateDialog === 'cover-letter'
+              ? t('coverLetter.title')
+              : showRegenerateDialog === 'outreach'
+                ? t('outreach.title')
+                : t('feedback.title'),
         })}
         confirmLabel={
           showRegenerateDialog === 'cover-letter'
             ? t('coverLetter.regenerate')
-            : t('outreach.regenerate')
+            : showRegenerateDialog === 'outreach'
+              ? t('outreach.regenerate')
+              : t('feedback.regenerate')
         }
         cancelLabel={t('common.cancel')}
         variant="warning"
         onConfirm={
-          showRegenerateDialog === 'cover-letter' ? doGenerateCoverLetter : doGenerateOutreach
+          showRegenerateDialog === 'cover-letter'
+            ? doGenerateCoverLetter
+            : showRegenerateDialog === 'outreach'
+              ? doGenerateOutreach
+              : doGenerateFeedback
         }
       />
 

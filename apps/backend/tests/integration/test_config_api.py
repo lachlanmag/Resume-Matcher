@@ -210,6 +210,7 @@ class TestFeaturePrompts:
         mock_load.return_value = {
             "cover_letter_prompt": "Custom cover prompt",
             "outreach_message_prompt": "",
+            "resume_feedback_prompt": "Custom feedback",
         }
         async with client:
             resp = await client.get("/api/v1/config/feature-prompts")
@@ -218,12 +219,16 @@ class TestFeaturePrompts:
         data = resp.json()
         assert data["cover_letter_prompt"] == "Custom cover prompt"
         assert data["outreach_message_prompt"] == ""
+        assert data["resume_feedback_prompt"] == "Custom feedback"
         assert "{job_description}" in data["cover_letter_default"]
         assert "{resume_data}" in data["cover_letter_default"]
         assert "{output_language}" in data["cover_letter_default"]
         assert "{job_description}" in data["outreach_message_default"]
         assert "{resume_data}" in data["outreach_message_default"]
         assert "{output_language}" in data["outreach_message_default"]
+        assert "{job_description}" in data["resume_feedback_default"]
+        assert "{resume_data}" in data["resume_feedback_default"]
+        assert "{output_language}" in data["resume_feedback_default"]
 
     @patch("app.routers.config._load_config")
     async def test_put_feature_prompts_rejects_missing_placeholders(self, mock_load, client):
@@ -237,6 +242,23 @@ class TestFeaturePrompts:
         assert resp.json()["detail"] == {
             "code": "missing_placeholders",
             "field": "cover_letter_prompt",
+            "missing": ["{resume_data}", "{output_language}"],
+        }
+
+    @patch("app.routers.config._load_config")
+    async def test_put_feature_prompts_rejects_missing_feedback_placeholders(
+        self, mock_load, client
+    ):
+        mock_load.return_value = {}
+        async with client:
+            resp = await client.put("/api/v1/config/feature-prompts", json={
+                "resume_feedback_prompt": "Review {job_description}",
+            })
+
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == {
+            "code": "missing_placeholders",
+            "field": "resume_feedback_prompt",
             "missing": ["{resume_data}", "{output_language}"],
         }
 

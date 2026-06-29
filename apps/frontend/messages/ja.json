@@ -175,6 +175,7 @@
       "resume": "履歴書",
       "coverLetter": "カバーレター",
       "outreach": "連絡メール",
+      "feedback": "フィードバック",
       "jdMatch": "JD一致"
     },
     "footer": {
@@ -194,7 +195,9 @@
       "outreachDescription": "履歴書と求人内容に基づいて、LinkedIn またはメール向けの外連絡メッセージを生成します。",
       "generateButton": "{title}を生成",
       "coverLetterFooter": "ヒント：先にカスタマイズすると精度が上がります。",
-      "outreachFooter": "ヒント：短く、個別性を入れましょう。"
+      "outreachFooter": "ヒント：短く、個別性を入れましょう。",
+      "feedbackDescription": "このカスタマイズ履歴書を求人内容と照らし合わせ、HR視点のフィードバックとATS分析を取得します。",
+      "feedbackFooter": "ヒント：応募前に、ギャップと質問を手がかりに編集してください。"
     },
     "regenerateDialog": {
       "title": "{title}を再生成しますか？",
@@ -449,7 +452,12 @@
       "editorPanel": "編集パネル",
       "coverLetterEditor": "カバーレター編集",
       "outreachEditor": "連絡メール編集",
+      "feedbackAnalysis": "履歴書フィードバック",
       "jdMatchAnalysis": "JD一致分析"
+    },
+    "feedback": {
+      "aboutTitle": "このレポートについて",
+      "aboutDescription": "リンクされた求人内容に対するカスタマイズ履歴書のAI採用・ATSフィードバックです。レポートは自動保存されません。ビルダーを離れる前に必要な部分をコピーしてください。"
     },
     "alerts": {
       "saveNotAvailable": "既存の履歴書を編集中のみ保存できます。",
@@ -466,7 +474,8 @@
       "coverLetterDownloadFailed": "カバーレターのダウンロードに失敗しました: {error}",
       "outreachSaveFailed": "連絡メールの保存に失敗しました。もう一度お試しください。",
       "coverLetterGenerateFailed": "カバーレターの生成に失敗しました: {error}",
-      "outreachGenerateFailed": "連絡メールの生成に失敗しました: {error}"
+      "outreachGenerateFailed": "連絡メールの生成に失敗しました: {error}",
+      "feedbackGenerateFailed": "履歴書フィードバックの生成に失敗しました: {error}"
     }
   },
   "enrichment": {
@@ -705,6 +714,10 @@
         "label": "コールドアウトリーチメッセージ",
         "description": "LinkedIn やメール向けのネットワーキングメッセージを生成します"
       },
+      "resumeFeedback": {
+        "label": "履歴書フィードバックプロンプト",
+        "description": "ビルダーでのオンデマンド履歴書フィードバック用の任意の上書き設定。"
+      },
       "customPromptLabel": "カスタムプロンプト（任意）",
       "customPromptHelp": "次のプレースホルダーを中括弧で囲んで含めてください：job_description, resume_data, output_language。空欄の場合は既定のプロンプトを使用します。",
       "customPromptResetButton": "デフォルトにリセット",
@@ -825,6 +838,12 @@
     "print": {
       "emptyContent": "カバーレターの内容がありません。"
     },
+    "copied": "コピーしました！"
+  },
+  "feedback": {
+    "title": "履歴書フィードバック",
+    "regenerate": "再生成",
+    "copyToClipboard": "クリップボードにコピー",
     "copied": "コピーしました！"
   },
   "outreach": {
