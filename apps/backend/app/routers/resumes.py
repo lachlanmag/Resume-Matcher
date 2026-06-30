@@ -2178,7 +2178,7 @@ async def generate_feedback_endpoint(resume_id: str) -> GenerateContentResponse:
     Returns markdown feedback without persisting it to the resume record.
     Requires a tailored resume with linked job context.
     """
-    resume = db.get_resume(resume_id)
+    resume = await db.get_resume(resume_id)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
@@ -2189,7 +2189,7 @@ async def generate_feedback_endpoint(resume_id: str) -> GenerateContentResponse:
             "Please tailor this resume to a job description first.",
         )
 
-    improvement = db.get_improvement_by_tailored_resume(resume_id)
+    improvement = await db.get_improvement_by_tailored_resume(resume_id)
     if not improvement:
         raise HTTPException(
             status_code=400,
@@ -2197,7 +2197,7 @@ async def generate_feedback_endpoint(resume_id: str) -> GenerateContentResponse:
             "The resume may have been created before job tracking was implemented.",
         )
 
-    job = db.get_job(improvement["job_id"])
+    job = await db.get_job(improvement["job_id"])
     if not job:
         raise HTTPException(
             status_code=404,
