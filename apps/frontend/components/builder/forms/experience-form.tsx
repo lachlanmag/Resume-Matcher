@@ -171,7 +171,7 @@ export const ExperienceForm: React.FC<ExperienceFormProps> = ({ data, onChange }
           </Button>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext id="experience-entries" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
             items={data.map((item) => item.id)}
             strategy={verticalListSortingStrategy}
