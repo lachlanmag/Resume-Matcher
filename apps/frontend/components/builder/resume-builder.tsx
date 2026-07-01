@@ -54,10 +54,7 @@ import { useElapsedSeconds } from '@/hooks/use-elapsed-seconds';
 import { useTranslations } from '@/lib/i18n';
 import { type TemplateSettings, DEFAULT_TEMPLATE_SETTINGS } from '@/lib/types/template-settings';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
-import {
-  getExperienceRoleTitles,
-  withNormalizedWorkExperience,
-} from '@/lib/utils/work-experience';
+import { getExperienceRoleTitles, withNormalizedWorkExperience } from '@/lib/utils/work-experience';
 import { useLanguage } from '@/lib/context/language-context';
 import { buildResumeFilename, downloadBlobAsFile, openUrlInNewTab } from '@/lib/utils/download';
 import type { RegenerateItemInput } from '@/lib/api/enrichment';
@@ -165,9 +162,9 @@ const ResumeBuilderContent = () => {
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
   const [isGeneratingOutreach, setIsGeneratingOutreach] = useState(false);
   const [enableResumeFeedback, setEnableResumeFeedback] = useState(false);
-  const [feedbackGenStatus, setFeedbackGenStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(
-    'idle'
-  );
+  const [feedbackGenStatus, setFeedbackGenStatus] = useState<
+    'idle' | 'loading' | 'ready' | 'error'
+  >('idle');
   const [feedbackGenError, setFeedbackGenError] = useState<string | null>(null);
   const [resumeFeedback, setResumeFeedback] = useState<ResumeFeedback | null>(null);
   const feedbackGenerationRef = useRef<{ resumeId: string | null; inFlight: boolean }>({
@@ -175,9 +172,9 @@ const ResumeBuilderContent = () => {
     inFlight: false,
   });
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [showRegenerateDialog, setShowRegenerateDialog] = useState<'cover-letter' | 'outreach' | null>(
-    null
-  );
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState<
+    'cover-letter' | 'outreach' | null
+  >(null);
 
   // JD comparison state
   const [jobDescription, setJobDescription] = useState<string | null>(null);
@@ -197,9 +194,7 @@ const ResumeBuilderContent = () => {
         // Update resume title for downloads
         setResumeTitle(data.title ?? null);
         if (data.processed_resume) {
-          const normalized = withNormalizedWorkExperience(
-            data.processed_resume as ResumeData
-          );
+          const normalized = withNormalizedWorkExperience(data.processed_resume as ResumeData);
           setResumeData(normalized);
           setLastSavedData(normalized);
           setHasUnsavedChanges(false);
@@ -352,9 +347,7 @@ const ResumeBuilderContent = () => {
           }
           // Prefer processed_resume if available
           if (data.processed_resume) {
-            const normalized = withNormalizedWorkExperience(
-              data.processed_resume as ResumeData
-            );
+            const normalized = withNormalizedWorkExperience(data.processed_resume as ResumeData);
             setResumeData(normalized);
             setLastSavedData(normalized);
             setLoadingState('loaded');
@@ -507,7 +500,10 @@ const ResumeBuilderContent = () => {
         console.error('Failed to generate resume feedback:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         setFeedbackGenError(errorMessage);
-        showNotification(t('builder.alerts.feedbackGenerateFailed', { error: errorMessage }), 'danger');
+        showNotification(
+          t('builder.alerts.feedbackGenerateFailed', { error: errorMessage }),
+          'danger'
+        );
         setFeedbackGenStatus('error');
       } finally {
         if (feedbackGenerationRef.current.resumeId === resumeId) {
@@ -832,17 +828,15 @@ const ResumeBuilderContent = () => {
                     {t('builder.regenerate.buttonLabel')}
                   </Button>
                   {isTailoredResume && enableResumeFeedback && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowFeedbackModal(true)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => setShowFeedbackModal(true)}>
                       {feedbackGenStatus === 'loading' ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
                           {t('common.processing')}
                           {feedbackGenElapsed > 0 && (
-                            <span className="font-mono text-xs opacity-70">{feedbackGenElapsed}s</span>
+                            <span className="font-mono text-xs opacity-70">
+                              {feedbackGenElapsed}s
+                            </span>
                           )}
                         </>
                       ) : (
@@ -937,7 +931,6 @@ const ResumeBuilderContent = () => {
                   </Button>
                 </>
               )}
-
             </div>
           </div>
         </div>
@@ -961,25 +954,22 @@ const ResumeBuilderContent = () => {
               {activeTab === 'resume' && (
                 <>
                   <FormattingControls settings={templateSettings} onChange={handleSettingsChange} />
-                  {isTailoredResume &&
-                    resumeId &&
-                    parentResumeId &&
-                    tailorJobId && (
-                      <TailorSettingsPanel
-                        resumeId={resumeId}
-                        masterResumeId={parentResumeId}
-                        jobId={tailorJobId}
-                        initialSettings={tailorSettings ?? DEFAULT_TAILOR_LENGTH_SETTINGS}
-                        onResumeUpdated={(data) => {
-                          const normalized = withNormalizedWorkExperience(data);
-                          setResumeData(normalized);
-                          setLastSavedData(normalized);
-                          setHasUnsavedChanges(false);
-                          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-                        }}
-                        onError={(msg) => showNotification(msg, 'warning')}
-                      />
-                    )}
+                  {isTailoredResume && resumeId && parentResumeId && tailorJobId && (
+                    <TailorSettingsPanel
+                      resumeId={resumeId}
+                      masterResumeId={parentResumeId}
+                      jobId={tailorJobId}
+                      initialSettings={tailorSettings ?? DEFAULT_TAILOR_LENGTH_SETTINGS}
+                      onResumeUpdated={(data) => {
+                        const normalized = withNormalizedWorkExperience(data);
+                        setResumeData(normalized);
+                        setLastSavedData(normalized);
+                        setHasUnsavedChanges(false);
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+                      }}
+                      onError={(msg) => showNotification(msg, 'warning')}
+                    />
+                  )}
                   <ResumeForm resumeData={resumeData} onUpdate={handleUpdate} />
                 </>
               )}
@@ -1190,6 +1180,7 @@ const ResumeBuilderContent = () => {
           onClose={() => setShowFeedbackModal(false)}
           onComplete={reloadResumeAfterFeedback}
           initialFeedback={resumeFeedback}
+          onFeedbackUpdated={setResumeFeedback}
           backgroundGenStatus={feedbackGenStatus}
           backgroundGenError={feedbackGenError}
           onRequestGeneration={startFeedbackGeneration}
@@ -1202,15 +1193,11 @@ const ResumeBuilderContent = () => {
         onOpenChange={(open) => !open && setShowRegenerateDialog(null)}
         title={t('builder.regenerateDialog.title', {
           title:
-            showRegenerateDialog === 'cover-letter'
-              ? t('coverLetter.title')
-              : t('outreach.title'),
+            showRegenerateDialog === 'cover-letter' ? t('coverLetter.title') : t('outreach.title'),
         })}
         description={t('builder.regenerateDialog.description', {
           title:
-            showRegenerateDialog === 'cover-letter'
-              ? t('coverLetter.title')
-              : t('outreach.title'),
+            showRegenerateDialog === 'cover-letter' ? t('coverLetter.title') : t('outreach.title'),
         })}
         confirmLabel={
           showRegenerateDialog === 'cover-letter'
@@ -1220,9 +1207,7 @@ const ResumeBuilderContent = () => {
         cancelLabel={t('common.cancel')}
         variant="warning"
         onConfirm={
-          showRegenerateDialog === 'cover-letter'
-            ? doGenerateCoverLetter
-            : doGenerateOutreach
+          showRegenerateDialog === 'cover-letter' ? doGenerateCoverLetter : doGenerateOutreach
         }
       />
 

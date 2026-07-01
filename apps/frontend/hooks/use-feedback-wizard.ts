@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useReducer } from 'react';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import {
   applyFeedback,
   generateFeedback,
@@ -34,6 +34,7 @@ export interface FeedbackWizardState {
 
 type FeedbackWizardAction =
   | { type: 'LOAD_FEEDBACK'; feedback: ResumeFeedback; answers: Record<string, string> }
+  | { type: 'SYNC_PERSISTED_ANSWERS'; feedback: ResumeFeedback; answers: Record<string, string> }
   | { type: 'START_GENERATE' }
   | { type: 'START_APPLY_PREVIEW' }
   | { type: 'START_APPLY' }
@@ -42,6 +43,7 @@ type FeedbackWizardAction =
   | { type: 'PREV_QUESTION' }
   | { type: 'NEXT_QUESTION' }
   | { type: 'GO_REVIEW' }
+  | { type: 'GO_SUMMARY' }
   | { type: 'SET_PREVIEW'; preview: FeedbackApplyPreview }
   | { type: 'SET_COMPLETE' }
   | { type: 'SET_ERROR'; error: string }
@@ -56,6 +58,26 @@ const initialState: FeedbackWizardState = {
   preview: null,
   error: null,
 };
+
+const ANSWER_PERSIST_DEBOUNCE_MS = 600;
+
+function answersMatchPersisted(
+  answers: Record<string, string>,
+  feedback: ResumeFeedback | null
+): boolean {
+  if (!feedback) {
+    return true;
+  }
+
+  for (const question of feedback.questions) {
+    const questionId = question.question_id;
+    if ((answers[questionId] ?? '') !== (feedback.answers[questionId] ?? '')) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 function hydrateAnswers(feedback: ResumeFeedback): Record<string, string> {
   const hydrated: Record<string, string> = {};
@@ -87,6 +109,13 @@ function feedbackWizardReducer(
         returnToReview: false,
         preview: null,
         error: null,
+      };
+
+    case 'SYNC_PERSISTED_ANSWERS':
+      return {
+        ...state,
+        feedback: action.feedback,
+        answers: action.answers,
       };
 
     case 'START_GENERATE':
@@ -171,6 +200,14 @@ function feedbackWizardReducer(
         error: null,
       };
 
+    case 'GO_SUMMARY':
+      return {
+        ...state,
+        step: 'summary',
+        returnToReview: false,
+        error: null,
+      };
+
     case 'SET_PREVIEW':
       return {
         ...state,
@@ -219,6 +256,7 @@ export interface UseFeedbackWizardReturn {
   startGenerate: (replace?: boolean) => Promise<void>;
   continueFromSummary: () => void;
   setAnswer: (questionId: string, answer: string) => void;
+  flushAnswers: () => Promise<void>;
   nextQuestion: () => Promise<void>;
   prevQuestion: () => void;
   editFromReview: (index: number) => void;
@@ -237,6 +275,7 @@ export interface UseFeedbackWizardReturn {
 
 export interface UseFeedbackWizardOptions {
   onGenerated?: (feedback: ResumeFeedback) => void;
+  onAnswersPersisted?: (feedback: ResumeFeedback) => void;
 }
 
 export function useFeedbackWizard(
@@ -244,14 +283,91 @@ export function useFeedbackWizard(
   options: UseFeedbackWizardOptions = {}
 ): UseFeedbackWizardReturn {
   const [state, dispatch] = useReducer(feedbackWizardReducer, initialState);
-  const { onGenerated } = options;
+  const { onGenerated, onAnswersPersisted } = options;
+  const answersRef = useRef(state.answers);
+  const feedbackRef = useRef(state.feedback);
+  const persistDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persistInFlightRef = useRef<Promise<void> | null>(null);
 
-  const persistAnswers = useCallback(
-    async (answers: Record<string, string>) => {
-      await patchFeedbackAnswers(resumeId, answers);
-    },
-    [resumeId]
-  );
+  useEffect(() => {
+    answersRef.current = state.answers;
+  }, [state.answers]);
+
+  useEffect(() => {
+    feedbackRef.current = state.feedback;
+  }, [state.feedback]);
+
+  useEffect(() => {
+    return () => {
+      if (persistDebounceRef.current) {
+        clearTimeout(persistDebounceRef.current);
+      }
+    };
+  }, []);
+
+  const persistAnswersIfDirty = useCallback(async (): Promise<ResumeFeedback | null> => {
+    if (persistDebounceRef.current) {
+      clearTimeout(persistDebounceRef.current);
+      persistDebounceRef.current = null;
+    }
+
+    const feedback = feedbackRef.current;
+    if (!feedback) {
+      return null;
+    }
+
+    const answers = answersRef.current;
+    if (answersMatchPersisted(answers, feedback)) {
+      return null;
+    }
+
+    if (persistInFlightRef.current) {
+      await persistInFlightRef.current;
+      if (answersMatchPersisted(answersRef.current, feedbackRef.current)) {
+        return null;
+      }
+    }
+
+    let persistedFeedback: ResumeFeedback | null = null;
+
+    const run = async () => {
+      const updated = await patchFeedbackAnswers(resumeId, answersRef.current);
+      persistedFeedback = updated;
+      dispatch({
+        type: 'SYNC_PERSISTED_ANSWERS',
+        feedback: updated,
+        answers: hydrateAnswers(updated),
+      });
+      onAnswersPersisted?.(updated);
+    };
+
+    persistInFlightRef.current = run();
+    try {
+      await persistInFlightRef.current;
+      return persistedFeedback;
+    } finally {
+      persistInFlightRef.current = null;
+    }
+  }, [resumeId, onAnswersPersisted]);
+
+  const flushAnswers = useCallback(async () => {
+    try {
+      await persistAnswersIfDirty();
+    } catch {
+      // Keep local draft if background save fails; explicit save paths surface errors.
+    }
+  }, [persistAnswersIfDirty]);
+
+  const schedulePersistAnswers = useCallback(() => {
+    if (persistDebounceRef.current) {
+      clearTimeout(persistDebounceRef.current);
+    }
+
+    persistDebounceRef.current = setTimeout(() => {
+      persistDebounceRef.current = null;
+      void flushAnswers();
+    }, ANSWER_PERSIST_DEBOUNCE_MS);
+  }, [flushAnswers]);
 
   const loadFeedback = useCallback((feedback: ResumeFeedback | null) => {
     if (!feedback) {
@@ -318,17 +434,18 @@ export function useFeedbackWizard(
     });
   }, [state.feedback, state.answers]);
 
-  const setAnswer = useCallback((questionId: string, answer: string) => {
-    dispatch({ type: 'SET_ANSWER', questionId, answer });
-  }, []);
+  const setAnswer = useCallback(
+    (questionId: string, answer: string) => {
+      dispatch({ type: 'SET_ANSWER', questionId, answer });
+      schedulePersistAnswers();
+    },
+    [schedulePersistAnswers]
+  );
 
   const nextQuestion = useCallback(async () => {
-    const answersToPersist = state.answers;
-    void persistAnswers(answersToPersist).catch(() => {
-      // Keep question flow responsive even if incremental save fails.
-    });
+    await flushAnswers();
     dispatch({ type: 'NEXT_QUESTION' });
-  }, [state.answers, persistAnswers]);
+  }, [flushAnswers]);
 
   const prevQuestion = useCallback(() => {
     dispatch({ type: 'PREV_QUESTION' });
@@ -340,12 +457,7 @@ export function useFeedbackWizard(
 
   const saveAndReturnToReview = useCallback(async () => {
     try {
-      const feedback = await patchFeedbackAnswers(resumeId, state.answers);
-      dispatch({
-        type: 'LOAD_FEEDBACK',
-        feedback,
-        answers: hydrateAnswers(feedback),
-      });
+      await persistAnswersIfDirty();
       dispatch({ type: 'GO_REVIEW' });
     } catch (error) {
       dispatch({
@@ -353,15 +465,21 @@ export function useFeedbackWizard(
         error: error instanceof Error ? error.message : 'Failed to save feedback answers',
       });
     }
-  }, [resumeId, state.answers]);
+  }, [persistAnswersIfDirty]);
 
   const backFromQuestion = useCallback(() => {
+    void flushAnswers();
+
     if (state.returnToReview) {
       dispatch({ type: 'GO_REVIEW' });
       return;
     }
+    if (state.currentQuestionIndex === 0) {
+      dispatch({ type: 'GO_SUMMARY' });
+      return;
+    }
     dispatch({ type: 'PREV_QUESTION' });
-  }, [state.returnToReview]);
+  }, [flushAnswers, state.returnToReview, state.currentQuestionIndex]);
 
   const backFromReview = useCallback(() => {
     if (!state.feedback || state.feedback.questions.length === 0) {
@@ -380,6 +498,16 @@ export function useFeedbackWizard(
   }, []);
 
   const startApplyPreview = useCallback(async () => {
+    try {
+      await persistAnswersIfDirty();
+    } catch (error) {
+      dispatch({
+        type: 'SET_ERROR',
+        error: error instanceof Error ? error.message : 'Failed to save feedback answers',
+      });
+      return;
+    }
+
     dispatch({ type: 'START_APPLY_PREVIEW' });
 
     try {
@@ -391,7 +519,7 @@ export function useFeedbackWizard(
         error: error instanceof Error ? error.message : 'Failed to generate apply preview',
       });
     }
-  }, [resumeId]);
+  }, [resumeId, persistAnswersIfDirty]);
 
   const applyAccepted = useCallback(async () => {
     if (!state.preview) {
@@ -445,7 +573,9 @@ export function useFeedbackWizard(
   const totalQuestions = state.feedback?.questions.length ?? 0;
   const isFirstQuestion = state.currentQuestionIndex === 0;
   const isLastQuestion = totalQuestions > 0 && state.currentQuestionIndex === totalQuestions - 1;
-  const answeredCount = Object.values(state.answers).filter((answer) => answer.trim() !== '').length;
+  const answeredCount = Object.values(state.answers).filter(
+    (answer) => answer.trim() !== ''
+  ).length;
 
   return {
     state,
@@ -458,6 +588,7 @@ export function useFeedbackWizard(
     startGenerate,
     continueFromSummary,
     setAnswer,
+    flushAnswers,
     nextQuestion,
     prevQuestion,
     editFromReview,

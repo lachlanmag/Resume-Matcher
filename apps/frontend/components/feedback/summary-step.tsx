@@ -1,5 +1,6 @@
 'use client';
 
+import { MarkdownContent } from '@/components/common/markdown-content';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/lib/i18n';
 
@@ -10,7 +11,12 @@ interface SummaryStepProps {
   onDone: () => void;
 }
 
-export function SummaryStep({ reportMarkdown, questionCount, onContinue, onDone }: SummaryStepProps) {
+export function SummaryStep({
+  reportMarkdown,
+  questionCount,
+  onContinue,
+  onDone,
+}: SummaryStepProps) {
   const { t } = useTranslations();
   const hasQuestions = questionCount > 0;
 
@@ -31,8 +37,12 @@ export function SummaryStep({ reportMarkdown, questionCount, onContinue, onDone 
       </div>
 
       <div className="flex-1 overflow-hidden border-2 border-black bg-white p-4 shadow-sw-sm">
-        <div className="h-full overflow-y-auto whitespace-pre-wrap font-mono text-sm leading-relaxed text-ink-soft">
-          {reportMarkdown || t('feedback.summary.empty')}
+        <div className="h-full overflow-auto">
+          {reportMarkdown ? (
+            <MarkdownContent markdown={reportMarkdown} />
+          ) : (
+            <p className="text-sm italic text-steel-grey">{t('feedback.summary.empty')}</p>
+          )}
         </div>
       </div>
 

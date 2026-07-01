@@ -12,7 +12,6 @@ interface FeedbackQuestionStepProps {
   answer: string;
   questionNumber: number;
   totalQuestions: number;
-  isFirst: boolean;
   returnToReview: boolean;
   onAnswer: (answer: string) => void;
   onBack: () => void;
@@ -30,7 +29,6 @@ export function FeedbackQuestionStep({
   answer,
   questionNumber,
   totalQuestions,
-  isFirst,
   returnToReview,
   onAnswer,
   onBack,
@@ -119,7 +117,7 @@ export function FeedbackQuestionStep({
       </div>
 
       <div className="mt-6 flex items-center justify-between border-t-2 border-black pt-6">
-        <Button variant="outline" onClick={onBack} disabled={isFirst && !returnToReview} className="gap-2">
+        <Button variant="outline" onClick={onBack} className="gap-2">
           <ChevronLeft className="h-4 w-4" />
           {t('common.back')}
         </Button>

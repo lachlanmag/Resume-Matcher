@@ -26,6 +26,7 @@ interface FeedbackModalProps {
   onClose: () => void;
   onComplete: () => void;
   initialFeedback?: ResumeFeedback | null;
+  onFeedbackUpdated?: (feedback: ResumeFeedback) => void;
   backgroundGenStatus?: 'idle' | 'loading' | 'ready' | 'error';
   backgroundGenError?: string | null;
   onRequestGeneration?: (replace: boolean) => void;
@@ -62,6 +63,7 @@ export function FeedbackModal({
   onClose,
   onComplete,
   initialFeedback = null,
+  onFeedbackUpdated,
   backgroundGenStatus = 'idle',
   backgroundGenError = null,
   onRequestGeneration,
@@ -74,7 +76,6 @@ export function FeedbackModal({
   const {
     state,
     currentQuestion,
-    isFirstQuestion,
     totalQuestions,
     loadFeedback,
     continueFromSummary,
@@ -88,9 +89,10 @@ export function FeedbackModal({
     startApplyPreview,
     applyAccepted,
     reset,
+    flushAnswers,
     showGeneratingStep,
     showErrorStep,
-  } = useFeedbackWizard(resumeId);
+  } = useFeedbackWizard(resumeId, { onAnswersPersisted: onFeedbackUpdated });
 
   const previewItems = useMemo(() => mapPreviewToRegeneratedItems(state.preview), [state.preview]);
 
@@ -186,7 +188,11 @@ export function FeedbackModal({
       return;
     }
 
-    if (state.step === 'generating-apply' || state.step === 'applying' || state.step === 'preview') {
+    if (
+      state.step === 'generating-apply' ||
+      state.step === 'applying' ||
+      state.step === 'preview'
+    ) {
       return;
     }
 
@@ -201,8 +207,10 @@ export function FeedbackModal({
   const feedbackGenElapsed = useElapsedSeconds(isBackgroundGenerating);
 
   const handleClose = () => {
-    reset();
-    onClose();
+    void flushAnswers().finally(() => {
+      reset();
+      onClose();
+    });
   };
 
   const handleDone = () => {
@@ -321,47 +329,47 @@ export function FeedbackModal({
           )}
 
           <div className="flex items-center justify-between border-b-2 border-black bg-paper-tint px-6 py-4">
-              <div className="flex items-center gap-3">
-                <MessageSquare className="h-5 w-5" />
-                <h1 className="font-serif text-xl font-bold uppercase tracking-tight">
-                  {t('feedback.modal.title')}
-                </h1>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {!isLocked && !isRegenerateConfirmOpen && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    disabled={isBackgroundGenerating}
-                    onClick={() => setIsRegenerateConfirmOpen(true)}
-                  >
-                    {isBackgroundGenerating ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4" />
-                    )}
-                    {t('feedback.regenerate')}
-                    {isBackgroundGenerating && feedbackGenElapsed > 0 && (
-                      <span className="font-mono text-xs opacity-70">{feedbackGenElapsed}s</span>
-                    )}
-                  </Button>
-                )}
-                {(!isLocked || isBackgroundGenerating) && !isRegenerateConfirmOpen && (
-                  <button type="button" onClick={handleClose} className="p-1 hover:bg-background">
-                    <XIcon className="h-5 w-5" />
-                    <span className="sr-only">{t('common.close')}</span>
-                  </button>
-                )}
-              </div>
+            <div className="flex items-center gap-3">
+              <MessageSquare className="h-5 w-5" />
+              <h1 className="font-serif text-xl font-bold uppercase tracking-tight">
+                {t('feedback.modal.title')}
+              </h1>
             </div>
 
-            <div className="flex-1 overflow-hidden p-6">{renderStep()}</div>
+            <div className="flex items-center gap-2">
+              {!isLocked && !isRegenerateConfirmOpen && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={isBackgroundGenerating}
+                  onClick={() => setIsRegenerateConfirmOpen(true)}
+                >
+                  {isBackgroundGenerating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  {t('feedback.regenerate')}
+                  {isBackgroundGenerating && feedbackGenElapsed > 0 && (
+                    <span className="font-mono text-xs opacity-70">{feedbackGenElapsed}s</span>
+                  )}
+                </Button>
+              )}
+              {(!isLocked || isBackgroundGenerating) && !isRegenerateConfirmOpen && (
+                <button type="button" onClick={handleClose} className="p-1 hover:bg-background">
+                  <XIcon className="h-5 w-5" />
+                  <span className="sr-only">{t('common.close')}</span>
+                </button>
+              )}
+            </div>
           </div>
+
+          <div className="flex-1 overflow-hidden p-6">{renderStep()}</div>
         </div>
-      </dialog>
+      </div>
+    </dialog>
   );
 
   function renderStep() {
@@ -390,7 +398,6 @@ export function FeedbackModal({
             answer={state.answers[currentQuestion.question_id] || ''}
             questionNumber={state.currentQuestionIndex + 1}
             totalQuestions={totalQuestions}
-            isFirst={isFirstQuestion}
             returnToReview={state.returnToReview}
             onAnswer={(answer) => setAnswer(currentQuestion.question_id, answer)}
             onBack={backFromQuestion}
@@ -440,7 +447,12 @@ export function FeedbackModal({
         return <ApplyingStep />;
 
       case 'complete':
-        return <CompleteStep onClose={handleDone} updatedCount={state.preview?.diff_summary.total_changes} />;
+        return (
+          <CompleteStep
+            onClose={handleDone}
+            updatedCount={state.preview?.diff_summary.total_changes}
+          />
+        );
 
       case 'error':
         return (
