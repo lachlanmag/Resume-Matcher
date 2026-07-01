@@ -28,15 +28,31 @@ def _legacy_path() -> Path:
     return settings.db_path  # data/database.json
 
 
+def _migrated_legacy_path() -> Path:
+    legacy = _legacy_path()
+    return legacy.with_suffix(legacy.suffix + ".migrated")
+
+
+def _resolve_legacy_import_path() -> Path | None:
+    """Return the TinyDB file to import from, preferring the live legacy file."""
+    legacy = _legacy_path()
+    migrated = _migrated_legacy_path()
+    if legacy.exists():
+        return legacy
+    if migrated.exists():
+        return migrated
+    return None
+
+
 async def migrate(database: Database | None = None) -> dict[str, Any]:
     """Import the legacy TinyDB file into SQLite if needed.
 
     Returns a summary dict: ``{"status": ..., counts...}``.
     """
     database = database or db
-    legacy = _legacy_path()
+    legacy = _resolve_legacy_import_path()
 
-    if not legacy.exists():
+    if legacy is None:
         return {"status": "no_legacy_file"}
 
     stats = await database.get_stats()
@@ -113,13 +129,15 @@ async def migrate(database: Database | None = None) -> dict[str, Any]:
             )
         await session.commit()
 
-    # Rename the legacy file so a restart doesn't re-trigger and we keep a
-    # rollback artifact.
-    migrated = legacy.with_suffix(legacy.suffix + ".migrated")
-    try:
-        legacy.rename(migrated)
-    except OSError as e:
-        logger.warning("Could not rename legacy DB file: %s", e)
+    # Rename the live legacy file so a restart doesn't re-trigger and we keep a
+    # rollback artifact. Imports from an existing ``.migrated`` file are left in
+    # place so the artifact remains available for recovery.
+    if legacy == _legacy_path():
+        migrated = _migrated_legacy_path()
+        try:
+            legacy.rename(migrated)
+        except OSError as e:
+            logger.warning("Could not rename legacy DB file: %s", e)
 
     summary = {
         "status": "migrated",

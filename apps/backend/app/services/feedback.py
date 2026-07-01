@@ -7,6 +7,8 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
+from pydantic import ValidationError
+
 from app.llm import complete_json
 from app.prompts import (
     APPLY_FEEDBACK_PROMPT,
@@ -14,6 +16,7 @@ from app.prompts import (
     get_language_name,
 )
 from app.prompts.templates import TAILORED_RESUME_FEEDBACK_PROMPT
+from app.schemas.feedback import ResumeFeedback
 from app.schemas.models import ResumeChange
 from app.services.cover_letter import _resolve_feature_prompt
 from app.services.improver import apply_diffs, calculate_resume_diff
@@ -95,13 +98,22 @@ async def generate_structured_feedback(
 
     _validate_report_headings(report_markdown)
 
-    return {
+    payload = {
         "report_markdown": report_markdown,
         "questions": questions,
         "answers": {},
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "applied_at": None,
     }
+    try:
+        validated = ResumeFeedback.model_validate(payload)
+    except ValidationError as e:
+        logger.error("Feedback generation returned invalid questions: %s", e)
+        raise ValueError(
+            "Invalid feedback output: malformed 'questions'."
+        ) from e
+
+    return validated.model_dump()
 
 
 async def build_apply_preview(

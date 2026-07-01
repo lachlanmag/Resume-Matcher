@@ -1,8 +1,48 @@
 """Unit tests for feedback service helpers."""
 
 import pytest
+from unittest.mock import AsyncMock, patch
 
-from app.services.feedback import _format_answers_block, _validate_report_headings
+from app.services.feedback import (
+    _format_answers_block,
+    _validate_report_headings,
+    generate_structured_feedback,
+)
+
+VALID_REPORT_MARKDOWN = """
+## Candidate summary
+Strong backend fit.
+
+## Strengths
+- Python experience
+
+## Concerns or gaps
+- Limited cloud exposure
+
+## Tailoring quality
+Well targeted.
+
+## Role fit score
+8/10
+
+## ATS assessment
+Good keyword coverage.
+
+## ATS optimization recommendations
+Add more metrics.
+
+## Hiring recommendation
+Proceed to interview.
+
+## Interview focus areas
+System design.
+
+## Resume improvement suggestions
+Quantify impact.
+
+## Gaps and questions for the candidate
+See structured questions.
+"""
 
 
 class TestValidateReportHeadings:
@@ -51,3 +91,47 @@ class TestFormatAnswersBlock:
         assert (
             _format_answers_block([], {}) == "No clarification questions were provided."
         )
+
+
+class TestGenerateStructuredFeedback:
+    @patch("app.services.feedback.complete_json", new_callable=AsyncMock)
+    async def test_rejects_invalid_questions(self, mock_complete_json) -> None:
+        mock_complete_json.return_value = {
+            "report_markdown": VALID_REPORT_MARKDOWN,
+            "questions": [
+                {
+                    "question_id": "q1",
+                    "category": "not-a-valid-category",
+                    "prompt": "What tools did you use?",
+                }
+            ],
+        }
+
+        with pytest.raises(ValueError, match="malformed 'questions'"):
+            await generate_structured_feedback(
+                resume_data={"summary": "Backend engineer"},
+                job_description="Python role",
+            )
+
+    @patch("app.services.feedback.complete_json", new_callable=AsyncMock)
+    async def test_accepts_valid_questions(self, mock_complete_json) -> None:
+        mock_complete_json.return_value = {
+            "report_markdown": VALID_REPORT_MARKDOWN,
+            "questions": [
+                {
+                    "question_id": "q1",
+                    "category": "gap",
+                    "prompt": "What was the scope?",
+                    "context": "",
+                }
+            ],
+        }
+
+        result = await generate_structured_feedback(
+            resume_data={"summary": "Backend engineer"},
+            job_description="Python role",
+        )
+
+        assert result["questions"][0]["question_id"] == "q1"
+        assert result["answers"] == {}
+        assert result["applied_at"] is None

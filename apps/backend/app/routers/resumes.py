@@ -2231,7 +2231,7 @@ async def feedback_generate_endpoint(
 ) -> dict[str, Any]:
     """Generate and persist structured feedback for a tailored resume."""
     feature_config = _load_config()
-    if not feature_config.get("enable_resume_feedback", False):
+    if not feature_config.get("enable_resume_feedback", True):
         raise HTTPException(
             status_code=400,
             detail="Resume feedback is disabled. Enable it in Settings.",

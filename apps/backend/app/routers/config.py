@@ -301,7 +301,7 @@ async def get_feature_config() -> FeatureConfigResponse:
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
-        enable_resume_feedback=stored.get("enable_resume_feedback", False),
+        enable_resume_feedback=stored.get("enable_resume_feedback", True),
     )
 
 
@@ -324,7 +324,7 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
-        enable_resume_feedback=stored.get("enable_resume_feedback", False),
+        enable_resume_feedback=stored.get("enable_resume_feedback", True),
     )
 
 

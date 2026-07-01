@@ -708,7 +708,7 @@ class FeatureConfigResponse(BaseModel):
 
     enable_cover_letter: bool = False
     enable_outreach_message: bool = False
-    enable_resume_feedback: bool = False
+    enable_resume_feedback: bool = True
 
 
 class LanguageConfigRequest(BaseModel):

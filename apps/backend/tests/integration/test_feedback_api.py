@@ -243,6 +243,37 @@ class TestFeedbackGenerate:
         assert "disabled" in resp.json()["detail"].lower()
         mock_db.update_resume.assert_not_called()
 
+    @patch("app.routers.resumes.generate_structured_feedback", new_callable=AsyncMock)
+    @patch("app.routers.resumes.db", new_callable=AsyncMock)
+    async def test_generate_rejects_invalid_llm_output(
+        self,
+        mock_db,
+        mock_gen,
+        client,
+        mock_tailored_resume_record,
+        mock_job_record,
+        mock_improvement_record,
+    ):
+        mock_gen.side_effect = ValueError(
+            "Invalid feedback output: malformed 'questions'."
+        )
+        _wire_tailored_db(
+            mock_db,
+            mock_tailored_resume_record,
+            mock_job_record,
+            mock_improvement_record,
+        )
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/resumes/tailored-123/feedback/generate",
+                json={"replace": False},
+            )
+
+        assert resp.status_code == 500
+        assert "generate" in resp.json()["detail"].lower()
+        mock_db.update_resume.assert_not_called()
+
 
 class TestFeedbackAnswers:
     """PATCH /api/v1/resumes/{resume_id}/feedback/answers"""

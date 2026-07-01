@@ -236,6 +236,14 @@ class TestFeatureConfig:
     """GET/PUT /api/v1/config/features"""
 
     @patch("app.routers.config._load_config")
+    async def test_get_features_defaults_feedback_enabled(self, mock_load, client):
+        mock_load.return_value = {}
+        async with client:
+            resp = await client.get("/api/v1/config/features")
+        assert resp.status_code == 200
+        assert resp.json()["enable_resume_feedback"] is True
+
+    @patch("app.routers.config._load_config")
     async def test_get_features(self, mock_load, client):
         mock_load.return_value = {
             "enable_cover_letter": True,
@@ -591,3 +599,21 @@ class TestLegacyKeyMigration:
         if config_module.CONFIG_FILE_PATH.exists():
             config_module.CONFIG_FILE_PATH.unlink()
         migrate_legacy_keys()
+
+    async def test_reimports_when_ciphertext_undecryptable(self, keys_env):
+        """Undecryptable ciphertext must not block re-import from config.json."""
+        import json
+        import app.config as config_module
+        from app.config import migrate_legacy_keys, get_api_keys_from_config
+
+        keys_env.set_api_key_ciphertext("openai", "not-valid-fernet-ciphertext")
+
+        config_module.CONFIG_FILE_PATH.write_text(
+            json.dumps({"provider": "openai", "api_keys": {"openai": "recovered-plaintext"}})
+        )
+        migrate_legacy_keys()
+
+        keys = get_api_keys_from_config()
+        assert keys["openai"] == "recovered-plaintext"
+        on_disk = json.loads(config_module.CONFIG_FILE_PATH.read_text())
+        assert "api_keys" not in on_disk
