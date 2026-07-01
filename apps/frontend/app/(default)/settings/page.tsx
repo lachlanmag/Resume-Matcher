@@ -154,6 +154,7 @@ export default function SettingsPage() {
   // Feature config state
   const [enableCoverLetter, setEnableCoverLetter] = useState(false);
   const [enableOutreach, setEnableOutreach] = useState(false);
+  const [enableResumeFeedback, setEnableResumeFeedback] = useState(false);
   const [featureConfigLoading, setFeatureConfigLoading] = useState(false);
   const [promptConfigLoading, setPromptConfigLoading] = useState(false);
   const [promptOptions, setPromptOptions] = useState<PromptOption[]>([]);
@@ -168,8 +169,10 @@ export default function SettingsPage() {
   // actual default text for placeholder display.
   const [coverLetterPrompt, setCoverLetterPrompt] = useState('');
   const [outreachPrompt, setOutreachPrompt] = useState('');
+  const [feedbackPrompt, setFeedbackPrompt] = useState('');
   const [coverLetterDefault, setCoverLetterDefault] = useState('');
   const [outreachDefault, setOutreachDefault] = useState('');
+  const [feedbackDefault, setFeedbackDefault] = useState('');
   const [featurePromptSaving, setFeaturePromptSaving] = useState<string | null>(null);
   const [featurePromptError, setFeaturePromptError] = useState<{
     field: string;
@@ -334,6 +337,7 @@ export default function SettingsPage() {
         if (featureConfig) {
           setEnableCoverLetter(featureConfig.enable_cover_letter);
           setEnableOutreach(featureConfig.enable_outreach_message);
+          setEnableResumeFeedback(featureConfig.enable_resume_feedback);
         }
 
         if (promptConfig) {
@@ -348,8 +352,10 @@ export default function SettingsPage() {
         if (featurePrompts) {
           setCoverLetterPrompt(featurePrompts.cover_letter_prompt);
           setOutreachPrompt(featurePrompts.outreach_message_prompt);
+          setFeedbackPrompt(featurePrompts.resume_feedback_prompt);
           setCoverLetterDefault(featurePrompts.cover_letter_default);
           setOutreachDefault(featurePrompts.outreach_message_default);
+          setFeedbackDefault(featurePrompts.resume_feedback_default);
         }
 
         setStatus('idle');
@@ -523,7 +529,7 @@ export default function SettingsPage() {
 
   // Update feature config
   const handleFeatureConfigChange = async (
-    key: 'enable_cover_letter' | 'enable_outreach_message',
+    key: 'enable_cover_letter' | 'enable_outreach_message' | 'enable_resume_feedback',
     value: boolean
   ) => {
     setFeatureConfigLoading(true);
@@ -531,13 +537,16 @@ export default function SettingsPage() {
       const updated = await updateFeatureConfig({ [key]: value });
       setEnableCoverLetter(updated.enable_cover_letter);
       setEnableOutreach(updated.enable_outreach_message);
+      setEnableResumeFeedback(updated.enable_resume_feedback);
     } catch (err) {
       console.error('Failed to update feature config', err);
       // Revert on error
       if (key === 'enable_cover_letter') {
         setEnableCoverLetter(!value);
-      } else {
+      } else if (key === 'enable_outreach_message') {
         setEnableOutreach(!value);
+      } else {
+        setEnableResumeFeedback(!value);
       }
     } finally {
       setFeatureConfigLoading(false);
@@ -545,7 +554,7 @@ export default function SettingsPage() {
   };
 
   const handleFeaturePromptSave = async (
-    field: 'cover_letter_prompt' | 'outreach_message_prompt',
+    field: 'cover_letter_prompt' | 'outreach_message_prompt' | 'resume_feedback_prompt',
     value: string
   ) => {
     setFeaturePromptSaving(field);
@@ -557,6 +566,7 @@ export default function SettingsPage() {
       const fresh = await updateFeaturePrompts(update);
       setCoverLetterPrompt(fresh.cover_letter_prompt);
       setOutreachPrompt(fresh.outreach_message_prompt);
+      setFeedbackPrompt(fresh.resume_feedback_prompt);
     } catch (err) {
       if (err instanceof FeaturePromptsError) {
         setFeaturePromptError({ field: err.detail.field, missing: err.detail.missing });
@@ -1291,6 +1301,64 @@ export default function SettingsPage() {
                         variant="outline"
                         onClick={() => handleFeaturePromptSave('outreach_message_prompt', '')}
                         disabled={featurePromptSaving === 'outreach_message_prompt'}
+                      >
+                        {t('settings.contentGeneration.customPromptResetButton')}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <ToggleSwitch
+                  checked={enableResumeFeedback}
+                  onCheckedChange={(checked) => {
+                    setEnableResumeFeedback(checked);
+                    handleFeatureConfigChange('enable_resume_feedback', checked);
+                  }}
+                  label={t('settings.contentGeneration.resumeFeedback.label')}
+                  description={t('settings.contentGeneration.resumeFeedback.description')}
+                  disabled={featureConfigLoading}
+                />
+                {enableResumeFeedback && (
+                  <div className="pl-6 space-y-2">
+                    <Label htmlFor="feedbackPrompt">
+                      {t('settings.contentGeneration.customPromptLabel')}
+                    </Label>
+                    <textarea
+                      id="feedbackPrompt"
+                      rows={8}
+                      value={feedbackPrompt}
+                      onChange={(e) => setFeedbackPrompt(e.target.value)}
+                      placeholder={feedbackDefault}
+                      className="w-full rounded-none border border-black bg-white p-3 font-mono text-xs break-words focus:outline-none focus:shadow-[4px_4px_0_0_#000]"
+                    />
+                    <p className="text-xs text-steel-grey font-mono">
+                      {t('settings.contentGeneration.customPromptHelp')}
+                    </p>
+                    {featurePromptError?.field === 'resume_feedback_prompt' && (
+                      <p className="text-xs text-red-600 font-mono break-words">
+                        {t('settings.contentGeneration.customPromptErrorMissing', {
+                          missing: featurePromptError.missing.join(', '),
+                        })}
+                      </p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          handleFeaturePromptSave('resume_feedback_prompt', feedbackPrompt)
+                        }
+                        disabled={featurePromptSaving === 'resume_feedback_prompt'}
+                      >
+                        {featurePromptSaving === 'resume_feedback_prompt' ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          t('common.save')
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleFeaturePromptSave('resume_feedback_prompt', '')}
+                        disabled={featurePromptSaving === 'resume_feedback_prompt'}
                       >
                         {t('settings.contentGeneration.customPromptResetButton')}
                       </Button>

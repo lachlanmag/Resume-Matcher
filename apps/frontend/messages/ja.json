@@ -195,7 +195,9 @@
       "outreachDescription": "履歴書と求人内容に基づいて、LinkedIn またはメール向けの外連絡メッセージを生成します。",
       "generateButton": "{title}を生成",
       "coverLetterFooter": "ヒント：先にカスタマイズすると精度が上がります。",
-      "outreachFooter": "ヒント：短く、個別性を入れましょう。"
+      "outreachFooter": "ヒント：短く、個別性を入れましょう。",
+      "feedbackDescription": "このカスタマイズ履歴書を求人内容と照らし合わせ、HR視点のフィードバックとATS分析を取得します。",
+      "feedbackFooter": "ヒント：応募前に、ギャップと質問を手がかりに編集してください。"
     },
     "regenerateDialog": {
       "title": "{title}を再生成しますか？",
@@ -479,7 +481,8 @@
       "coverLetterDownloadFailed": "カバーレターのダウンロードに失敗しました: {error}",
       "outreachSaveFailed": "連絡メールの保存に失敗しました。もう一度お試しください。",
       "coverLetterGenerateFailed": "カバーレターの生成に失敗しました: {error}",
-      "outreachGenerateFailed": "連絡メールの生成に失敗しました: {error}"
+      "outreachGenerateFailed": "連絡メールの生成に失敗しました: {error}",
+      "feedbackGenerateFailed": "履歴書フィードバックの生成に失敗しました: {error}"
     }
   },
   "enrichment": {
@@ -720,6 +723,10 @@
         "label": "コールドアウトリーチメッセージ",
         "description": "LinkedIn やメール向けのネットワーキングメッセージを生成します"
       },
+      "resumeFeedback": {
+        "label": "履歴書フィードバック",
+        "description": "ビルダーでカスタマイズ履歴書のフィードバックを生成します"
+      },
       "customPromptLabel": "カスタムプロンプト（任意）",
       "customPromptHelp": "次のプレースホルダーを中括弧で囲んで含めてください：job_description, resume_data, output_language。空欄の場合は既定のプロンプトを使用します。",
       "customPromptResetButton": "デフォルトにリセット",
@@ -846,6 +853,53 @@
     "print": {
       "emptyContent": "カバーレターの内容がありません。"
     },
+    "copied": "コピーしました！"
+  },
+  "feedback": {
+    "title": "履歴書フィードバック",
+    "buttonLabel": "フィードバック",
+    "modal": {
+      "title": "カスタマイズ履歴書フィードバック"
+    },
+    "regenerate": "再生成",
+    "loading": {
+      "generatingTitle": "フィードバックを生成中...",
+      "generatingDescription": "求人票に照らしてカスタマイズ履歴書をレビューしています"
+    },
+    "regenerateDialog": {
+      "title": "フィードバックを再生成しますか？",
+      "description": "現在のフィードバックレポートが置き換わり、保存済みの回答がすべて消去されます。",
+      "confirm": "再生成"
+    },
+    "summary": {
+      "kicker": "フィードバックレポート",
+      "title": "概要",
+      "questionsCount": "{count} 件の質問",
+      "empty": "フィードバックレポートがありません。",
+      "done": "完了"
+    },
+    "question": {
+      "progress": "質問 {current} / {total}",
+      "placeholder": "この点を明確にする詳細を追加...",
+      "shortcutHint": "Shift+Enter で改行、Cmd/Ctrl+Enter で続行",
+      "skip": "スキップ"
+    },
+    "saveAndReturnToReview": "保存してレビューに戻る",
+    "review": {
+      "kicker": "質問レビュー",
+      "title": "回答を確認",
+      "questionLabel": "質問 {number}",
+      "skipped": "スキップ",
+      "applyFeedback": "フィードバックを適用"
+    },
+    "category": {
+      "gap": "ギャップ",
+      "risk": "リスク",
+      "clarification": "確認",
+      "improvement": "改善",
+      "ats": "ATS"
+    },
+    "copyToClipboard": "クリップボードにコピー",
     "copied": "コピーしました！"
   },
   "outreach": {

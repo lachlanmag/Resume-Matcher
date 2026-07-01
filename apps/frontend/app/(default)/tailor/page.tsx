@@ -168,7 +168,7 @@ export default function TailorPage() {
 
     const newResumeId = confirmed?.data?.resume_id;
     if (newResumeId) {
-      router.push(`/resumes/${newResumeId}`);
+      router.push(`/builder?id=${newResumeId}`);
     } else {
       router.push('/builder');
     }

@@ -34,7 +34,11 @@ from app.prompts import (
     IMPROVE_PROMPT_OPTIONS,
     validate_prompt_placeholders,
 )
-from app.prompts.templates import COVER_LETTER_PROMPT, OUTREACH_MESSAGE_PROMPT
+from app.prompts.templates import (
+    COVER_LETTER_PROMPT,
+    OUTREACH_MESSAGE_PROMPT,
+    TAILORED_RESUME_FEEDBACK_PROMPT,
+)
 from app.config import (
     get_api_keys_from_config,
     save_api_keys_to_config,
@@ -297,6 +301,7 @@ async def get_feature_config() -> FeatureConfigResponse:
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
+        enable_resume_feedback=stored.get("enable_resume_feedback", True),
     )
 
 
@@ -310,6 +315,8 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
         stored["enable_cover_letter"] = request.enable_cover_letter
     if request.enable_outreach_message is not None:
         stored["enable_outreach_message"] = request.enable_outreach_message
+    if request.enable_resume_feedback is not None:
+        stored["enable_resume_feedback"] = request.enable_resume_feedback
 
     # Save config
     _save_config(stored)
@@ -317,6 +324,7 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
+        enable_resume_feedback=stored.get("enable_resume_feedback", True),
     )
 
 
@@ -473,8 +481,10 @@ async def get_feature_prompts() -> FeaturePromptsResponse:
     return FeaturePromptsResponse(
         cover_letter_prompt=stored.get("cover_letter_prompt", "") or "",
         outreach_message_prompt=stored.get("outreach_message_prompt", "") or "",
+        resume_feedback_prompt=stored.get("resume_feedback_prompt", "") or "",
         cover_letter_default=COVER_LETTER_PROMPT,
         outreach_message_default=OUTREACH_MESSAGE_PROMPT,
+        resume_feedback_default=TAILORED_RESUME_FEEDBACK_PROMPT,
     )
 
 
@@ -523,13 +533,30 @@ async def update_feature_prompts(
                 )
         stored["outreach_message_prompt"] = prompt
 
+    if request.resume_feedback_prompt is not None:
+        prompt = request.resume_feedback_prompt.strip()
+        if prompt:
+            missing = validate_prompt_placeholders(prompt)
+            if missing:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "code": "missing_placeholders",
+                        "field": "resume_feedback_prompt",
+                        "missing": missing,
+                    },
+                )
+        stored["resume_feedback_prompt"] = prompt
+
     _save_config(stored)
 
     return FeaturePromptsResponse(
         cover_letter_prompt=stored.get("cover_letter_prompt", "") or "",
         outreach_message_prompt=stored.get("outreach_message_prompt", "") or "",
+        resume_feedback_prompt=stored.get("resume_feedback_prompt", "") or "",
         cover_letter_default=COVER_LETTER_PROMPT,
         outreach_message_default=OUTREACH_MESSAGE_PROMPT,
+        resume_feedback_default=TAILORED_RESUME_FEEDBACK_PROMPT,
     )
 
 

@@ -7,6 +7,7 @@ from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.schemas.feedback import ResumeFeedback
 from app.schemas.work_experience import (
     normalize_experience_entry,
     normalize_work_experience_list,
@@ -482,6 +483,7 @@ class ResumeFetchData(BaseModel):
     parent_id: str | None = None  # For determining if resume is tailored
     title: str | None = None
     tailor_settings: TailorLengthSettings | None = None
+    resume_feedback: ResumeFeedback | None = None
 
 
 class ResumeFetchResponse(BaseModel):
@@ -698,6 +700,7 @@ class FeatureConfigRequest(BaseModel):
 
     enable_cover_letter: bool | None = None
     enable_outreach_message: bool | None = None
+    enable_resume_feedback: bool | None = None
 
 
 class FeatureConfigResponse(BaseModel):
@@ -705,6 +708,7 @@ class FeatureConfigResponse(BaseModel):
 
     enable_cover_letter: bool = False
     enable_outreach_message: bool = False
+    enable_resume_feedback: bool = True
 
 
 class LanguageConfigRequest(BaseModel):
@@ -753,6 +757,7 @@ class FeaturePromptsRequest(BaseModel):
 
     cover_letter_prompt: str | None = None
     outreach_message_prompt: str | None = None
+    resume_feedback_prompt: str | None = None
 
 
 class FeaturePromptsResponse(BaseModel):
@@ -765,8 +770,10 @@ class FeaturePromptsResponse(BaseModel):
 
     cover_letter_prompt: str
     outreach_message_prompt: str
+    resume_feedback_prompt: str
     cover_letter_default: str
     outreach_message_default: str
+    resume_feedback_default: str
 
 
 # API Key Management Models

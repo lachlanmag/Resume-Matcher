@@ -828,7 +828,8 @@ def _appears_truncated(data: dict, schema_type: str = "resume") -> bool:
     Args:
         data: Parsed JSON dict.
         schema_type: Expected schema — "resume" (full resume), "enrichment"
-            (analyze output), "diff" (diff changes), or "keywords".
+            (analyze output), "feedback" (tailored resume feedback),
+            "diff" (diff changes), or "keywords".
             Determines which fields are checked for truncation.
     """
     if not isinstance(data, dict):
@@ -854,6 +855,19 @@ def _appears_truncated(data: dict, schema_type: str = "resume") -> bool:
         if "items_to_enrich" not in data or "questions" not in data:
             logging.warning(
                 "Possible truncation detected: enrichment missing required keys"
+            )
+            return True
+        return False
+
+    if schema_type == "feedback":
+        if "report_markdown" not in data:
+            logging.warning(
+                "Possible truncation detected: feedback missing report_markdown key"
+            )
+            return True
+        if data.get("report_markdown") == "":
+            logging.warning(
+                "Possible truncation detected: feedback report_markdown is empty"
             )
             return True
         return False
@@ -1082,9 +1096,9 @@ async def complete_json(
     are handled by the Router and are NOT retried again here.
 
     Args:
-        schema_type: Expected schema — "resume", "enrichment", "diff", or
-            "keywords". Passed to _appears_truncated for context-aware truncation
-            detection and used to tailor retry hints.
+        schema_type: Expected schema — "resume", "enrichment", "feedback",
+            "diff", or "keywords". Passed to _appears_truncated for
+            context-aware truncation detection and used to tailor retry hints.
     """
     router, config = get_router(config)
     model_name = get_model_name(config)
@@ -1155,6 +1169,10 @@ async def complete_json(
                     elif schema_type == "enrichment":
                         hint = (
                             "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: items_to_enrich, questions, analysis_summary. Do not truncate."
+                        )
+                    elif schema_type == "feedback":
+                        hint = (
+                            "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: report_markdown, questions. Do not truncate report_markdown."
                         )
                     else:
                         hint = (

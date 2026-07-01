@@ -195,7 +195,9 @@
       "outreachDescription": "Gere uma mensagem de contato concisa para LinkedIn ou email com base no seu currículo e descrição da vaga.",
       "generateButton": "Gerar {title}",
       "coverLetterFooter": "Dica: personalize primeiro para melhores resultados.",
-      "outreachFooter": "Dica: mantenha curta e personalizada."
+      "outreachFooter": "Dica: mantenha curta e personalizada.",
+      "feedbackDescription": "Revise este currículo personalizado em relação à vaga com feedback de RH e análise ATS.",
+      "feedbackFooter": "Dica: use lacunas e perguntas para orientar suas edições antes de candidatar-se."
     },
     "regenerateDialog": {
       "title": "Regenerar {title}?",
@@ -479,7 +481,8 @@
       "coverLetterDownloadFailed": "Falha ao baixar carta de apresentação: {error}",
       "outreachSaveFailed": "Falha ao salvar mensagem de contato. Por favor, tente novamente.",
       "coverLetterGenerateFailed": "Falha ao gerar carta de apresentação: {error}",
-      "outreachGenerateFailed": "Falha ao gerar mensagem de contato: {error}"
+      "outreachGenerateFailed": "Falha ao gerar mensagem de contato: {error}",
+      "feedbackGenerateFailed": "Falha ao gerar feedback do currículo: {error}"
     }
   },
   "enrichment": {
@@ -720,6 +723,10 @@
         "label": "Mensagem de Contato Frio",
         "description": "Gerar uma mensagem de networking para LinkedIn ou email"
       },
+      "resumeFeedback": {
+        "label": "Feedback do currículo",
+        "description": "Gerar feedback personalizado do currículo no editor"
+      },
       "customPromptLabel": "Prompt personalizado (opcional)",
       "customPromptHelp": "Deve incluir estes marcadores (cada um entre chaves): job_description, resume_data, output_language. Deixe em branco para usar o prompt padrão.",
       "customPromptResetButton": "Restaurar padrão",
@@ -847,6 +854,53 @@
     "print": {
       "emptyContent": "Nenhum conteúdo de carta de apresentação disponível."
     }
+  },
+  "feedback": {
+    "title": "Feedback do currículo",
+    "buttonLabel": "Feedback",
+    "modal": {
+      "title": "Feedback do currículo personalizado"
+    },
+    "regenerate": "Regenerar",
+    "loading": {
+      "generatingTitle": "Gerando feedback...",
+      "generatingDescription": "Analisando seu currículo personalizado em relação à descrição da vaga"
+    },
+    "regenerateDialog": {
+      "title": "Regenerar feedback?",
+      "description": "Isso substituirá o relatório de feedback atual e limpará todas as respostas salvas.",
+      "confirm": "Regenerar"
+    },
+    "summary": {
+      "kicker": "Relatório de feedback",
+      "title": "Resumo",
+      "questionsCount": "{count} perguntas",
+      "empty": "Nenhum relatório de feedback disponível.",
+      "done": "Concluído"
+    },
+    "question": {
+      "progress": "Pergunta {current} de {total}",
+      "placeholder": "Adicione detalhes para esclarecer este ponto...",
+      "shortcutHint": "Pressione Shift+Enter para nova linha, Cmd/Ctrl+Enter para continuar",
+      "skip": "Pular"
+    },
+    "saveAndReturnToReview": "Salvar e voltar à revisão",
+    "review": {
+      "kicker": "Revisão de perguntas",
+      "title": "Revise suas respostas",
+      "questionLabel": "Pergunta {number}",
+      "skipped": "Ignorada",
+      "applyFeedback": "Aplicar feedback"
+    },
+    "category": {
+      "gap": "Lacuna",
+      "risk": "Risco",
+      "clarification": "Esclarecimento",
+      "improvement": "Melhoria",
+      "ats": "ATS"
+    },
+    "copyToClipboard": "Copiar para a área de transferência",
+    "copied": "Copiado!"
   },
   "outreach": {
     "title": "Mensagem de Contato",

@@ -34,6 +34,17 @@ export {
   type ImproveResumeOptions,
 } from './resume';
 
+// Feedback operations
+export {
+  generateFeedback,
+  patchFeedbackAnswers,
+  previewFeedbackApply,
+  applyFeedback,
+  type FeedbackQuestion,
+  type ResumeFeedback,
+  type FeedbackApplyPreview,
+} from './feedback';
+
 // Resume wizard operations
 export {
   createInitialResumeWizardState,

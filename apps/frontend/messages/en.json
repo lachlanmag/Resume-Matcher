@@ -193,9 +193,11 @@
       "generateTitle": "Generate {title}",
       "coverLetterDescription": "Generate a tailored cover letter based on your resume and job description.",
       "outreachDescription": "Generate a concise outreach message for LinkedIn or email based on your resume and job description.",
+      "feedbackDescription": "Review this tailored resume against the job description with HR-style feedback and ATS analysis.",
       "generateButton": "Generate {title}",
       "coverLetterFooter": "Tip: tailor first for best results.",
-      "outreachFooter": "Tip: keep it short and personalized."
+      "outreachFooter": "Tip: keep it short and personalized.",
+      "feedbackFooter": "Tip: use gaps and questions to guide your edits before applying."
     },
     "regenerateDialog": {
       "title": "Regenerate {title}?",
@@ -479,7 +481,8 @@
       "coverLetterDownloadFailed": "Failed to download cover letter: {error}",
       "outreachSaveFailed": "Failed to save outreach message. Please try again.",
       "coverLetterGenerateFailed": "Failed to generate cover letter: {error}",
-      "outreachGenerateFailed": "Failed to generate outreach message: {error}"
+      "outreachGenerateFailed": "Failed to generate outreach message: {error}",
+      "feedbackGenerateFailed": "Failed to generate resume feedback: {error}"
     }
   },
   "enrichment": {
@@ -720,6 +723,10 @@
         "label": "Cold Outreach Message",
         "description": "Generate a networking message for LinkedIn or email"
       },
+      "resumeFeedback": {
+        "label": "Resume Feedback",
+        "description": "Generate tailored resume feedback in the builder"
+      },
       "customPromptLabel": "Custom prompt (optional)",
       "customPromptHelp": "Must include these placeholders (each in curly braces): job_description, resume_data, output_language. Leave blank to use the default prompt.",
       "customPromptResetButton": "Reset to default",
@@ -847,6 +854,53 @@
     "print": {
       "emptyContent": "No cover letter content available."
     }
+  },
+  "feedback": {
+    "title": "Resume Feedback",
+    "buttonLabel": "Feedback",
+    "modal": {
+      "title": "Tailored Resume Feedback"
+    },
+    "regenerate": "Regenerate",
+    "loading": {
+      "generatingTitle": "Generating feedback...",
+      "generatingDescription": "Reviewing your tailored resume against the job description"
+    },
+    "regenerateDialog": {
+      "title": "Regenerate feedback?",
+      "description": "This will replace the current feedback report and clear all saved answers.",
+      "confirm": "Regenerate"
+    },
+    "summary": {
+      "kicker": "Feedback Report",
+      "title": "Summary",
+      "questionsCount": "{count} questions",
+      "empty": "No feedback report available.",
+      "done": "Done"
+    },
+    "question": {
+      "progress": "Question {current} of {total}",
+      "placeholder": "Add details to clarify this point...",
+      "shortcutHint": "Press Shift+Enter for new line, Cmd/Ctrl+Enter to continue",
+      "skip": "Skip"
+    },
+    "saveAndReturnToReview": "Save & return to review",
+    "review": {
+      "kicker": "Question Review",
+      "title": "Review Your Answers",
+      "questionLabel": "Question {number}",
+      "skipped": "Skipped",
+      "applyFeedback": "Apply Feedback"
+    },
+    "category": {
+      "gap": "Gap",
+      "risk": "Risk",
+      "clarification": "Clarification",
+      "improvement": "Improvement",
+      "ats": "ATS"
+    },
+    "copyToClipboard": "Copy to Clipboard",
+    "copied": "Copied!"
   },
   "outreach": {
     "title": "Outreach Message",

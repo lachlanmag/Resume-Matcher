@@ -49,6 +49,7 @@ class Resume(Base):
     original_markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Per-resume tailor length overrides (target pages, bullets per job).
     tailor_settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    resume_feedback: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)
     updated_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)
 

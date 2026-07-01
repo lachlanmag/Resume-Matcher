@@ -1,4 +1,4 @@
-"""Cover letter, outreach message, and resume title generation service."""
+"""Cover letter, outreach message, resume title, and feedback generation."""
 
 import json
 import logging
@@ -134,6 +134,22 @@ async def generate_outreach_message(
     )
 
     return result.strip()
+
+
+async def generate_tailored_resume_feedback(
+    resume_data: dict[str, Any],
+    job_description: str,
+    language: str = "en",
+) -> str:
+    """Backward-compatible wrapper returning only markdown feedback report."""
+    from app.services.feedback import generate_structured_feedback
+
+    feedback = await generate_structured_feedback(
+        resume_data=resume_data,
+        job_description=job_description,
+        language=language,
+    )
+    return str(feedback.get("report_markdown", "")).strip()
 
 
 async def generate_resume_title(

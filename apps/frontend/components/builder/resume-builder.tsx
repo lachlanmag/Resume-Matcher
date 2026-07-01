@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, Suspense, useCallback, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { type ResumeData } from '@/components/dashboard/resume-component';
@@ -14,6 +14,7 @@ import { GeneratePrompt } from './generate-prompt';
 import { Button } from '@/components/ui/button';
 import { RetroTabs } from '@/components/ui/retro-tabs';
 import { ConfirmDialog, type ConfirmDialogProps } from '@/components/ui/confirm-dialog';
+import { FeedbackModal } from '@/components/feedback/feedback-modal';
 import {
   Download,
   Save,
@@ -24,6 +25,7 @@ import {
   Check,
   Sparkles,
   Loader2,
+  MessageSquare,
 } from 'lucide-react';
 import { useResumePreview } from '@/components/common/resume_previewer_context';
 import { PaginatedPreview } from '@/components/preview';
@@ -40,19 +42,19 @@ import {
   generateOutreachMessage,
   fetchJobDescription,
 } from '@/lib/api/resume';
+import { generateFeedback, type ResumeFeedback } from '@/lib/api/feedback';
+import { fetchFeatureConfig } from '@/lib/api/config';
 import { JDComparisonView } from './jd-comparison-view';
 import { RegenerateWizard } from './regenerate-wizard';
 import { TailorSettingsPanel } from '@/components/tailor/tailor-settings-panel';
 import { DEFAULT_TAILOR_LENGTH_SETTINGS } from '@/lib/types/tailor-length';
 import type { TailorLengthSettings } from '@/lib/types/tailor-length';
 import { useRegenerateWizard } from '@/hooks/use-regenerate-wizard';
+import { useElapsedSeconds } from '@/hooks/use-elapsed-seconds';
 import { useTranslations } from '@/lib/i18n';
 import { type TemplateSettings, DEFAULT_TEMPLATE_SETTINGS } from '@/lib/types/template-settings';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
-import {
-  getExperienceRoleTitles,
-  withNormalizedWorkExperience,
-} from '@/lib/utils/work-experience';
+import { getExperienceRoleTitles, withNormalizedWorkExperience } from '@/lib/utils/work-experience';
 import { useLanguage } from '@/lib/context/language-context';
 import { buildResumeFilename, downloadBlobAsFile, openUrlInNewTab } from '@/lib/utils/download';
 import type { RegenerateItemInput } from '@/lib/api/enrichment';
@@ -159,6 +161,17 @@ const ResumeBuilderContent = () => {
   const [tailorSettings, setTailorSettings] = useState<TailorLengthSettings | null>(null);
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
   const [isGeneratingOutreach, setIsGeneratingOutreach] = useState(false);
+  const [enableResumeFeedback, setEnableResumeFeedback] = useState(false);
+  const [feedbackGenStatus, setFeedbackGenStatus] = useState<
+    'idle' | 'loading' | 'ready' | 'error'
+  >('idle');
+  const [feedbackGenError, setFeedbackGenError] = useState<string | null>(null);
+  const [resumeFeedback, setResumeFeedback] = useState<ResumeFeedback | null>(null);
+  const feedbackGenerationRef = useRef<{ resumeId: string | null; inFlight: boolean }>({
+    resumeId: null,
+    inFlight: false,
+  });
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showRegenerateDialog, setShowRegenerateDialog] = useState<
     'cover-letter' | 'outreach' | null
   >(null);
@@ -181,9 +194,7 @@ const ResumeBuilderContent = () => {
         // Update resume title for downloads
         setResumeTitle(data.title ?? null);
         if (data.processed_resume) {
-          const normalized = withNormalizedWorkExperience(
-            data.processed_resume as ResumeData
-          );
+          const normalized = withNormalizedWorkExperience(data.processed_resume as ResumeData);
           setResumeData(normalized);
           setLastSavedData(normalized);
           setHasUnsavedChanges(false);
@@ -326,11 +337,17 @@ const ResumeBuilderContent = () => {
           if (data.outreach_message) {
             setOutreachMessage(data.outreach_message);
           }
+          setResumeFeedback(data.resume_feedback ?? null);
+          if (data.resume_feedback) {
+            setFeedbackGenStatus('ready');
+            setFeedbackGenError(null);
+          } else {
+            setFeedbackGenStatus('idle');
+            setFeedbackGenError(null);
+          }
           // Prefer processed_resume if available
           if (data.processed_resume) {
-            const normalized = withNormalizedWorkExperience(
-              data.processed_resume as ResumeData
-            );
+            const normalized = withNormalizedWorkExperience(data.processed_resume as ResumeData);
             setResumeData(normalized);
             setLastSavedData(normalized);
             setLoadingState('loaded');
@@ -360,6 +377,10 @@ const ResumeBuilderContent = () => {
         const normalized = withNormalizedWorkExperience(improvedPreview);
         setResumeData(normalized);
         setLastSavedData(normalized);
+        setResumeFeedback(null);
+        setFeedbackGenStatus('idle');
+        setFeedbackGenError(null);
+        feedbackGenerationRef.current = { resumeId: null, inFlight: false };
         // Also load cover letter and outreach if present
         if (improvedCoverLetter) {
           setCoverLetter(improvedCoverLetter);
@@ -381,6 +402,10 @@ const ResumeBuilderContent = () => {
           setResumeData(parsed);
           setLastSavedData(parsed);
           setHasUnsavedChanges(true); // Mark as unsaved since it's a draft
+          setResumeFeedback(null);
+          setFeedbackGenStatus('idle');
+          setFeedbackGenError(null);
+          feedbackGenerationRef.current = { resumeId: null, inFlight: false };
           setLoadingState('loaded');
           return;
         } catch {
@@ -389,6 +414,10 @@ const ResumeBuilderContent = () => {
       }
 
       // Fallback: Use initial data
+      setResumeFeedback(null);
+      setFeedbackGenStatus('idle');
+      setFeedbackGenError(null);
+      feedbackGenerationRef.current = { resumeId: null, inFlight: false };
       setLoadingState('loaded');
     };
 
@@ -426,6 +455,106 @@ const ResumeBuilderContent = () => {
       cancelled = true;
     };
   }, [isTailoredResume, resumeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetchFeatureConfig()
+      .then((config) => {
+        if (!cancelled) {
+          setEnableResumeFeedback(config.enable_resume_feedback);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load feature config:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const startFeedbackGeneration = useCallback(
+    async (replace = false) => {
+      if (!resumeId) {
+        return;
+      }
+
+      if (
+        feedbackGenerationRef.current.inFlight &&
+        feedbackGenerationRef.current.resumeId === resumeId
+      ) {
+        return;
+      }
+
+      feedbackGenerationRef.current = { resumeId, inFlight: true };
+      setFeedbackGenError(null);
+      setFeedbackGenStatus('loading');
+
+      try {
+        const feedback = await generateFeedback(resumeId, replace);
+        setResumeFeedback(feedback);
+        setFeedbackGenStatus('ready');
+        setFeedbackGenError(null);
+      } catch (error) {
+        console.error('Failed to generate resume feedback:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setFeedbackGenError(errorMessage);
+        showNotification(
+          t('builder.alerts.feedbackGenerateFailed', { error: errorMessage }),
+          'danger'
+        );
+        setFeedbackGenStatus('error');
+      } finally {
+        if (feedbackGenerationRef.current.resumeId === resumeId) {
+          feedbackGenerationRef.current.inFlight = false;
+        }
+      }
+    },
+    [resumeId, showNotification, t]
+  );
+
+  useEffect(() => {
+    if (!resumeId || !isTailoredResume || !enableResumeFeedback || resumeFeedback) {
+      return;
+    }
+
+    void startFeedbackGeneration(false);
+  }, [resumeId, isTailoredResume, enableResumeFeedback, resumeFeedback, startFeedbackGeneration]);
+
+  const feedbackGenElapsed = useElapsedSeconds(feedbackGenStatus === 'loading');
+
+  const reloadResumeAfterFeedback = useCallback(async () => {
+    if (!resumeId) {
+      setShowFeedbackModal(false);
+      return;
+    }
+
+    try {
+      const data = await fetchResume(resumeId);
+      setResumeTitle(data.title ?? null);
+      setResumeFeedback(data.resume_feedback ?? null);
+      if (data.resume_feedback) {
+        setFeedbackGenStatus('ready');
+        setFeedbackGenError(null);
+      } else {
+        setFeedbackGenStatus('idle');
+        setFeedbackGenError(null);
+      }
+
+      if (data.processed_resume) {
+        const normalized = withNormalizedWorkExperience(data.processed_resume as ResumeData);
+        setResumeData(normalized);
+        setLastSavedData(normalized);
+        setHasUnsavedChanges(false);
+      }
+    } catch (error) {
+      console.error('Failed to reload resume after feedback completion:', error);
+      showNotification(t('builder.alerts.reloadFailed'), 'danger');
+    } finally {
+      setShowFeedbackModal(false);
+    }
+  }, [resumeId, showNotification, t]);
 
   const handleUpdate = useCallback((newData: ResumeData) => {
     setResumeData(newData);
@@ -698,6 +827,26 @@ const ResumeBuilderContent = () => {
                     <Sparkles className="w-4 h-4" />
                     {t('builder.regenerate.buttonLabel')}
                   </Button>
+                  {isTailoredResume && enableResumeFeedback && (
+                    <Button variant="outline" size="sm" onClick={() => setShowFeedbackModal(true)}>
+                      {feedbackGenStatus === 'loading' ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          {t('common.processing')}
+                          {feedbackGenElapsed > 0 && (
+                            <span className="font-mono text-xs opacity-70">
+                              {feedbackGenElapsed}s
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="w-4 h-4" />
+                          {t('feedback.buttonLabel')}
+                        </>
+                      )}
+                    </Button>
+                  )}
                   <Button
                     variant="warning"
                     size="sm"
@@ -805,25 +954,22 @@ const ResumeBuilderContent = () => {
               {activeTab === 'resume' && (
                 <>
                   <FormattingControls settings={templateSettings} onChange={handleSettingsChange} />
-                  {isTailoredResume &&
-                    resumeId &&
-                    parentResumeId &&
-                    tailorJobId && (
-                      <TailorSettingsPanel
-                        resumeId={resumeId}
-                        masterResumeId={parentResumeId}
-                        jobId={tailorJobId}
-                        initialSettings={tailorSettings ?? DEFAULT_TAILOR_LENGTH_SETTINGS}
-                        onResumeUpdated={(data) => {
-                          const normalized = withNormalizedWorkExperience(data);
-                          setResumeData(normalized);
-                          setLastSavedData(normalized);
-                          setHasUnsavedChanges(false);
-                          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-                        }}
-                        onError={(msg) => showNotification(msg, 'warning')}
-                      />
-                    )}
+                  {isTailoredResume && resumeId && parentResumeId && tailorJobId && (
+                    <TailorSettingsPanel
+                      resumeId={resumeId}
+                      masterResumeId={parentResumeId}
+                      jobId={tailorJobId}
+                      initialSettings={tailorSettings ?? DEFAULT_TAILOR_LENGTH_SETTINGS}
+                      onResumeUpdated={(data) => {
+                        const normalized = withNormalizedWorkExperience(data);
+                        setResumeData(normalized);
+                        setLastSavedData(normalized);
+                        setHasUnsavedChanges(false);
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+                      }}
+                      onError={(msg) => showNotification(msg, 'warning')}
+                    />
+                  )}
                   <ResumeForm resumeData={resumeData} onUpdate={handleUpdate} />
                 </>
               )}
@@ -1026,6 +1172,20 @@ const ResumeBuilderContent = () => {
           </div>
         </div>
       </div>
+
+      {resumeId && (
+        <FeedbackModal
+          resumeId={resumeId}
+          isOpen={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          onComplete={reloadResumeAfterFeedback}
+          initialFeedback={resumeFeedback}
+          onFeedbackUpdated={setResumeFeedback}
+          backgroundGenStatus={feedbackGenStatus}
+          backgroundGenError={feedbackGenError}
+          onRequestGeneration={startFeedbackGeneration}
+        />
+      )}
 
       {/* Regenerate Confirmation Dialog */}
       <ConfirmDialog

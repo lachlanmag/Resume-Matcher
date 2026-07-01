@@ -83,6 +83,20 @@ class TestResumeCrud:
         fetched = await db.get_resume(created["resume_id"])
         assert fetched["tailor_settings"] == settings
 
+    async def test_resume_feedback_round_trip(self, db):
+        created = await db.create_resume(content="# Test", is_master=False, parent_id="master-1")
+        payload = {
+            "report_markdown": "## Candidate summary\n- Good fit",
+            "questions": [{"question_id": "q1", "category": "gap", "prompt": "Clarify scope?", "context": ""}],
+            "answers": {},
+            "generated_at": "2026-06-30T12:00:00Z",
+            "applied_at": None,
+        }
+        updated = await db.update_resume(created["resume_id"], {"resume_feedback": payload})
+        assert updated["resume_feedback"] == payload
+        fetched = await db.get_resume(created["resume_id"])
+        assert fetched["resume_feedback"] == payload
+
     async def test_tailor_settings_schema_patch_on_legacy_db(self, tmp_path):
         """Databases created before tailor_settings existed get the column on init."""
         from sqlalchemy import create_engine, text

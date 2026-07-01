@@ -2,13 +2,13 @@
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Loader2, FileText, Mail, ArrowRight } from 'lucide-react';
+import { Sparkles, Loader2, FileText, Mail, ClipboardList, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/lib/i18n';
 
 export interface GeneratePromptProps {
   /** Type of content to generate */
-  type: 'cover-letter' | 'outreach';
+  type: 'cover-letter' | 'outreach' | 'feedback';
   /** Whether generation is in progress */
   isGenerating: boolean;
   /** Callback to trigger generation */
@@ -28,8 +28,13 @@ export function GeneratePrompt({
 }: GeneratePromptProps) {
   const { t } = useTranslations();
   const isOutreach = type === 'outreach';
-  const Icon = isOutreach ? Mail : FileText;
-  const title = isOutreach ? t('outreach.title') : t('coverLetter.title');
+  const isFeedback = type === 'feedback';
+  const Icon = isFeedback ? ClipboardList : isOutreach ? Mail : FileText;
+  const title = isFeedback
+    ? t('feedback.title')
+    : isOutreach
+      ? t('outreach.title')
+      : t('coverLetter.title');
 
   // Show a different message if resume is not tailored
   if (!isTailoredResume) {
@@ -57,6 +62,18 @@ export function GeneratePrompt({
     );
   }
 
+  const description = isFeedback
+    ? t('builder.generatePrompt.feedbackDescription')
+    : isOutreach
+      ? t('builder.generatePrompt.outreachDescription')
+      : t('builder.generatePrompt.coverLetterDescription');
+
+  const footer = isFeedback
+    ? t('builder.generatePrompt.feedbackFooter')
+    : isOutreach
+      ? t('builder.generatePrompt.outreachFooter')
+      : t('builder.generatePrompt.coverLetterFooter');
+
   return (
     <div
       className={cn(
@@ -70,11 +87,7 @@ export function GeneratePrompt({
       <h3 className="font-mono text-sm font-bold uppercase tracking-wider mb-3">
         {t('builder.generatePrompt.generateTitle', { title })}
       </h3>
-      <p className="font-mono text-xs text-ink-soft max-w-md mb-6 leading-relaxed">
-        {isOutreach
-          ? t('builder.generatePrompt.outreachDescription')
-          : t('builder.generatePrompt.coverLetterDescription')}
-      </p>
+      <p className="font-mono text-xs text-ink-soft max-w-md mb-6 leading-relaxed">{description}</p>
       <Button onClick={onGenerate} disabled={isGenerating} className="gap-2">
         {isGenerating ? (
           <>
@@ -88,11 +101,7 @@ export function GeneratePrompt({
           </>
         )}
       </Button>
-      <p className="font-mono text-xs text-steel-grey mt-4">
-        {isOutreach
-          ? t('builder.generatePrompt.outreachFooter')
-          : t('builder.generatePrompt.coverLetterFooter')}
-      </p>
+      <p className="font-mono text-xs text-steel-grey mt-4">{footer}</p>
     </div>
   );
 }

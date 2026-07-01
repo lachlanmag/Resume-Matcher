@@ -236,10 +236,19 @@ class TestFeatureConfig:
     """GET/PUT /api/v1/config/features"""
 
     @patch("app.routers.config._load_config")
+    async def test_get_features_defaults_feedback_enabled(self, mock_load, client):
+        mock_load.return_value = {}
+        async with client:
+            resp = await client.get("/api/v1/config/features")
+        assert resp.status_code == 200
+        assert resp.json()["enable_resume_feedback"] is True
+
+    @patch("app.routers.config._load_config")
     async def test_get_features(self, mock_load, client):
         mock_load.return_value = {
             "enable_cover_letter": True,
             "enable_outreach_message": False,
+            "enable_resume_feedback": True,
         }
         async with client:
             resp = await client.get("/api/v1/config/features")
@@ -247,6 +256,7 @@ class TestFeatureConfig:
         data = resp.json()
         assert data["enable_cover_letter"] is True
         assert data["enable_outreach_message"] is False
+        assert data["enable_resume_feedback"] is True
 
     @patch("app.routers.config._save_config")
     @patch("app.routers.config._load_config")
@@ -268,6 +278,7 @@ class TestFeaturePrompts:
         mock_load.return_value = {
             "cover_letter_prompt": "Custom cover prompt",
             "outreach_message_prompt": "",
+            "resume_feedback_prompt": "Custom feedback",
         }
         async with client:
             resp = await client.get("/api/v1/config/feature-prompts")
@@ -276,12 +287,16 @@ class TestFeaturePrompts:
         data = resp.json()
         assert data["cover_letter_prompt"] == "Custom cover prompt"
         assert data["outreach_message_prompt"] == ""
+        assert data["resume_feedback_prompt"] == "Custom feedback"
         assert "{job_description}" in data["cover_letter_default"]
         assert "{resume_data}" in data["cover_letter_default"]
         assert "{output_language}" in data["cover_letter_default"]
         assert "{job_description}" in data["outreach_message_default"]
         assert "{resume_data}" in data["outreach_message_default"]
         assert "{output_language}" in data["outreach_message_default"]
+        assert "{job_description}" in data["resume_feedback_default"]
+        assert "{resume_data}" in data["resume_feedback_default"]
+        assert "{output_language}" in data["resume_feedback_default"]
 
     @patch("app.routers.config._load_config")
     async def test_put_feature_prompts_rejects_missing_placeholders(self, mock_load, client):
@@ -295,6 +310,23 @@ class TestFeaturePrompts:
         assert resp.json()["detail"] == {
             "code": "missing_placeholders",
             "field": "cover_letter_prompt",
+            "missing": ["{resume_data}", "{output_language}"],
+        }
+
+    @patch("app.routers.config._load_config")
+    async def test_put_feature_prompts_rejects_missing_feedback_placeholders(
+        self, mock_load, client
+    ):
+        mock_load.return_value = {}
+        async with client:
+            resp = await client.put("/api/v1/config/feature-prompts", json={
+                "resume_feedback_prompt": "Review {job_description}",
+            })
+
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == {
+            "code": "missing_placeholders",
+            "field": "resume_feedback_prompt",
             "missing": ["{resume_data}", "{output_language}"],
         }
 
@@ -567,3 +599,21 @@ class TestLegacyKeyMigration:
         if config_module.CONFIG_FILE_PATH.exists():
             config_module.CONFIG_FILE_PATH.unlink()
         migrate_legacy_keys()
+
+    async def test_reimports_when_ciphertext_undecryptable(self, keys_env):
+        """Undecryptable ciphertext must not block re-import from config.json."""
+        import json
+        import app.config as config_module
+        from app.config import migrate_legacy_keys, get_api_keys_from_config
+
+        keys_env.set_api_key_ciphertext("openai", "not-valid-fernet-ciphertext")
+
+        config_module.CONFIG_FILE_PATH.write_text(
+            json.dumps({"provider": "openai", "api_keys": {"openai": "recovered-plaintext"}})
+        )
+        migrate_legacy_keys()
+
+        keys = get_api_keys_from_config()
+        assert keys["openai"] == "recovered-plaintext"
+        on_disk = json.loads(config_module.CONFIG_FILE_PATH.read_text())
+        assert "api_keys" not in on_disk
