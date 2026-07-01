@@ -3,6 +3,7 @@ import type { ResumeData } from '@/components/dashboard/resume-component';
 import { type TailorLengthSettings } from '@/lib/types/tailor-length';
 import { type TemplateSettings } from '@/lib/types/template-settings';
 import { type Locale } from '@/i18n/config';
+import type { ResumeFeedback } from './feedback';
 import { API_BASE, DEFAULT_TIMEOUT_MS, apiPost, apiPatch, apiDelete, apiFetch } from './client';
 
 // Matches backend schemas/models.py ResumeData
@@ -73,6 +74,7 @@ interface ResumeResponse {
     parent_id?: string | null; // For determining if resume is tailored
     title?: string | null;
     tailor_settings?: TailorLengthSettings | null;
+    resume_feedback?: ResumeFeedback | null;
   };
 }
 
@@ -435,17 +437,6 @@ export async function generateOutreachMessage(resumeId: string): Promise<string>
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`Failed to generate outreach message (status ${res.status}): ${text}`);
-  }
-  const data = await res.json();
-  return data.content;
-}
-
-/** Generates HR-style feedback on-demand for a tailored resume (not persisted). */
-export async function generateResumeFeedback(resumeId: string): Promise<string> {
-  const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/generate-feedback`, {});
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Failed to generate resume feedback (status ${res.status}): ${text}`);
   }
   const data = await res.json();
   return data.content;

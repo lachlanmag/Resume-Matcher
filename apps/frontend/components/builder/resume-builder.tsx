@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, Suspense, useCallback, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { type ResumeData } from '@/components/dashboard/resume-component';
@@ -10,11 +10,11 @@ import { CoverLetterEditor } from './cover-letter-editor';
 import { OutreachEditor } from './outreach-editor';
 import { CoverLetterPreview } from './cover-letter-preview';
 import { OutreachPreview } from './outreach-preview';
-import { FeedbackPreview } from './feedback-preview';
 import { GeneratePrompt } from './generate-prompt';
 import { Button } from '@/components/ui/button';
 import { RetroTabs } from '@/components/ui/retro-tabs';
 import { ConfirmDialog, type ConfirmDialogProps } from '@/components/ui/confirm-dialog';
+import { FeedbackModal } from '@/components/feedback/feedback-modal';
 import {
   Download,
   Save,
@@ -25,6 +25,7 @@ import {
   Check,
   Sparkles,
   Loader2,
+  MessageSquare,
 } from 'lucide-react';
 import { useResumePreview } from '@/components/common/resume_previewer_context';
 import { PaginatedPreview } from '@/components/preview';
@@ -39,15 +40,17 @@ import {
   updateOutreachMessage,
   generateCoverLetter,
   generateOutreachMessage,
-  generateResumeFeedback,
   fetchJobDescription,
 } from '@/lib/api/resume';
+import { generateFeedback, type ResumeFeedback } from '@/lib/api/feedback';
+import { fetchFeatureConfig } from '@/lib/api/config';
 import { JDComparisonView } from './jd-comparison-view';
 import { RegenerateWizard } from './regenerate-wizard';
 import { TailorSettingsPanel } from '@/components/tailor/tailor-settings-panel';
 import { DEFAULT_TAILOR_LENGTH_SETTINGS } from '@/lib/types/tailor-length';
 import type { TailorLengthSettings } from '@/lib/types/tailor-length';
 import { useRegenerateWizard } from '@/hooks/use-regenerate-wizard';
+import { useElapsedSeconds } from '@/hooks/use-elapsed-seconds';
 import { useTranslations } from '@/lib/i18n';
 import { type TemplateSettings, DEFAULT_TEMPLATE_SETTINGS } from '@/lib/types/template-settings';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
@@ -59,7 +62,7 @@ import { useLanguage } from '@/lib/context/language-context';
 import { buildResumeFilename, downloadBlobAsFile, openUrlInNewTab } from '@/lib/utils/download';
 import type { RegenerateItemInput } from '@/lib/api/enrichment';
 
-type TabId = 'resume' | 'cover-letter' | 'outreach' | 'feedback' | 'jd-match';
+type TabId = 'resume' | 'cover-letter' | 'outreach' | 'jd-match';
 
 const STORAGE_KEY = 'resume_builder_draft';
 const SETTINGS_STORAGE_KEY = 'resume_builder_settings';
@@ -161,12 +164,20 @@ const ResumeBuilderContent = () => {
   const [tailorSettings, setTailorSettings] = useState<TailorLengthSettings | null>(null);
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
   const [isGeneratingOutreach, setIsGeneratingOutreach] = useState(false);
-  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
-  const [resumeFeedback, setResumeFeedback] = useState('');
-  const [isFeedbackCopied, setIsFeedbackCopied] = useState(false);
-  const [showRegenerateDialog, setShowRegenerateDialog] = useState<
-    'cover-letter' | 'outreach' | 'feedback' | null
-  >(null);
+  const [enableResumeFeedback, setEnableResumeFeedback] = useState(false);
+  const [feedbackGenStatus, setFeedbackGenStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(
+    'idle'
+  );
+  const [feedbackGenError, setFeedbackGenError] = useState<string | null>(null);
+  const [resumeFeedback, setResumeFeedback] = useState<ResumeFeedback | null>(null);
+  const feedbackGenerationRef = useRef<{ resumeId: string | null; inFlight: boolean }>({
+    resumeId: null,
+    inFlight: false,
+  });
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState<'cover-letter' | 'outreach' | null>(
+    null
+  );
 
   // JD comparison state
   const [jobDescription, setJobDescription] = useState<string | null>(null);
@@ -331,6 +342,14 @@ const ResumeBuilderContent = () => {
           if (data.outreach_message) {
             setOutreachMessage(data.outreach_message);
           }
+          setResumeFeedback(data.resume_feedback ?? null);
+          if (data.resume_feedback) {
+            setFeedbackGenStatus('ready');
+            setFeedbackGenError(null);
+          } else {
+            setFeedbackGenStatus('idle');
+            setFeedbackGenError(null);
+          }
           // Prefer processed_resume if available
           if (data.processed_resume) {
             const normalized = withNormalizedWorkExperience(
@@ -365,6 +384,10 @@ const ResumeBuilderContent = () => {
         const normalized = withNormalizedWorkExperience(improvedPreview);
         setResumeData(normalized);
         setLastSavedData(normalized);
+        setResumeFeedback(null);
+        setFeedbackGenStatus('idle');
+        setFeedbackGenError(null);
+        feedbackGenerationRef.current = { resumeId: null, inFlight: false };
         // Also load cover letter and outreach if present
         if (improvedCoverLetter) {
           setCoverLetter(improvedCoverLetter);
@@ -386,6 +409,10 @@ const ResumeBuilderContent = () => {
           setResumeData(parsed);
           setLastSavedData(parsed);
           setHasUnsavedChanges(true); // Mark as unsaved since it's a draft
+          setResumeFeedback(null);
+          setFeedbackGenStatus('idle');
+          setFeedbackGenError(null);
+          feedbackGenerationRef.current = { resumeId: null, inFlight: false };
           setLoadingState('loaded');
           return;
         } catch {
@@ -394,6 +421,10 @@ const ResumeBuilderContent = () => {
       }
 
       // Fallback: Use initial data
+      setResumeFeedback(null);
+      setFeedbackGenStatus('idle');
+      setFeedbackGenError(null);
+      feedbackGenerationRef.current = { resumeId: null, inFlight: false };
       setLoadingState('loaded');
     };
 
@@ -431,6 +462,103 @@ const ResumeBuilderContent = () => {
       cancelled = true;
     };
   }, [isTailoredResume, resumeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetchFeatureConfig()
+      .then((config) => {
+        if (!cancelled) {
+          setEnableResumeFeedback(config.enable_resume_feedback);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load feature config:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const startFeedbackGeneration = useCallback(
+    async (replace = false) => {
+      if (!resumeId) {
+        return;
+      }
+
+      if (
+        feedbackGenerationRef.current.inFlight &&
+        feedbackGenerationRef.current.resumeId === resumeId
+      ) {
+        return;
+      }
+
+      feedbackGenerationRef.current = { resumeId, inFlight: true };
+      setFeedbackGenError(null);
+      setFeedbackGenStatus('loading');
+
+      try {
+        const feedback = await generateFeedback(resumeId, replace);
+        setResumeFeedback(feedback);
+        setFeedbackGenStatus('ready');
+        setFeedbackGenError(null);
+      } catch (error) {
+        console.error('Failed to generate resume feedback:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setFeedbackGenError(errorMessage);
+        showNotification(t('builder.alerts.feedbackGenerateFailed', { error: errorMessage }), 'danger');
+        setFeedbackGenStatus('error');
+      } finally {
+        if (feedbackGenerationRef.current.resumeId === resumeId) {
+          feedbackGenerationRef.current.inFlight = false;
+        }
+      }
+    },
+    [resumeId, showNotification, t]
+  );
+
+  useEffect(() => {
+    if (!resumeId || !isTailoredResume || !enableResumeFeedback || resumeFeedback) {
+      return;
+    }
+
+    void startFeedbackGeneration(false);
+  }, [resumeId, isTailoredResume, enableResumeFeedback, resumeFeedback, startFeedbackGeneration]);
+
+  const feedbackGenElapsed = useElapsedSeconds(feedbackGenStatus === 'loading');
+
+  const reloadResumeAfterFeedback = useCallback(async () => {
+    if (!resumeId) {
+      setShowFeedbackModal(false);
+      return;
+    }
+
+    try {
+      const data = await fetchResume(resumeId);
+      setResumeTitle(data.title ?? null);
+      setResumeFeedback(data.resume_feedback ?? null);
+      if (data.resume_feedback) {
+        setFeedbackGenStatus('ready');
+        setFeedbackGenError(null);
+      } else {
+        setFeedbackGenStatus('idle');
+        setFeedbackGenError(null);
+      }
+
+      if (data.processed_resume) {
+        const normalized = withNormalizedWorkExperience(data.processed_resume as ResumeData);
+        setResumeData(normalized);
+        setLastSavedData(normalized);
+        setHasUnsavedChanges(false);
+      }
+    } catch (error) {
+      console.error('Failed to reload resume after feedback completion:', error);
+      showNotification(t('builder.alerts.reloadFailed'), 'danger');
+    } finally {
+      setShowFeedbackModal(false);
+    }
+  }, [resumeId, showNotification, t]);
 
   const handleUpdate = useCallback((newData: ResumeData) => {
     setResumeData(newData);
@@ -656,44 +784,6 @@ const ResumeBuilderContent = () => {
     doGenerateOutreach();
   };
 
-  const doGenerateFeedback = async () => {
-    if (!resumeId) return;
-    setIsGeneratingFeedback(true);
-    setShowRegenerateDialog(null);
-    try {
-      const content = await generateResumeFeedback(resumeId);
-      setResumeFeedback(content);
-    } catch (error) {
-      console.error('Failed to generate resume feedback:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      showNotification(
-        t('builder.alerts.feedbackGenerateFailed', { error: errorMessage }),
-        'danger'
-      );
-    } finally {
-      setIsGeneratingFeedback(false);
-    }
-  };
-
-  const handleGenerateFeedback = () => {
-    if (!resumeId) return;
-    if (resumeFeedback) {
-      setShowRegenerateDialog('feedback');
-      return;
-    }
-    doGenerateFeedback();
-  };
-
-  const handleCopyFeedback = async () => {
-    try {
-      await navigator.clipboard.writeText(resumeFeedback);
-      setIsFeedbackCopied(true);
-      setTimeout(() => setIsFeedbackCopied(false), 2000);
-    } catch (error) {
-      console.error('Failed to copy:', error);
-    }
-  };
-
   return (
     <div className="h-screen w-full bg-background flex justify-center items-center p-4 md:p-8">
       {/* Main Container */}
@@ -741,6 +831,28 @@ const ResumeBuilderContent = () => {
                     <Sparkles className="w-4 h-4" />
                     {t('builder.regenerate.buttonLabel')}
                   </Button>
+                  {isTailoredResume && enableResumeFeedback && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowFeedbackModal(true)}
+                    >
+                      {feedbackGenStatus === 'loading' ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          {t('common.processing')}
+                          {feedbackGenElapsed > 0 && (
+                            <span className="font-mono text-xs opacity-70">{feedbackGenElapsed}s</span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="w-4 h-4" />
+                          {t('feedback.buttonLabel')}
+                        </>
+                      )}
+                    </Button>
+                  )}
                   <Button
                     variant="warning"
                     size="sm"
@@ -826,37 +938,6 @@ const ResumeBuilderContent = () => {
                 </>
               )}
 
-              {/* Feedback tab actions */}
-              {activeTab === 'feedback' && resumeFeedback && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateFeedback}
-                    disabled={isGeneratingFeedback}
-                  >
-                    {isGeneratingFeedback ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-4 h-4" />
-                    )}
-                    {t('feedback.regenerate')}
-                  </Button>
-                  <Button variant="success" size="sm" onClick={handleCopyFeedback}>
-                    {isFeedbackCopied ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        {t('feedback.copied')}
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        {t('feedback.copyToClipboard')}
-                      </>
-                    )}
-                  </Button>
-                </>
-              )}
             </div>
           </div>
         </div>
@@ -872,7 +953,6 @@ const ResumeBuilderContent = () => {
                   {activeTab === 'resume' && t('builder.leftPanel.editorPanel')}
                   {activeTab === 'cover-letter' && t('builder.leftPanel.coverLetterEditor')}
                   {activeTab === 'outreach' && t('builder.leftPanel.outreachEditor')}
-                  {activeTab === 'feedback' && t('builder.leftPanel.feedbackAnalysis')}
                   {activeTab === 'jd-match' && t('builder.leftPanel.jdMatchAnalysis')}
                 </h2>
               </div>
@@ -939,20 +1019,6 @@ const ResumeBuilderContent = () => {
                     isTailoredResume={isTailoredResume}
                   />
                 ))}
-
-              {/* Feedback info panel */}
-              {activeTab === 'feedback' && (
-                <div className="space-y-4">
-                  <div className="border-2 border-black bg-white p-4">
-                    <h3 className="font-mono text-sm font-bold uppercase mb-2">
-                      {t('builder.feedback.aboutTitle')}
-                    </h3>
-                    <p className="text-sm text-ink-soft leading-relaxed">
-                      {t('builder.feedback.aboutDescription')}
-                    </p>
-                  </div>
-                </div>
-              )}
 
               {/* JD Match Info Panel */}
               {activeTab === 'jd-match' && (
@@ -1023,11 +1089,6 @@ const ResumeBuilderContent = () => {
                     disabled: !outreachMessage,
                   },
                   {
-                    id: 'feedback',
-                    label: t('builder.previewTabs.feedback'),
-                    disabled: !isTailoredResume || !jobDescription,
-                  },
-                  {
                     id: 'jd-match',
                     label: t('builder.previewTabs.jdMatch'),
                     disabled: !jobDescription,
@@ -1082,19 +1143,6 @@ const ResumeBuilderContent = () => {
                   />
                 ))}
 
-              {/* Feedback Preview */}
-              {activeTab === 'feedback' &&
-                (resumeFeedback ? (
-                  <FeedbackPreview content={resumeFeedback} />
-                ) : (
-                  <GeneratePrompt
-                    type="feedback"
-                    isGenerating={isGeneratingFeedback}
-                    onGenerate={handleGenerateFeedback}
-                    isTailoredResume={isTailoredResume}
-                  />
-                ))}
-
               {/* JD Match Comparison */}
               {activeTab === 'jd-match' && jobDescription && (
                 <JDComparisonView jobDescription={jobDescription} resumeData={resumeData} />
@@ -1135,6 +1183,19 @@ const ResumeBuilderContent = () => {
         </div>
       </div>
 
+      {resumeId && (
+        <FeedbackModal
+          resumeId={resumeId}
+          isOpen={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          onComplete={reloadResumeAfterFeedback}
+          initialFeedback={resumeFeedback}
+          backgroundGenStatus={feedbackGenStatus}
+          backgroundGenError={feedbackGenError}
+          onRequestGeneration={startFeedbackGeneration}
+        />
+      )}
+
       {/* Regenerate Confirmation Dialog */}
       <ConfirmDialog
         open={showRegenerateDialog !== null}
@@ -1143,33 +1204,25 @@ const ResumeBuilderContent = () => {
           title:
             showRegenerateDialog === 'cover-letter'
               ? t('coverLetter.title')
-              : showRegenerateDialog === 'outreach'
-                ? t('outreach.title')
-                : t('feedback.title'),
+              : t('outreach.title'),
         })}
         description={t('builder.regenerateDialog.description', {
           title:
             showRegenerateDialog === 'cover-letter'
               ? t('coverLetter.title')
-              : showRegenerateDialog === 'outreach'
-                ? t('outreach.title')
-                : t('feedback.title'),
+              : t('outreach.title'),
         })}
         confirmLabel={
           showRegenerateDialog === 'cover-letter'
             ? t('coverLetter.regenerate')
-            : showRegenerateDialog === 'outreach'
-              ? t('outreach.regenerate')
-              : t('feedback.regenerate')
+            : t('outreach.regenerate')
         }
         cancelLabel={t('common.cancel')}
         variant="warning"
         onConfirm={
           showRegenerateDialog === 'cover-letter'
             ? doGenerateCoverLetter
-            : showRegenerateDialog === 'outreach'
-              ? doGenerateOutreach
-              : doGenerateFeedback
+            : doGenerateOutreach
         }
       />
 

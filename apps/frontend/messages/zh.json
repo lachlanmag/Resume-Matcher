@@ -176,7 +176,6 @@
       "resume": "简历",
       "coverLetter": "求职信",
       "outreach": "联系邮件",
-      "feedback": "反馈",
       "jdMatch": "JD 匹配"
     },
     "footer": {
@@ -465,12 +464,7 @@
       "editorPanel": "编辑面板",
       "coverLetterEditor": "求职信编辑",
       "outreachEditor": "联系邮件编辑",
-      "feedbackAnalysis": "简历反馈",
       "jdMatchAnalysis": "JD 匹配分析"
-    },
-    "feedback": {
-      "aboutTitle": "关于此报告",
-      "aboutDescription": "针对这份定制简历与关联职位描述生成的 AI 招聘与 ATS 反馈。报告不会自动保存。离开编辑器前请复制有用内容。"
     },
     "alerts": {
       "saveNotAvailable": "仅在编辑现有简历时可保存。",
@@ -730,8 +724,8 @@
         "description": "生成用于 LinkedIn 或邮件的社交/外联消息"
       },
       "resumeFeedback": {
-        "label": "简历反馈提示词",
-        "description": "可选覆盖编辑器中按需生成的定制简历反馈。"
+        "label": "简历反馈",
+        "description": "在编辑器中生成定制简历反馈"
       },
       "customPromptLabel": "自定义提示词（可选）",
       "customPromptHelp": "必须包含以下占位符（各自使用大括号括起来）：job_description、resume_data、output_language。留空则使用默认提示词。",
@@ -863,7 +857,48 @@
   },
   "feedback": {
     "title": "简历反馈",
+    "buttonLabel": "反馈",
+    "modal": {
+      "title": "定制简历反馈"
+    },
     "regenerate": "重新生成",
+    "loading": {
+      "generatingTitle": "正在生成反馈...",
+      "generatingDescription": "正在根据职位描述审阅您的定制简历"
+    },
+    "regenerateDialog": {
+      "title": "重新生成反馈？",
+      "description": "这将替换当前反馈报告并清除所有已保存的回答。",
+      "confirm": "重新生成"
+    },
+    "summary": {
+      "kicker": "反馈报告",
+      "title": "摘要",
+      "questionsCount": "{count} 个问题",
+      "empty": "暂无反馈报告。",
+      "done": "完成"
+    },
+    "question": {
+      "progress": "第 {current} 题，共 {total} 题",
+      "placeholder": "添加细节以澄清这一点...",
+      "shortcutHint": "按 Shift+Enter 换行，Cmd/Ctrl+Enter 继续",
+      "skip": "跳过"
+    },
+    "saveAndReturnToReview": "保存并返回审查",
+    "review": {
+      "kicker": "问题审查",
+      "title": "审查你的回答",
+      "questionLabel": "问题 {number}",
+      "skipped": "已跳过",
+      "applyFeedback": "应用反馈"
+    },
+    "category": {
+      "gap": "差距",
+      "risk": "风险",
+      "clarification": "澄清",
+      "improvement": "改进",
+      "ats": "ATS"
+    },
     "copyToClipboard": "复制到剪贴板",
     "copied": "已复制！"
   },

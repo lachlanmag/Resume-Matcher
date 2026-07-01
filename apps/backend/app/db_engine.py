@@ -68,6 +68,9 @@ def _apply_schema_patches(engine: Engine) -> None:
     if "tailor_settings" not in columns:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE resumes ADD COLUMN tailor_settings JSON"))
+    if "resume_feedback" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE resumes ADD COLUMN resume_feedback JSON"))
 
 
 def init_models_sync(engine: Engine) -> None:

@@ -571,7 +571,20 @@ Guidelines:
 - Do not recommend adding keywords without evidence; mark as "verify with candidate."
 - Do not use em dash ("—") anywhere in the output.
 
-Output markdown only. No JSON, no preamble."""
+Return JSON only with this exact shape:
+{{
+  "report_markdown": "<full markdown report using the headings above>",
+  "questions": [
+    {{
+      "question_id": "q1",
+      "category": "gap",
+      "prompt": "<specific question for the candidate>",
+      "context": "<optional short context>"
+    }}
+  ]
+}}
+
+The questions array must contain 3 to 8 items drawn from gaps, risks, unsupported claims, ATS blockers, and improvement areas in the report. Categories must be one of: gap, risk, clarification, improvement, ats. question_id values must be unique (q1, q2, ...)."""
 
 GENERATE_TITLE_PROMPT = """Extract the job title and company name from this job description.
 

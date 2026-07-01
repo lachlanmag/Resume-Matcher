@@ -2,6 +2,7 @@
 
 import asyncio
 import copy
+from datetime import datetime, timezone
 import hashlib
 import json
 import logging
@@ -26,6 +27,12 @@ from app.pdf import (
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+from app.schemas.feedback import (
+    FeedbackApplyRequest,
+    FeedbackAnswersPatch,
+    FeedbackGenerateRequest,
+    ResumeFeedback,
+)
 from app.schemas import (
     ApplyTailorLengthResponse,
     GenerateContentResponse,
@@ -75,7 +82,10 @@ from app.services.cover_letter import (
     generate_cover_letter,
     generate_outreach_message,
     generate_resume_title,
-    generate_tailored_resume_feedback,
+)
+from app.services.feedback import (
+    build_apply_preview,
+    generate_structured_feedback,
 )
 from app.prompts import DEFAULT_IMPROVE_PROMPT_ID, IMPROVE_PROMPT_OPTIONS
 
@@ -806,6 +816,11 @@ async def get_resume(resume_id: str = Query(...)) -> ResumeFetchResponse:
 
     tailor_settings = tailor_length_settings_from_resume_doc(resume)
 
+    raw_feedback = resume.get("resume_feedback")
+    resume_feedback = (
+        ResumeFeedback.model_validate(raw_feedback) if raw_feedback else None
+    )
+
     return ResumeFetchResponse(
         request_id=str(uuid4()),
         data=ResumeFetchData(
@@ -817,6 +832,7 @@ async def get_resume(resume_id: str = Query(...)) -> ResumeFetchResponse:
             parent_id=resume.get("parent_id"),
             title=resume.get("title"),
             tailor_settings=tailor_settings,
+            resume_feedback=resume_feedback,
         ),
     )
 
@@ -2171,13 +2187,8 @@ async def generate_outreach_endpoint(resume_id: str) -> GenerateContentResponse:
     )
 
 
-@router.post("/{resume_id}/generate-feedback", response_model=GenerateContentResponse)
-async def generate_feedback_endpoint(resume_id: str) -> GenerateContentResponse:
-    """Generate HR-style feedback on-demand for an existing tailored resume.
-
-    Returns markdown feedback without persisting it to the resume record.
-    Requires a tailored resume with linked job context.
-    """
+async def _require_tailored_resume_with_job(resume_id: str) -> tuple[dict, dict, dict]:
+    """Returns (resume, job, improvement). Raises HTTPException on failure."""
     resume = await db.get_resume(resume_id)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
@@ -2211,11 +2222,32 @@ async def generate_feedback_endpoint(resume_id: str) -> GenerateContentResponse:
             detail="Resume has no processed data. Please re-upload the resume.",
         )
 
+    return resume, job, improvement
+
+
+@router.post("/{resume_id}/feedback/generate")
+async def feedback_generate_endpoint(
+    resume_id: str, body: FeedbackGenerateRequest
+) -> dict[str, Any]:
+    """Generate and persist structured feedback for a tailored resume."""
+    feature_config = _load_config()
+    if not feature_config.get("enable_resume_feedback", False):
+        raise HTTPException(
+            status_code=400,
+            detail="Resume feedback is disabled. Enable it in Settings.",
+        )
+
+    resume, job, _ = await _require_tailored_resume_with_job(resume_id)
+
+    existing_feedback = resume.get("resume_feedback")
+    if existing_feedback and not body.replace:
+        return {"data": existing_feedback}
+
     language = get_content_language()
 
     try:
-        feedback_content = await generate_tailored_resume_feedback(
-            resume_data, job["content"], language
+        payload = await generate_structured_feedback(
+            resume["processed_data"], job["content"], language
         )
     except Exception as e:
         logger.error(f"Resume feedback generation failed: {e}")
@@ -2224,9 +2256,161 @@ async def generate_feedback_endpoint(resume_id: str) -> GenerateContentResponse:
             detail="Failed to generate resume feedback. Please try again.",
         )
 
-    return GenerateContentResponse(
-        content=feedback_content,
-        message="Resume feedback generated successfully",
+    await db.update_resume(resume_id, {"resume_feedback": payload})
+    return {"data": payload}
+
+
+@router.patch("/{resume_id}/feedback/answers")
+async def feedback_answers_patch_endpoint(
+    resume_id: str, body: FeedbackAnswersPatch
+) -> dict[str, Any]:
+    """Merge answer updates into persisted feedback answers."""
+    resume, _, _ = await _require_tailored_resume_with_job(resume_id)
+
+    raw_feedback = resume.get("resume_feedback")
+    if not raw_feedback:
+        raise HTTPException(
+            status_code=400,
+            detail="No feedback found for this resume. Please generate feedback first.",
+        )
+
+    try:
+        feedback = ResumeFeedback.model_validate(raw_feedback)
+    except ValidationError as e:
+        logger.error("Stored resume feedback is invalid for %s: %s", resume_id, e)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update resume feedback. Please try again.",
+        )
+
+    known_question_ids = {question.question_id for question in feedback.questions}
+    unknown_question_ids = sorted(set(body.answers) - known_question_ids)
+    if unknown_question_ids:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown question_id values: {', '.join(unknown_question_ids)}",
+        )
+
+    merged_answers = dict(feedback.answers)
+    merged_answers.update(body.answers)
+    updated_feedback = feedback.model_copy(update={"answers": merged_answers})
+    payload = updated_feedback.model_dump()
+
+    await db.update_resume(resume_id, {"resume_feedback": payload})
+    return {"data": payload}
+
+
+@router.post("/{resume_id}/feedback/apply-preview")
+async def feedback_apply_preview_endpoint(resume_id: str) -> dict[str, Any]:
+    """Build a feedback-driven apply preview for a tailored resume."""
+    resume, job, _ = await _require_tailored_resume_with_job(resume_id)
+
+    raw_feedback = resume.get("resume_feedback")
+    if not raw_feedback:
+        raise HTTPException(
+            status_code=400,
+            detail="No feedback found for this resume. Please generate feedback first.",
+        )
+
+    try:
+        feedback = ResumeFeedback.model_validate(raw_feedback)
+    except ValidationError as e:
+        logger.error("Stored resume feedback is invalid for %s: %s", resume_id, e)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to build feedback preview. Please try again.",
+        )
+
+    try:
+        preview = await build_apply_preview(
+            resume_data=resume["processed_data"],
+            job_description=job["content"],
+            report_markdown=feedback.report_markdown,
+            questions=[question.model_dump() for question in feedback.questions],
+            answers=feedback.answers,
+            language=get_content_language(),
+        )
+    except Exception as e:
+        logger.error("Feedback apply preview generation failed for %s: %s", resume_id, e)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to build feedback preview. Please try again.",
+        )
+
+    return {"data": preview}
+
+
+@router.post("/{resume_id}/feedback/apply", response_model=ResumeFetchResponse)
+async def feedback_apply_endpoint(
+    resume_id: str, body: FeedbackApplyRequest
+) -> ResumeFetchResponse:
+    """Apply accepted feedback preview data and mark feedback as applied."""
+    resume, _, _ = await _require_tailored_resume_with_job(resume_id)
+
+    raw_feedback = resume.get("resume_feedback")
+    if not raw_feedback:
+        raise HTTPException(
+            status_code=400,
+            detail="No feedback found for this resume. Please generate feedback first.",
+        )
+
+    try:
+        feedback = ResumeFeedback.model_validate(raw_feedback)
+    except ValidationError as e:
+        logger.error("Stored resume feedback is invalid for %s: %s", resume_id, e)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to apply feedback. Please try again.",
+        )
+
+    improved_data = copy.deepcopy(body.improved_data)
+    improved_text = json.dumps(improved_data, indent=2)
+    applied_feedback = feedback.model_copy(
+        update={"applied_at": datetime.now(timezone.utc).isoformat()}
+    )
+
+    updated = await db.update_resume(
+        resume_id,
+        {
+            "content": improved_text,
+            "content_type": "json",
+            "processed_data": improved_data,
+            "processing_status": "ready",
+            "resume_feedback": applied_feedback.model_dump(),
+        },
+    )
+
+    raw_resume = RawResume(
+        id=None,
+        content=updated["content"],
+        content_type=updated["content_type"],
+        created_at=updated["created_at"],
+        processing_status=updated.get("processing_status", "pending"),
+    )
+    processed_resume = (
+        ResumeData.model_validate(updated.get("processed_data"))
+        if updated.get("processed_data")
+        else None
+    )
+    updated_resume_feedback = (
+        ResumeFeedback.model_validate(updated.get("resume_feedback"))
+        if updated.get("resume_feedback")
+        else None
+    )
+
+    return ResumeFetchResponse(
+        request_id=str(uuid4()),
+        data=ResumeFetchData(
+            resume_id=resume_id,
+            raw_resume=raw_resume,
+            processed_resume=processed_resume,
+            cover_letter=updated.get("cover_letter"),
+            outreach_message=updated.get("outreach_message"),
+            parent_id=updated.get("parent_id"),
+            title=updated.get("title"),
+            tailor_settings=tailor_length_settings_from_resume_doc(updated),
+            resume_feedback=updated_resume_feedback,
+        ),
     )
 
 

@@ -240,6 +240,7 @@ class TestFeatureConfig:
         mock_load.return_value = {
             "enable_cover_letter": True,
             "enable_outreach_message": False,
+            "enable_resume_feedback": True,
         }
         async with client:
             resp = await client.get("/api/v1/config/features")
@@ -247,6 +248,7 @@ class TestFeatureConfig:
         data = resp.json()
         assert data["enable_cover_letter"] is True
         assert data["enable_outreach_message"] is False
+        assert data["enable_resume_feedback"] is True
 
     @patch("app.routers.config._save_config")
     @patch("app.routers.config._load_config")

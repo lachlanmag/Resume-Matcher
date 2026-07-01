@@ -176,7 +176,6 @@
       "resume": "RESUME",
       "coverLetter": "COVER LETTER",
       "outreach": "OUTREACH MAIL",
-      "feedback": "FEEDBACK",
       "jdMatch": "JD MATCH"
     },
     "footer": {
@@ -465,12 +464,7 @@
       "editorPanel": "Editor Panel",
       "coverLetterEditor": "Cover Letter Editor",
       "outreachEditor": "Outreach Message Editor",
-      "feedbackAnalysis": "Resume Feedback",
       "jdMatchAnalysis": "JD Match Analysis"
-    },
-    "feedback": {
-      "aboutTitle": "About this report",
-      "aboutDescription": "AI-generated hiring and ATS feedback for this tailored resume versus the linked job description. Reports are not saved automatically. Copy useful sections before leaving the builder."
     },
     "alerts": {
       "saveNotAvailable": "Save is only available when editing an existing resume.",
@@ -730,8 +724,8 @@
         "description": "Generate a networking message for LinkedIn or email"
       },
       "resumeFeedback": {
-        "label": "Resume feedback prompt",
-        "description": "Optional override for on-demand tailored resume feedback in the builder."
+        "label": "Resume Feedback",
+        "description": "Generate tailored resume feedback in the builder"
       },
       "customPromptLabel": "Custom prompt (optional)",
       "customPromptHelp": "Must include these placeholders (each in curly braces): job_description, resume_data, output_language. Leave blank to use the default prompt.",
@@ -863,7 +857,48 @@
   },
   "feedback": {
     "title": "Resume Feedback",
+    "buttonLabel": "Feedback",
+    "modal": {
+      "title": "Tailored Resume Feedback"
+    },
     "regenerate": "Regenerate",
+    "loading": {
+      "generatingTitle": "Generating feedback...",
+      "generatingDescription": "Reviewing your tailored resume against the job description"
+    },
+    "regenerateDialog": {
+      "title": "Regenerate feedback?",
+      "description": "This will replace the current feedback report and clear all saved answers.",
+      "confirm": "Regenerate"
+    },
+    "summary": {
+      "kicker": "Feedback Report",
+      "title": "Summary",
+      "questionsCount": "{count} questions",
+      "empty": "No feedback report available.",
+      "done": "Done"
+    },
+    "question": {
+      "progress": "Question {current} of {total}",
+      "placeholder": "Add details to clarify this point...",
+      "shortcutHint": "Press Shift+Enter for new line, Cmd/Ctrl+Enter to continue",
+      "skip": "Skip"
+    },
+    "saveAndReturnToReview": "Save & return to review",
+    "review": {
+      "kicker": "Question Review",
+      "title": "Review Your Answers",
+      "questionLabel": "Question {number}",
+      "skipped": "Skipped",
+      "applyFeedback": "Apply Feedback"
+    },
+    "category": {
+      "gap": "Gap",
+      "risk": "Risk",
+      "clarification": "Clarification",
+      "improvement": "Improvement",
+      "ats": "ATS"
+    },
     "copyToClipboard": "Copy to Clipboard",
     "copied": "Copied!"
   },

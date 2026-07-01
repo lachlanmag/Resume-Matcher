@@ -176,7 +176,6 @@
       "resume": "履歴書",
       "coverLetter": "カバーレター",
       "outreach": "連絡メール",
-      "feedback": "フィードバック",
       "jdMatch": "JD一致"
     },
     "footer": {
@@ -465,12 +464,7 @@
       "editorPanel": "編集パネル",
       "coverLetterEditor": "カバーレター編集",
       "outreachEditor": "連絡メール編集",
-      "feedbackAnalysis": "履歴書フィードバック",
       "jdMatchAnalysis": "JD一致分析"
-    },
-    "feedback": {
-      "aboutTitle": "このレポートについて",
-      "aboutDescription": "リンクされた求人内容に対するカスタマイズ履歴書のAI採用・ATSフィードバックです。レポートは自動保存されません。ビルダーを離れる前に必要な部分をコピーしてください。"
     },
     "alerts": {
       "saveNotAvailable": "既存の履歴書を編集中のみ保存できます。",
@@ -730,8 +724,8 @@
         "description": "LinkedIn やメール向けのネットワーキングメッセージを生成します"
       },
       "resumeFeedback": {
-        "label": "履歴書フィードバックプロンプト",
-        "description": "ビルダーでのオンデマンド履歴書フィードバック用の任意の上書き設定。"
+        "label": "履歴書フィードバック",
+        "description": "ビルダーでカスタマイズ履歴書のフィードバックを生成します"
       },
       "customPromptLabel": "カスタムプロンプト（任意）",
       "customPromptHelp": "次のプレースホルダーを中括弧で囲んで含めてください：job_description, resume_data, output_language。空欄の場合は既定のプロンプトを使用します。",
@@ -863,7 +857,48 @@
   },
   "feedback": {
     "title": "履歴書フィードバック",
+    "buttonLabel": "フィードバック",
+    "modal": {
+      "title": "カスタマイズ履歴書フィードバック"
+    },
     "regenerate": "再生成",
+    "loading": {
+      "generatingTitle": "フィードバックを生成中...",
+      "generatingDescription": "求人票に照らしてカスタマイズ履歴書をレビューしています"
+    },
+    "regenerateDialog": {
+      "title": "フィードバックを再生成しますか？",
+      "description": "現在のフィードバックレポートが置き換わり、保存済みの回答がすべて消去されます。",
+      "confirm": "再生成"
+    },
+    "summary": {
+      "kicker": "フィードバックレポート",
+      "title": "概要",
+      "questionsCount": "{count} 件の質問",
+      "empty": "フィードバックレポートがありません。",
+      "done": "完了"
+    },
+    "question": {
+      "progress": "質問 {current} / {total}",
+      "placeholder": "この点を明確にする詳細を追加...",
+      "shortcutHint": "Shift+Enter で改行、Cmd/Ctrl+Enter で続行",
+      "skip": "スキップ"
+    },
+    "saveAndReturnToReview": "保存してレビューに戻る",
+    "review": {
+      "kicker": "質問レビュー",
+      "title": "回答を確認",
+      "questionLabel": "質問 {number}",
+      "skipped": "スキップ",
+      "applyFeedback": "フィードバックを適用"
+    },
+    "category": {
+      "gap": "ギャップ",
+      "risk": "リスク",
+      "clarification": "確認",
+      "improvement": "改善",
+      "ats": "ATS"
+    },
     "copyToClipboard": "クリップボードにコピー",
     "copied": "コピーしました！"
   },

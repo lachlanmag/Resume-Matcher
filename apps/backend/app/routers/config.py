@@ -301,6 +301,7 @@ async def get_feature_config() -> FeatureConfigResponse:
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
+        enable_resume_feedback=stored.get("enable_resume_feedback", False),
     )
 
 
@@ -314,6 +315,8 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
         stored["enable_cover_letter"] = request.enable_cover_letter
     if request.enable_outreach_message is not None:
         stored["enable_outreach_message"] = request.enable_outreach_message
+    if request.enable_resume_feedback is not None:
+        stored["enable_resume_feedback"] = request.enable_resume_feedback
 
     # Save config
     _save_config(stored)
@@ -321,6 +324,7 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
+        enable_resume_feedback=stored.get("enable_resume_feedback", False),
     )
 
 

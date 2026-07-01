@@ -176,7 +176,6 @@
       "resume": "CURRÍCULO",
       "coverLetter": "CARTA DE APRESENTAÇÃO",
       "outreach": "MENSAGEM DE CONTATO",
-      "feedback": "FEEDBACK",
       "jdMatch": "ANÁLISE DE VAGA"
     },
     "footer": {
@@ -465,12 +464,7 @@
       "editorPanel": "Painel do Editor",
       "coverLetterEditor": "Editor de Carta de Apresentação",
       "outreachEditor": "Editor de Mensagem de Contato",
-      "feedbackAnalysis": "Feedback do currículo",
       "jdMatchAnalysis": "Análise de Correspondência de Vaga"
-    },
-    "feedback": {
-      "aboutTitle": "Sobre este relatório",
-      "aboutDescription": "Feedback de contratação e ATS gerado por IA para este currículo personalizado em relação à vaga vinculada. Os relatórios não são salvos automaticamente. Copie seções úteis antes de sair do editor."
     },
     "alerts": {
       "saveNotAvailable": "Salvar só está disponível ao editar um currículo existente.",
@@ -730,8 +724,8 @@
         "description": "Gerar uma mensagem de networking para LinkedIn ou email"
       },
       "resumeFeedback": {
-        "label": "Prompt de feedback do currículo",
-        "description": "Substituição opcional para feedback sob demanda de currículos personalizados no editor."
+        "label": "Feedback do currículo",
+        "description": "Gerar feedback personalizado do currículo no editor"
       },
       "customPromptLabel": "Prompt personalizado (opcional)",
       "customPromptHelp": "Deve incluir estes marcadores (cada um entre chaves): job_description, resume_data, output_language. Deixe em branco para usar o prompt padrão.",
@@ -863,7 +857,48 @@
   },
   "feedback": {
     "title": "Feedback do currículo",
+    "buttonLabel": "Feedback",
+    "modal": {
+      "title": "Feedback do currículo personalizado"
+    },
     "regenerate": "Regenerar",
+    "loading": {
+      "generatingTitle": "Gerando feedback...",
+      "generatingDescription": "Analisando seu currículo personalizado em relação à descrição da vaga"
+    },
+    "regenerateDialog": {
+      "title": "Regenerar feedback?",
+      "description": "Isso substituirá o relatório de feedback atual e limpará todas as respostas salvas.",
+      "confirm": "Regenerar"
+    },
+    "summary": {
+      "kicker": "Relatório de feedback",
+      "title": "Resumo",
+      "questionsCount": "{count} perguntas",
+      "empty": "Nenhum relatório de feedback disponível.",
+      "done": "Concluído"
+    },
+    "question": {
+      "progress": "Pergunta {current} de {total}",
+      "placeholder": "Adicione detalhes para esclarecer este ponto...",
+      "shortcutHint": "Pressione Shift+Enter para nova linha, Cmd/Ctrl+Enter para continuar",
+      "skip": "Pular"
+    },
+    "saveAndReturnToReview": "Salvar e voltar à revisão",
+    "review": {
+      "kicker": "Revisão de perguntas",
+      "title": "Revise suas respostas",
+      "questionLabel": "Pergunta {number}",
+      "skipped": "Ignorada",
+      "applyFeedback": "Aplicar feedback"
+    },
+    "category": {
+      "gap": "Lacuna",
+      "risk": "Risco",
+      "clarification": "Esclarecimento",
+      "improvement": "Melhoria",
+      "ats": "ATS"
+    },
     "copyToClipboard": "Copiar para a área de transferência",
     "copied": "Copiado!"
   },

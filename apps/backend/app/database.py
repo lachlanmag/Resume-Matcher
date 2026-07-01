@@ -135,6 +135,8 @@ class Database:
             doc["original_markdown"] = row.original_markdown
         if row.tailor_settings is not None:
             doc["tailor_settings"] = row.tailor_settings
+        if row.resume_feedback is not None:
+            doc["resume_feedback"] = row.resume_feedback
         return doc
 
     @staticmethod

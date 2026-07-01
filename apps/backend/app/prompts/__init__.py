@@ -1,5 +1,9 @@
 """LLM prompt templates."""
 
+from app.prompts.feedback import (
+    APPLY_FEEDBACK_PROMPT,
+    APPLY_FEEDBACK_TRUTHFULNESS_RULES,
+)
 from app.prompts.templates import (
     CRITICAL_TRUTHFULNESS_RULES,
     DEFAULT_IMPROVE_PROMPT_ID,
@@ -41,6 +45,8 @@ def validate_prompt_placeholders(prompt: str) -> list[str]:
 
 
 __all__ = [
+    "APPLY_FEEDBACK_PROMPT",
+    "APPLY_FEEDBACK_TRUTHFULNESS_RULES",
     "PARSE_RESUME_PROMPT",
     "EXTRACT_KEYWORDS_PROMPT",
     "IMPROVE_RESUME_PROMPT",
