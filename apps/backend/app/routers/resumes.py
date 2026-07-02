@@ -57,7 +57,7 @@ from app.schemas import (
     UpdateTitleRequest,
     normalize_resume_data,
 )
-from app.schemas.work_experience import preserve_work_experience_identity
+from app.schemas.work_experience import finalize_tailored_work_experience
 from app.services.parser import parse_document, parse_resume_to_json, restore_dates_from_markdown
 from app.services.improver import (
     MONTH_PATTERN,
@@ -488,22 +488,6 @@ def _protect_custom_sections(
 
     result["customSections"] = result_custom
     return result
-
-
-def _finalize_tailored_work_experience(
-    original_data: dict[str, Any] | None,
-    improved_data: dict[str, Any],
-) -> dict[str, Any]:
-    """Restore multi-role work experience identity after LLM tailoring/refinement."""
-    if not original_data:
-        return normalize_resume_data(improved_data)
-
-    result = copy.deepcopy(improved_data)
-    result["workExperience"] = preserve_work_experience_identity(
-        original_data.get("workExperience"),
-        improved_data.get("workExperience"),
-    )
-    return normalize_resume_data(result)
 
 
 def _preserve_personal_info(
@@ -1120,7 +1104,7 @@ async def _improve_preview_flow(
         if refinement_attempted:
             response_warnings.append(f"Refinement failed: {str(e)}")
 
-    improved_data = _finalize_tailored_work_experience(original_resume_data, improved_data)
+    improved_data = finalize_tailored_work_experience(original_resume_data, improved_data)
 
     if master_for_length and improved_data:
         improved_data, length_warnings = _apply_length_safety_net(
@@ -1527,7 +1511,7 @@ async def improve_resume_endpoint(
             if refinement_attempted:
                 response_warnings.append(f"Refinement failed: {str(e)}")
 
-        improved_data = _finalize_tailored_work_experience(
+        improved_data = finalize_tailored_work_experience(
             original_resume_data, improved_data
         )
 
@@ -1816,7 +1800,7 @@ async def apply_tailor_length_endpoint(
         warnings.append(f"Selection pass failed: {e}")
         improved_data = copy.deepcopy(tailored_data)
 
-    improved_data = _finalize_tailored_work_experience(tailored_data, improved_data)
+    improved_data = finalize_tailored_work_experience(tailored_data, improved_data)
     improved_data, length_warnings = _apply_length_safety_net(
         improved_data, master_data, settings
     )
@@ -2187,6 +2171,20 @@ async def generate_outreach_endpoint(resume_id: str) -> GenerateContentResponse:
     )
 
 
+async def _master_processed_data_for_improvement(
+    improvement: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Load the master resume processed_data linked to a tailored improvement."""
+    master_id = improvement.get("original_resume_id")
+    if not master_id:
+        return None
+    master = await db.get_resume(master_id)
+    if not master:
+        return None
+    processed = master.get("processed_data")
+    return processed if isinstance(processed, dict) else None
+
+
 async def _require_tailored_resume_with_job(resume_id: str) -> tuple[dict, dict, dict]:
     """Returns (resume, job, improvement). Raises HTTPException on failure."""
     resume = await db.get_resume(resume_id)
@@ -2303,7 +2301,8 @@ async def feedback_answers_patch_endpoint(
 @router.post("/{resume_id}/feedback/apply-preview")
 async def feedback_apply_preview_endpoint(resume_id: str) -> dict[str, Any]:
     """Build a feedback-driven apply preview for a tailored resume."""
-    resume, job, _ = await _require_tailored_resume_with_job(resume_id)
+    resume, job, improvement = await _require_tailored_resume_with_job(resume_id)
+    master_data = await _master_processed_data_for_improvement(improvement)
 
     raw_feedback = resume.get("resume_feedback")
     if not raw_feedback:
@@ -2324,6 +2323,7 @@ async def feedback_apply_preview_endpoint(resume_id: str) -> dict[str, Any]:
     try:
         preview = await build_apply_preview(
             resume_data=resume["processed_data"],
+            original_resume_data=master_data,
             job_description=job["content"],
             report_markdown=feedback.report_markdown,
             questions=[question.model_dump() for question in feedback.questions],
@@ -2345,7 +2345,8 @@ async def feedback_apply_endpoint(
     resume_id: str, body: FeedbackApplyRequest
 ) -> ResumeFetchResponse:
     """Apply accepted feedback preview data and mark feedback as applied."""
-    resume, _, _ = await _require_tailored_resume_with_job(resume_id)
+    resume, _, improvement = await _require_tailored_resume_with_job(resume_id)
+    master_data = await _master_processed_data_for_improvement(improvement)
 
     raw_feedback = resume.get("resume_feedback")
     if not raw_feedback:
@@ -2363,7 +2364,9 @@ async def feedback_apply_endpoint(
             detail="Failed to apply feedback. Please try again.",
         )
 
-    improved_data = copy.deepcopy(body.improved_data)
+    improved_data = finalize_tailored_work_experience(
+        master_data, copy.deepcopy(body.improved_data)
+    )
     improved_text = json.dumps(improved_data, indent=2)
     applied_feedback = feedback.model_copy(
         update={"applied_at": datetime.now(timezone.utc).isoformat()}

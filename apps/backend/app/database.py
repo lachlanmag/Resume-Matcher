@@ -314,13 +314,11 @@ class Database:
             row = await session.get(Resume, resume_id)
             if row is None:
                 raise ValueError(f"Resume not found: {resume_id}")
-            unknown = [key for key in updates if not hasattr(row, key)]
-            if unknown:
-                raise ValueError(
-                    f"Unknown resume field(s): {', '.join(sorted(unknown))}"
-                )
             for key, value in updates.items():
-                setattr(row, key, value)
+                if hasattr(row, key):
+                    setattr(row, key, value)
+                else:
+                    logger.warning("Ignoring unknown resume field on update: %s", key)
             row.updated_at = _now()
             await session.commit()
             return self._resume_to_dict(row)

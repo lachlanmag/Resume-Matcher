@@ -18,6 +18,7 @@ from app.prompts import (
 from app.prompts.templates import TAILORED_RESUME_FEEDBACK_PROMPT
 from app.schemas.feedback import ResumeFeedback
 from app.schemas.models import ResumeChange
+from app.schemas.work_experience import finalize_tailored_work_experience
 from app.services.cover_letter import _resolve_feature_prompt
 from app.services.improver import apply_diffs, calculate_resume_diff
 
@@ -123,6 +124,7 @@ async def build_apply_preview(
     questions: list[dict[str, Any]] | list[Any],
     answers: dict[str, str],
     language: str = "en",
+    original_resume_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Generate and apply feedback-driven resume diffs, then return a preview diff."""
     output_language = get_language_name(language)
@@ -179,6 +181,9 @@ async def build_apply_preview(
         )
 
     improved_data, _applied, _rejected = apply_diffs(copy.deepcopy(resume_data), changes)
+    improved_data = finalize_tailored_work_experience(
+        original_resume_data, improved_data
+    )
     diff_summary, detailed_changes = calculate_resume_diff(resume_data, improved_data)
 
     return {

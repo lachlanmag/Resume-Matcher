@@ -101,6 +101,7 @@ async def migrate(database: Database | None = None) -> dict[str, Any]:
                     title=r.get("title"),
                     original_markdown=r.get("original_markdown"),
                     tailor_settings=r.get("tailor_settings"),
+                    resume_feedback=r.get("resume_feedback"),
                     created_at=r.get("created_at") or _utcnow_iso(),
                     updated_at=r.get("updated_at") or r.get("created_at") or _utcnow_iso(),
                 )

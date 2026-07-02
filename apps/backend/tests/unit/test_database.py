@@ -45,11 +45,6 @@ class TestResumeCrud:
         with pytest.raises(ValueError):
             await db.update_resume("missing", {"title": "X"})
 
-    async def test_update_unknown_field_raises(self, db):
-        created = await db.create_resume(content="x")
-        with pytest.raises(ValueError, match="Unknown resume field"):
-            await db.update_resume(created["resume_id"], {"not_a_column": True})
-
     async def test_delete_resume(self, db):
         created = await db.create_resume(content="x")
         assert await db.delete_resume(created["resume_id"]) is True
