@@ -154,6 +154,7 @@ def migrate_legacy_keys() -> None:
 _LEGACY_PROVIDER_KEY_MAP: dict[str, str] = {
     "openai": "openai",
     "openai_compatible": "openai_compatible",
+    "cursor": "cursor",
     "anthropic": "anthropic",
     "gemini": "google",
     "openrouter": "openrouter",

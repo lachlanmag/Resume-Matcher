@@ -617,3 +617,25 @@ class TestLegacyKeyMigration:
         assert keys.get("openai", "") == ""
         on_disk = json.loads(config_module.CONFIG_FILE_PATH.read_text())
         assert "api_keys" not in on_disk
+
+    async def test_migration_maps_cursor_legacy_single_key(self, keys_env, monkeypatch, tmp_path):
+        import json
+        import app.config as config_module
+        from app.config import migrate_legacy_keys, get_api_keys_from_config
+
+        config_module.CONFIG_FILE_PATH.write_text(
+            json.dumps(
+                {
+                    "provider": "cursor",
+                    "model": "auto",
+                    "api_key": "cursor-local-key",
+                }
+            )
+        )
+
+        migrate_legacy_keys()
+
+        keys = get_api_keys_from_config()
+        assert keys["cursor"] == "cursor-local-key"
+        on_disk = json.loads(config_module.CONFIG_FILE_PATH.read_text())
+        assert "api_key" not in on_disk

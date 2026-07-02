@@ -108,8 +108,16 @@ def _wire_tailored_db(
     resume_record,
     job_record,
     improvement_record,
+    master_record=None,
 ):
-    mock_db.get_resume.return_value = resume_record
+    records = {resume_record["resume_id"]: resume_record}
+    if master_record is not None:
+        records[master_record["resume_id"]] = master_record
+
+    async def get_resume_side_effect(resume_id):
+        return records.get(resume_id)
+
+    mock_db.get_resume.side_effect = get_resume_side_effect
     mock_db.get_improvement_by_tailored_resume.return_value = improvement_record
     mock_db.get_job.return_value = job_record
 
@@ -447,7 +455,7 @@ class TestFeedbackApply:
         mock_db.update_resume.assert_called_once()
         resume_id, update_payload = mock_db.update_resume.call_args[0]
         assert resume_id == "tailored-123"
-        assert update_payload["processed_data"] == improved_data
+        assert update_payload["processed_data"]["summary"] == improved_data["summary"]
         assert update_payload["processing_status"] == "ready"
         assert update_payload["resume_feedback"]["applied_at"] is not None
 
@@ -455,3 +463,104 @@ class TestFeedbackApply:
         assert data["resume_id"] == "tailored-123"
         assert data["processed_resume"]["summary"] == improved_data["summary"]
         assert data["resume_feedback"]["applied_at"] is not None
+
+    @patch("app.routers.resumes.db", new_callable=AsyncMock)
+    async def test_apply_preserves_multi_role_work_experience(
+        self,
+        mock_db,
+        client,
+        mock_tailored_resume_record,
+        mock_job_record,
+        mock_improvement_record,
+    ):
+        master_data = {
+            "personalInfo": {"name": "Jane Doe"},
+            "summary": "Product leader.",
+            "workExperience": [
+                {
+                    "id": 1,
+                    "company": "Example Industries",
+                    "location": "New York, NY",
+                    "roles": [
+                        {
+                            "id": 1,
+                            "title": "Product Owner",
+                            "years": "Sep 2021 - Nov 2023",
+                        },
+                        {
+                            "id": 2,
+                            "title": "Senior Business Analyst",
+                            "years": "Jul 2019 - Sep 2021",
+                        },
+                    ],
+                    "description": ["Led product strategy"],
+                }
+            ],
+            "education": [],
+            "personalProjects": [],
+            "additional": {
+                "technicalSkills": [],
+                "languages": [],
+                "certificationsTraining": [],
+                "awards": [],
+            },
+            "sectionMeta": [],
+            "customSections": {},
+        }
+        master_record = {
+            "resume_id": "master-001",
+            "processed_data": master_data,
+        }
+        flattened_apply_payload = {
+            "personalInfo": master_data["personalInfo"],
+            "summary": "Product leader with clarified scope.",
+            "workExperience": [
+                {
+                    "id": 1,
+                    "company": "Example Industries",
+                    "location": "New York, NY",
+                    "title": "Product Owner",
+                    "years": "Sep 2021 - Nov 2023",
+                    "description": ["Led product strategy across platform modules"],
+                }
+            ],
+            "education": [],
+            "personalProjects": [],
+            "additional": master_data["additional"],
+            "sectionMeta": [],
+            "customSections": {},
+        }
+
+        resume_with_feedback = {
+            **mock_tailored_resume_record,
+            "processed_data": flattened_apply_payload,
+            "resume_feedback": SAMPLE_FEEDBACK,
+        }
+        _wire_tailored_db(
+            mock_db,
+            resume_with_feedback,
+            mock_job_record,
+            mock_improvement_record,
+            master_record=master_record,
+        )
+
+        async def update_side_effect(resume_id, updates):
+            return {**resume_with_feedback, **updates}
+
+        mock_db.update_resume.side_effect = update_side_effect
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/resumes/tailored-123/feedback/apply",
+                json={"improved_data": flattened_apply_payload},
+            )
+
+        assert resp.status_code == 200
+        update_payload = mock_db.update_resume.call_args[0][1]
+        roles = update_payload["processed_data"]["workExperience"][0]["roles"]
+        assert len(roles) == 2
+        assert roles[0]["title"] == "Product Owner"
+        assert roles[1]["title"] == "Senior Business Analyst"
+        assert update_payload["processed_data"]["workExperience"][0]["description"] == [
+            "Led product strategy across platform modules"
+        ]

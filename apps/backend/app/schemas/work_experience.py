@@ -122,6 +122,24 @@ def preserve_work_experience_identity(
     return preserved
 
 
+def finalize_tailored_work_experience(
+    original_data: dict[str, Any] | None,
+    improved_data: dict[str, Any],
+) -> dict[str, Any]:
+    """Restore multi-role work experience identity after LLM tailoring or feedback."""
+    from app.schemas.models import normalize_resume_data
+
+    if not original_data:
+        return normalize_resume_data(improved_data)
+
+    result = copy.deepcopy(improved_data)
+    result["workExperience"] = preserve_work_experience_identity(
+        original_data.get("workExperience"),
+        improved_data.get("workExperience"),
+    )
+    return normalize_resume_data(result)
+
+
 def _normalize_role(role: Any, index: int) -> dict[str, Any]:
     if not isinstance(role, dict):
         return {"id": index + 1, "title": "", "years": ""}
