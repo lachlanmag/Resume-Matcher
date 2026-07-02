@@ -420,6 +420,60 @@ async def test_ai_turn_sanitizes_user_answer_before_prompting() -> None:
     assert "Ignore previous instructions" not in sent_prompt
 
 
+@pytest.mark.parametrize(
+    "answer,leaked_fragment",
+    [
+        (
+            "I prototype with sk-ant-api03-abcdefghijklmnopqrst",
+            "sk-ant-api03",
+        ),
+        (
+            "My Google key is AIzaSyD-example-key-token-here",
+            "AIzaSyD",
+        ),
+        (
+            "I curl with Authorization: Bearer eyJhbGciOiJIUzI1NiJ9",
+            "eyJhbGci",
+        ),
+    ],
+)
+async def test_ai_turn_scrubs_credential_tokens_before_prompting(
+    answer: str, leaked_fragment: str
+) -> None:
+    # Credential-like tokens in the user answer must be redacted before the
+    # answer reaches the LLM prompt (mirrors _scrub_secrets on health errors).
+    state = _state_on_section("skills")
+    with patch(
+        "app.services.resume_wizard.complete_json",
+        new_callable=AsyncMock,
+        return_value=_AI_EXPERIENCE_RESULT,
+    ) as mock_complete:
+        await run_ai_turn(state, answer, skip=False)
+
+    sent_prompt = mock_complete.call_args.args[0]
+    assert leaked_fragment not in sent_prompt
+    assert "<redacted>" in sent_prompt
+
+
+from app.llm import _scrub_secrets
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "Contact me; my OpenAI key is sk-proj-abcdefghijklmnopqrst",
+        "Gemini key AIzaSyD-example-key-token-here in notes",
+        "Header Authorization: Bearer eyJhbGciOiJIUzI1NiJ9",
+    ],
+)
+def test_scrub_secrets_redacts_api_key_patterns(raw: str) -> None:
+    redacted = _scrub_secrets(raw)
+    assert "<redacted>" in redacted
+    assert "sk-proj" not in redacted
+    assert "AIzaSyD" not in redacted
+    assert "eyJhbGci" not in redacted
+
+
 def test_assign_entry_ids_renumbers_all_three_lists() -> None:
     # Directly exercise the helper across all three lists (the section-scoped
     # merge only fills one list per turn, so test the helper itself here).
