@@ -109,27 +109,15 @@ def clear_all_api_keys() -> None:
         _write_config_json(config)
 
 
-def _providers_with_decryptable_keys() -> set[str]:
-    """Return provider names whose stored ciphertext decrypts to a non-empty key."""
-    from app.crypto import decrypt
-    from app.database import db
-
-    return {
-        provider
-        for provider, ciphertext in db.get_api_key_ciphertexts().items()
-        if decrypt(ciphertext)
-    }
-
-
 def migrate_legacy_keys() -> None:
     """Fold legacy plaintext keys from config.json into the encrypted store.
 
     Idempotent and non-clobbering: an existing config.json ``api_keys`` map and
     the legacy single ``api_key`` (mapped to its key-store provider via the
     active provider) are written to the encrypted store **only if that provider
-    does not already have a decryptable key**, then removed from config.json.
-    Undecryptable ciphertext (e.g. after a lost ``.secret_key``) is treated as
-    empty so recoverable plaintext keys in config.json can be re-imported.
+    slot is empty**, then removed from config.json. This eliminates the
+    legacy-shadow bug where ``resolve_api_key`` returned one shared key for
+    every provider.
     """
     config = _read_config_json()
     legacy_map = config.get("api_keys")
@@ -140,40 +128,24 @@ def migrate_legacy_keys() -> None:
     from app.crypto import encrypt
     from app.database import db
 
-    secured = _providers_with_decryptable_keys()
+    existing = set(db.get_api_key_ciphertexts().keys())
 
     if isinstance(legacy_map, dict):
         for provider, key in legacy_map.items():
-            if key and provider not in secured:
+            if key and provider not in existing:
                 db.set_api_key_ciphertext(provider, encrypt(key))
-                secured.add(provider)
+                existing.add(provider)
 
     if legacy_single:
         # Map the active LLM provider to its key-store provider name.
         provider = config.get("provider") or settings.llm_provider
         key_provider = _LEGACY_PROVIDER_KEY_MAP.get(provider, provider)
-        if key_provider not in secured:
+        if key_provider not in existing:
             db.set_api_key_ciphertext(key_provider, encrypt(legacy_single))
 
-    secured = _providers_with_decryptable_keys()
-
-    if isinstance(legacy_map, dict):
-        remaining = {
-            provider: key
-            for provider, key in legacy_map.items()
-            if key and provider not in secured
-        }
-        if remaining:
-            config["api_keys"] = remaining
-        else:
-            config.pop("api_keys", None)
-
-    if legacy_single:
-        provider = config.get("provider") or settings.llm_provider
-        key_provider = _LEGACY_PROVIDER_KEY_MAP.get(provider, provider)
-        if key_provider in secured:
-            config.pop("api_key", None)
-
+    # Strip the legacy slots from config.json now that they're in the store.
+    config.pop("api_keys", None)
+    config.pop("api_key", None)
     _write_config_json(config)
 
 

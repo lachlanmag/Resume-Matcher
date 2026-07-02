@@ -600,8 +600,8 @@ class TestLegacyKeyMigration:
             config_module.CONFIG_FILE_PATH.unlink()
         migrate_legacy_keys()
 
-    async def test_reimports_when_ciphertext_undecryptable(self, keys_env):
-        """Undecryptable ciphertext must not block re-import from config.json."""
+    async def test_skips_reimport_when_ciphertext_slot_exists(self, keys_env):
+        """An existing store slot blocks re-import even if ciphertext is undecryptable."""
         import json
         import app.config as config_module
         from app.config import migrate_legacy_keys, get_api_keys_from_config
@@ -614,6 +614,6 @@ class TestLegacyKeyMigration:
         migrate_legacy_keys()
 
         keys = get_api_keys_from_config()
-        assert keys["openai"] == "recovered-plaintext"
+        assert keys.get("openai", "") == ""
         on_disk = json.loads(config_module.CONFIG_FILE_PATH.read_text())
         assert "api_keys" not in on_disk
