@@ -77,21 +77,21 @@ export function LivePreview({ resumeData, inferredSkills }: LivePreviewProps) {
                   .filter(Boolean)
                   .join(' · ');
                 return (
-                <div key={item.id} className="mt-2">
-                  <p className="font-sans text-sm font-bold">
-                    {[getExperienceRoleTitles(item), item.company].filter(Boolean).join(' · ')}
-                  </p>
-                  {yearsLine && (
-                    <p className="font-mono text-xs text-steel-grey">{yearsLine}</p>
-                  )}
-                  <ul className="mt-1 list-none space-y-1">
-                    {(item.description ?? []).map((line, index) => (
-                      <li key={index} className="font-sans text-xs leading-snug">
-                        {line}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                  <div key={item.id} className="mt-2">
+                    <p className="font-sans text-sm font-bold">
+                      {[getExperienceRoleTitles(item), item.company].filter(Boolean).join(' · ')}
+                    </p>
+                    {yearsLine && (
+                      <p className="font-mono text-xs text-steel-grey">{yearsLine}</p>
+                    )}
+                    <ul className="mt-1 list-none space-y-1">
+                      {(item.description ?? []).map((line, index) => (
+                        <li key={index} className="font-sans text-xs leading-snug">
+                          {line}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 );
               })}
             </section>

@@ -146,6 +146,7 @@ def migrate_legacy_keys() -> None:
         for provider, key in legacy_map.items():
             if key and provider not in secured:
                 db.set_api_key_ciphertext(provider, encrypt(key))
+                secured.add(provider)
 
     if legacy_single:
         # Map the active LLM provider to its key-store provider name.

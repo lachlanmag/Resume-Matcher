@@ -141,7 +141,7 @@ CRITICAL RULES:
 1. Only reframe with keywords the master resume substantively supports (e.g., if the master shows "used Python for data analysis", surface "Python" and "data analysis" language)
 2. Do NOT add skills, technologies, or certifications not in the master resume
 3. Rephrase existing bullet points and content to include keywords - do not invent new content, metrics, or work history
-4. Maintain the exact same JSON structure; preserve workExperience[].roles (title + years per role) — only edit descriptions, summary, and skills
+4. Maintain the exact same JSON structure; preserve workExperience[].roles (title + years per role). Only edit descriptions, summary, and skills
 5. Do not use em-dashes (—) or their variants (---, --)
 6. Make keyword incorporation the DEFAULT across all content sections, not an optional enhancement
 

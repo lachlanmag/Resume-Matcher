@@ -10,9 +10,8 @@ const data: ResumeData = {
   workExperience: [
     {
       id: 1,
-      title: 'DevRel Engineer',
       company: 'Apideck',
-      years: '2025-Present',
+      roles: [{ id: 1, title: 'DevRel Engineer', years: '2025-Present' }],
       description: ['Lead client demos.'],
     },
   ],
@@ -37,7 +36,9 @@ describe('ResumeVivid', () => {
   it('does not render an orphaned leading pipe when years is missing but location exists', () => {
     const noYears: ResumeData = {
       personalInfo: { name: 'Saurabh Rai' },
-      workExperience: [{ id: 1, title: 'Engineer', company: 'Apideck', location: 'Remote' }],
+      workExperience: [
+        { id: 1, company: 'Apideck', location: 'Remote', roles: [{ id: 1, title: 'Engineer' }] },
+      ],
     } as ResumeData;
     render(<ResumeVivid data={noYears} />);
     // Meta should be just the location, never "| Remote".

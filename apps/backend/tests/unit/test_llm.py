@@ -341,7 +341,7 @@ class TestCompleteJsonFallback:
         router = MagicMock()
         router.acompletion = AsyncMock(side_effect=[rejection, good_response])
         config = MagicMock()
-        config.provider = "openai"
+        config.provider = "openai_compatible"
         config.reasoning_effort = None
         mock_get_router.return_value = (router, config)
 
@@ -354,9 +354,10 @@ class TestCompleteJsonFallback:
         )
 
         assert result == {"answer": "ok"}
-        # JSON mode was sent on the first (rejected) call, dropped on the retry.
+        # openai_compatible skips response_format up front; if the server still
+        # rejects, complete_json retries prompt-only JSON mode.
         calls = router.acompletion.call_args_list
-        assert calls[0].kwargs.get("response_format") == {"type": "json_object"}
+        assert "response_format" not in calls[0].kwargs
         assert "response_format" not in calls[1].kwargs
 
     @pytest.mark.asyncio
@@ -392,7 +393,7 @@ class TestCompleteJsonFallback:
         router = MagicMock()
         router.acompletion = AsyncMock(side_effect=[rejection, good_response])
         config = MagicMock()
-        config.provider = "openai"
+        config.provider = "openai_compatible"
         config.reasoning_effort = None
         mock_get_router.return_value = (router, config)
 

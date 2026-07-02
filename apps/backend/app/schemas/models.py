@@ -6,7 +6,6 @@ from enum import Enum
 from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
-
 from app.schemas.feedback import ResumeFeedback
 from app.schemas.work_experience import (
     normalize_experience_entry,
