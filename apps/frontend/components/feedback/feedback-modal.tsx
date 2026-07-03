@@ -427,6 +427,7 @@ export function FeedbackModal({
       case 'preview':
         return (
           <RegenerateDiffPreview
+            embedded
             open
             onOpenChange={(open) => {
               if (!open) {
