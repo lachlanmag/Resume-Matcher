@@ -105,7 +105,9 @@ export function FeedbackQuestionStep({
             onAnswer(value);
           }}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') {
+            // Let the Cmd/Ctrl+Enter shortcut reach the window listener; only
+            // swallow a plain Enter so it inserts a newline instead of bubbling.
+            if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) {
               event.stopPropagation();
             }
           }}
