@@ -5,12 +5,9 @@ import copy
 import json
 import logging
 import re
-<<<<<<< HEAD
-from typing import Any
-=======
 from collections.abc import Callable
+from typing import Any
 from uuid import uuid4
->>>>>>> origin/main
 
 from fastapi import APIRouter, HTTPException
 
@@ -690,27 +687,17 @@ async def regenerate_items(request: RegenerateRequest) -> RegenerateResponse:
     # Get language name for LLM
     output_language = get_language_name(request.output_language)
 
-<<<<<<< HEAD
     # A bounded collection may queue work, but at most four items call AI.
     semaphore = asyncio.Semaphore(MAX_ITEM_WORKERS)
-=======
-    # Process all items in parallel for better performance
-    tasks = []
-    for item in request.items:
-        if item.item_type == "skills":
-            tasks.append(_regenerate_skills(item, request.instruction, output_language))
-        elif item.item_type == "summary":
-            tasks.append(_regenerate_summary(item, request.instruction, output_language))
-        elif item.item_type in {"experience", "project"}:
-            tasks.append(
-                _regenerate_experience_or_project(item, request.instruction, output_language)
-            )
->>>>>>> origin/main
 
     async def regenerate_one(item: RegenerateItemInput) -> RegeneratedItem:
         async with semaphore:
             if item.item_type == "skills":
                 return await _regenerate_skills(
+                    item, request.instruction, output_language
+                )
+            if item.item_type == "summary":
+                return await _regenerate_summary(
                     item, request.instruction, output_language
                 )
             return await _regenerate_experience_or_project(
@@ -883,15 +870,8 @@ async def apply_regenerated_items(
 
             resolved_index: int | None = None
             if 0 <= index < len(experiences):
-<<<<<<< HEAD
-                entry = (
-                    experiences[index] if isinstance(experiences[index], dict) else {}
-                )
-                entry_title = _normalize_match_value(str(entry.get("title", "")))
-=======
                 entry = experiences[index] if isinstance(experiences[index], dict) else {}
                 entry_title = _normalize_match_value(experience_role_titles(entry))
->>>>>>> origin/main
                 entry_company = _normalize_match_value(str(entry.get("company", "")))
                 if (
                     entry_title == _normalize_match_value(expected_title)
