@@ -594,12 +594,13 @@ def restore_dates_from_markdown(
     work_entries = parsed_data.get("workExperience")
     if isinstance(work_entries, list):
         for work_entry in work_entries:
-            if isinstance(work_entry, dict) and isinstance(
-                work_entry.get("roles"), list
-            ):
-                entry_count += sum(
-                    isinstance(role, dict) for role in work_entry["roles"]
-                )
+            if not isinstance(work_entry, dict):
+                continue
+            roles = work_entry.get("roles")
+            if isinstance(roles, list) and roles:
+                entry_count += sum(isinstance(role, dict) for role in roles)
+            else:
+                entry_count += 1
     custom_data = parsed_data.get("customSections")
     if isinstance(custom_data, dict):
         entry_count += sum(
@@ -679,16 +680,20 @@ def restore_dates_from_markdown(
         for entry in parsed_data.get(section_key, []):
             restore_entry(entry, identity_fields)
 
-    # Work experience moved dates onto each role (multi-role employer entries),
-    # so years are restored per-role using the role's own title as context.
+    # Work experience may have moved dates onto each role (multi-role employer
+    # entries) or still carry a flat top-level years/title (legacy shape, or
+    # raw pre-normalization LLM output that hasn't gone through the Pydantic
+    # "before" validator yet). Handle both.
     if isinstance(work_entries, list):
         for work_entry in work_entries:
             if not isinstance(work_entry, dict):
                 continue
             roles = work_entry.get("roles")
-            if isinstance(roles, list):
+            if isinstance(roles, list) and roles:
                 for role in roles:
                     restore_entry(role, ("title",))
+            else:
+                restore_entry(work_entry, ("company", "title"))
 
     custom = parsed_data.get("customSections", {})
     if isinstance(custom, dict):
