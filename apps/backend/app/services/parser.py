@@ -584,14 +584,22 @@ def restore_dates_from_markdown(
     if not occurrences:
         return parsed_data
 
-<<<<<<< HEAD
     used: set[int] = set()
     patched = 0
     entry_count = sum(
         sum(isinstance(entry, dict) for entry in parsed_data.get(section, []))
-        for section in ("workExperience", "education", "personalProjects")
+        for section in ("education", "personalProjects")
         if isinstance(parsed_data.get(section), list)
     )
+    work_entries = parsed_data.get("workExperience")
+    if isinstance(work_entries, list):
+        for work_entry in work_entries:
+            if isinstance(work_entry, dict) and isinstance(
+                work_entry.get("roles"), list
+            ):
+                entry_count += sum(
+                    isinstance(role, dict) for role in work_entry["roles"]
+                )
     custom_data = parsed_data.get("customSections")
     if isinstance(custom_data, dict):
         entry_count += sum(
@@ -665,47 +673,22 @@ def restore_dates_from_markdown(
         patched += 1
 
     for section_key, identity_fields in (
-        ("workExperience", ("company", "title")),
         ("education", ("institution", "degree")),
         ("personalProjects", ("name", "role")),
     ):
         for entry in parsed_data.get(section_key, []):
             restore_entry(entry, identity_fields)
-=======
-    def _patch_years_value(years: str) -> str | None:
-        if not isinstance(years, str) or not years:
-            return None
-        if re.search(
-            r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)",
-            years,
-            re.IGNORECASE,
-        ):
-            return None
-        if years in year_to_full:
-            return year_to_full[years]
-        return None
 
-    patched = 0
-    for section_key in ("workExperience", "education", "personalProjects"):
-        for entry in parsed_data.get(section_key, []):
-            if not isinstance(entry, dict):
+    # Work experience moved dates onto each role (multi-role employer entries),
+    # so years are restored per-role using the role's own title as context.
+    if isinstance(work_entries, list):
+        for work_entry in work_entries:
+            if not isinstance(work_entry, dict):
                 continue
-            if section_key == "workExperience":
-                roles = entry.get("roles")
-                if isinstance(roles, list):
-                    for role in roles:
-                        if not isinstance(role, dict):
-                            continue
-                        replacement = _patch_years_value(role.get("years", ""))
-                        if replacement:
-                            role["years"] = replacement
-                            patched += 1
-            years = entry.get("years", "")
-            replacement = _patch_years_value(years)
-            if replacement:
-                entry["years"] = replacement
-                patched += 1
->>>>>>> origin/main
+            roles = work_entry.get("roles")
+            if isinstance(roles, list):
+                for role in roles:
+                    restore_entry(role, ("title",))
 
     custom = parsed_data.get("customSections", {})
     if isinstance(custom, dict):

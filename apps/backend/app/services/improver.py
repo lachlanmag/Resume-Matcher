@@ -25,26 +25,20 @@ from app.prompts import (
     SKILL_TARGET_PLAN_PROMPT,
     get_language_name,
 )
-<<<<<<< HEAD
-from app.prompts.templates import IMPROVE_SCHEMA_EXAMPLE
-from app.schemas import ResumeData, ResumeDiffSummary, ResumeFieldDiff
-from app.schemas.models import ImproveDiffResult, ResumeChange
-from app.services.parser import has_meaningful_resume_content
-=======
 from app.prompts.templates import (
     IMPROVE_SCHEMA_EXAMPLE,
     IMPROVE_WORK_EXPERIENCE_RULES,
     LENGTH_SELECTION_PROMPT,
 )
-from app.schemas import ResumeData, ResumeFieldDiff, ResumeDiffSummary
+from app.schemas import ResumeData, ResumeDiffSummary, ResumeFieldDiff
 from app.schemas.models import ImproveDiffResult, ResumeChange, TailorLengthSettings
+from app.schemas.work_experience import compare_work_experience_identity
+from app.services.parser import has_meaningful_resume_content
 from app.services.tailor_length import (
     build_length_constraints_block,
     parse_original_list,
     plan_per_job_bullet_targets,
 )
-from app.schemas.work_experience import compare_work_experience_identity
->>>>>>> origin/main
 
 logger = logging.getLogger(__name__)
 
@@ -308,16 +302,11 @@ def _set_at_path(data: dict[str, Any], path: str, value: Any) -> bool:
 
 
 def _verify_original_matches(actual: Any, expected: str | list[str] | None) -> bool:
-<<<<<<< HEAD
     """Verify that the original text from the diff matches the actual value.
 
     A replace must quote what it replaces: without ``original`` there is
     nothing to verify, so the change is rejected rather than applied blind.
     """
-=======
-    """Verify that the original text from the diff matches the actual value."""
-    if expected is None:
-        return True  # no original provided (e.g. append) — nothing to verify
     if isinstance(expected, list):
         if not isinstance(actual, list):
             return False
@@ -329,7 +318,6 @@ def _verify_original_matches(actual: Any, expected: str | list[str] | None) -> b
             if a.strip().casefold() != e.strip().casefold():
                 return False
         return True
->>>>>>> origin/main
     if not isinstance(expected, str):
         return False  # a non-str original on a text action is malformed — reject
     if not isinstance(actual, str):
@@ -698,13 +686,10 @@ async def generate_resume_diffs(
     prompt_id: str | None = None,
     original_resume_data: dict[str, Any] | None = None,
     skill_targets: list[dict[str, Any]] | None = None,
-<<<<<<< HEAD
     *,
     fixed_row_sections: tuple[str, ...] = (),
-=======
     tailor_length_settings: TailorLengthSettings | None = None,
     template_settings: dict[str, Any] | None = None,
->>>>>>> origin/main
 ) -> ImproveDiffResult:
     """Generate targeted resume diffs via LLM.
 
