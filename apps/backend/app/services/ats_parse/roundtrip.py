@@ -98,6 +98,25 @@ def _condensed_fields(prefix: str, entry: dict[str, Any]) -> list[Field]:
     return [(f"{prefix}.{k}", _join(entry.get(k))) for k in CONDENSED_ORDER]
 
 
+def _flatten_work_experience_roles(entry: dict[str, Any]) -> dict[str, Any]:
+    """Project a multi-role employer entry's first role's title/years onto it.
+
+    ``workExperience`` entries hold title/years per role in ``roles`` (multi-role
+    support); this round trip's field model is one-title-per-entry. Using the
+    first role matches the common single-role case exactly; an entry with
+    several roles under one employer is only checked against its first role's
+    title/years here (a known simplification — see upstream-sync review doc).
+    """
+    roles = entry.get("roles")
+    if not isinstance(roles, list) or not roles or not isinstance(roles[0], dict):
+        return entry
+    first_role = roles[0]
+    flattened = dict(entry)
+    flattened.setdefault("title", first_role.get("title", ""))
+    flattened.setdefault("years", first_role.get("years", ""))
+    return flattened
+
+
 def _section_fields(
     key: str, data: dict[str, Any], template: str | None
 ) -> list[Field]:
@@ -109,6 +128,7 @@ def _section_fields(
         )
         entries = list(enumerate(data.get(key) or []))
         if key == "workExperience":
+            entries = [(i, _flatten_work_experience_roles(e)) for i, e in entries]
             # Condensed entries follow the full ones, under "Earlier experience".
             entries.sort(key=lambda pair: bool(pair[1].get("condensed")))
         return [

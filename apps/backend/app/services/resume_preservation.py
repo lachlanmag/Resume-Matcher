@@ -57,18 +57,32 @@ def _normalized(value: Any) -> str:
     return " ".join(str(value or "").split()).casefold()
 
 
+def _entry_field(entry: dict[str, Any], field: str, section: str) -> Any:
+    """Read a protected/identity field, checking the first role for workExperience.
+
+    workExperience moved title/years onto Experience.roles[] (multi-role
+    support); entries without a flat title/years key still need these checks
+    to see the first role's values instead of silently treating them as blank.
+    """
+    if section == "workExperience" and field in ("title", "years") and field not in entry:
+        roles = entry.get("roles")
+        if isinstance(roles, list) and roles and isinstance(roles[0], dict):
+            return roles[0].get(field)
+    return entry.get(field)
+
+
 def _identity(entry: dict[str, Any], section: str) -> tuple[str, ...]:
     entry_id = entry.get("id")
     if isinstance(entry_id, int) and entry_id != 0:
         return ("id", str(entry_id))
     return (
         "fields",
-        *(_normalized(entry.get(field)) for field in _ENTRY_FIELDS[section]),
+        *(_normalized(_entry_field(entry, field, section)) for field in _ENTRY_FIELDS[section]),
     )
 
 
 def _field_identity(entry: dict[str, Any], section: str) -> tuple[str, ...] | None:
-    identity = tuple(_normalized(entry.get(field)) for field in _ENTRY_FIELDS[section])
+    identity = tuple(_normalized(_entry_field(entry, field, section)) for field in _ENTRY_FIELDS[section])
     return identity if any(identity) else None
 
 
@@ -578,13 +592,14 @@ def _entry_map(
 
 
 def _protected_field_changed(
-    field: str, source_entry: dict[str, Any], candidate_entry: dict[str, Any]
+    field: str, source_entry: dict[str, Any], candidate_entry: dict[str, Any], section: str
 ) -> bool:
     if field in _FLAG_FIELDS:
         return bool(source_entry.get(field)) != bool(candidate_entry.get(field))
-    return field in source_entry and source_entry.get(field) != candidate_entry.get(
-        field
-    )
+    source_value = _entry_field(source_entry, field, section)
+    if field not in source_entry and source_value is None:
+        return False
+    return source_value != _entry_field(candidate_entry, field, section)
 
 
 def _entry_bucket_violation(
@@ -605,7 +620,7 @@ def _entry_bucket_violation(
         available.remove(source_index)
         source_entry = source_entries[source_index]
         if any(
-            _protected_field_changed(field, source_entry, candidate_entry)
+            _protected_field_changed(field, source_entry, candidate_entry, section)
             for field in _PROTECTED_FIELDS[section]
         ):
             return "identity"

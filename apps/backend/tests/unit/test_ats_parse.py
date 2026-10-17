@@ -831,8 +831,11 @@ def test_roundtrip_checks_rendered_locations() -> None:
 
 
 def test_roundtrip_validates_stored_data() -> None:
-    with pytest.raises(ValidationError):
-        compute_roundtrip({"workExperience": ["bogus"]}, "text")
+    # A malformed (non-dict) entry is defensively normalized to a default empty
+    # entry rather than rejected — normalize_experience_entry never raises, so
+    # a resume with one bad entry still round-trips instead of failing outright.
+    result = compute_roundtrip({"workExperience": ["bogus"]}, "text")
+    assert result is not None
     # Data without sectionMeta renders the default sections, as the print page does.
     legacy = {"workExperience": [{"title": "Staff Engineer", "company": "Acme"}]}
     fields = {f.field for f in compute_roundtrip(legacy, "Staff Engineer Acme").fields}

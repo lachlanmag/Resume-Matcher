@@ -73,10 +73,9 @@ def test_condensed_defaults_to_false_and_legacy_entries_validate_unchanged() -> 
     assert entry.condensed is False
     assert entry.model_dump() == {
         "id": 0,
-        "title": "Engineer",
         "company": "Acme",
         "location": None,
-        "years": "2020 - 2021",
+        "roles": [{"id": 1, "title": "Engineer", "years": "2020 - 2021"}],
         "description": [],
         "descriptionStyles": [],
         "condensed": False,

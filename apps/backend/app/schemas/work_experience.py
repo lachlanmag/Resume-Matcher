@@ -60,6 +60,10 @@ def normalize_experience_entry(data: Any) -> dict[str, Any]:
         "roles": roles,
         "description": entry.get("description", []),
     }
+    if "descriptionStyles" in entry:
+        normalized["descriptionStyles"] = entry["descriptionStyles"]
+    if "condensed" in entry:
+        normalized["condensed"] = entry["condensed"]
     if normalized["location"] == "":
         normalized["location"] = None
     return normalized
