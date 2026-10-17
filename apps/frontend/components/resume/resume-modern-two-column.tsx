@@ -8,14 +8,10 @@ import type {
 import { getSortedSections, getSectionMeta } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
 import { DynamicResumeSection } from './dynamic-resume-section';
-<<<<<<< HEAD
 import { DescriptionList } from './description-list';
 import { EarlierExperience, splitCondensed } from './earlier-experience';
 import { RESUME_SECTION, RESUME_SECTION_TITLE, resumeItem } from './page-break-attrs';
-=======
-import { SafeHtml } from './safe-html';
 import { WorkExperienceBlock } from './work-experience-block';
->>>>>>> origin/main
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/modern-two-column.module.css';
 
@@ -197,39 +193,7 @@ export const ResumeModernTwoColumn: React.FC<ResumeModernTwoColumnProps> = ({
                 {getSectionDisplayName('workExperience', headingFallbacks.experience)}
               </h3>
               <div className={baseStyles['resume-items']}>
-<<<<<<< HEAD
                 {splitCondensed(workExperience).full.map((exp) => (
-                  <div
-                    key={exp.id}
-                    {...resumeItem(exp.description)}
-                    className={baseStyles['resume-item']}
-                  >
-                    <div
-                      className={`flex justify-between items-baseline ${baseStyles['resume-row-tight']}`}
-                    >
-                      <h4 className={baseStyles['resume-item-title-sm']}>{exp.title}</h4>
-                      <span className={`${baseStyles['resume-date']} ml-4`}>
-                        {formatDateRange(exp.years)}
-                      </span>
-                    </div>
-
-                    <div
-                      className={`flex justify-between items-center ${baseStyles['resume-row-tight']} ${baseStyles['resume-item-subtitle-sm']}`}
-                    >
-                      <span>
-                        {exp.company}
-                        {exp.location && <> • {exp.location}</>}
-                      </span>
-                    </div>
-
-                    <DescriptionList
-                      items={exp.description}
-                      styles={exp.descriptionStyles}
-                      textClassName={baseStyles['resume-text-xs']}
-                    />
-                  </div>
-=======
-                {workExperience.map((exp) => (
                   <WorkExperienceBlock
                     key={exp.id}
                     job={exp}
@@ -239,7 +203,6 @@ export const ResumeModernTwoColumn: React.FC<ResumeModernTwoColumnProps> = ({
                     listClassName={baseStyles['resume-list']}
                     textClassName={baseStyles['resume-text-xs']}
                   />
->>>>>>> origin/main
                 ))}
                 {splitCondensed(workExperience).condensed.length > 0 && (
                   <EarlierExperience
