@@ -257,13 +257,10 @@
       "generateButton": "{title}を生成",
       "coverLetterFooter": "ヒント：先にカスタマイズすると精度が上がります。",
       "outreachFooter": "ヒント：短く、個別性を入れましょう。",
-<<<<<<< HEAD
       "interviewPrepDescription": "カスタマイズ済み履歴書と求人内容に基づいて、職種別の面接準備を生成します。",
-      "interviewPrepFooter": "ヒント：カスタマイズ後に、履歴書の根拠に基づく正確な回答を準備しましょう。"
-=======
       "feedbackDescription": "このカスタマイズ履歴書を求人内容と照らし合わせ、HR視点のフィードバックとATS分析を取得します。",
-      "feedbackFooter": "ヒント：応募前に、ギャップと質問を手がかりに編集してください。"
->>>>>>> origin/main
+      "feedbackFooter": "ヒント：応募前に、ギャップと質問を手がかりに編集してください。",
+      "interviewPrepFooter": "ヒント：カスタマイズ後に、履歴書の根拠に基づく正確な回答を準備しましょう。"
     },
     "regenerateDialog": {
       "title": "{title}を再生成しますか？",
@@ -585,8 +582,8 @@
       "outreachSaveFailed": "連絡メールの保存に失敗しました。もう一度お試しください。",
       "coverLetterGenerateFailed": "カバーレターの生成に失敗しました: {error}",
       "outreachGenerateFailed": "連絡メールの生成に失敗しました: {error}",
-<<<<<<< HEAD
-      "interviewPrepGenerateFailed": "面接準備の生成に失敗しました: {error}"
+      "interviewPrepGenerateFailed": "面接準備の生成に失敗しました: {error}",
+      "feedbackGenerateFailed": "履歴書フィードバックの生成に失敗しました: {error}"
     },
     "leaveWithoutDraft": {
       "title": "未保存の変更を残して移動しますか？",
@@ -713,9 +710,6 @@
           "warn": "認識できる日付が見つかりません。"
         }
       }
-=======
-      "feedbackGenerateFailed": "履歴書フィードバックの生成に失敗しました: {error}"
->>>>>>> origin/main
     }
   },
   "enrichment": {

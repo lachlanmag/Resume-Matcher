@@ -257,13 +257,10 @@
       "generateButton": "Gerar {title}",
       "coverLetterFooter": "Dica: personalize primeiro para melhores resultados.",
       "outreachFooter": "Dica: mantenha curta e personalizada.",
-<<<<<<< HEAD
       "interviewPrepDescription": "Gere preparação para entrevista com base no currículo adaptado e na descrição da vaga.",
-      "interviewPrepFooter": "Dica: use depois de adaptar o currículo para preparar respostas verdadeiras e baseadas em evidências."
-=======
       "feedbackDescription": "Revise este currículo personalizado em relação à vaga com feedback de RH e análise ATS.",
-      "feedbackFooter": "Dica: use lacunas e perguntas para orientar suas edições antes de candidatar-se."
->>>>>>> origin/main
+      "feedbackFooter": "Dica: use lacunas e perguntas para orientar suas edições antes de candidatar-se.",
+      "interviewPrepFooter": "Dica: use depois de adaptar o currículo para preparar respostas verdadeiras e baseadas em evidências."
     },
     "regenerateDialog": {
       "title": "Regenerar {title}?",
@@ -585,8 +582,8 @@
       "outreachSaveFailed": "Falha ao salvar mensagem de contato. Por favor, tente novamente.",
       "coverLetterGenerateFailed": "Falha ao gerar carta de apresentação: {error}",
       "outreachGenerateFailed": "Falha ao gerar mensagem de contato: {error}",
-<<<<<<< HEAD
-      "interviewPrepGenerateFailed": "Falha ao gerar preparação para entrevista: {error}"
+      "interviewPrepGenerateFailed": "Falha ao gerar preparação para entrevista: {error}",
+      "feedbackGenerateFailed": "Falha ao gerar feedback do currículo: {error}"
     },
     "leaveWithoutDraft": {
       "title": "Sair com alterações não salvas?",
@@ -713,9 +710,6 @@
           "warn": "Nenhuma data reconhecível."
         }
       }
-=======
-      "feedbackGenerateFailed": "Falha ao gerar feedback do currículo: {error}"
->>>>>>> origin/main
     }
   },
   "enrichment": {

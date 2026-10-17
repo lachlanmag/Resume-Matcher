@@ -258,7 +258,9 @@
       "coverLetterFooter": "Conseil : personnalisez d'abord pour de meilleurs résultats.",
       "outreachFooter": "Conseil : restez bref et personnalisé.",
       "interviewPrepDescription": "Générez une préparation à l'entretien spécifique au poste, basée sur votre CV personnalisé et la fiche de poste.",
-      "interviewPrepFooter": "Conseil : utilisez cette fonction après la personnalisation pour préparer des réponses sincères et fondées sur votre CV."
+      "interviewPrepFooter": "Conseil : utilisez cette fonction après la personnalisation pour préparer des réponses sincères et fondées sur votre CV.",
+      "feedbackDescription": "Review this tailored resume against the job description with HR-style feedback and ATS analysis.",
+      "feedbackFooter": "Tip: use gaps and questions to guide your edits before applying."
     },
     "regenerateDialog": {
       "title": "Régénérer {title} ?",
@@ -278,7 +280,8 @@
           "one": "{count} élément",
           "other": "{count} éléments"
         },
-        "continueButton": "Continuer"
+        "continueButton": "Continuer",
+        "summary": "Professional Summary"
       },
       "instructionDialog": {
         "title": "Que souhaitez-vous améliorer ?",
@@ -390,7 +393,9 @@
         },
         "fields": {
           "jobTitle": "Intitulé du poste",
-          "company": "Entreprise"
+          "company": "Entreprise",
+          "roleTitle": "Role title",
+          "roles": "Roles"
         },
         "placeholders": {
           "jobTitle": "Développeur senior",
@@ -398,6 +403,10 @@
           "location": "Télétravail / Ville",
           "years": "Janv. 2020 - Présent",
           "description": "Décrivez votre réalisation..."
+        },
+        "actions": {
+          "addRole": "Add role",
+          "removeRole": "Remove role"
         }
       },
       "education": {
@@ -562,7 +571,8 @@
       "outreachSaveFailed": "Impossible d'enregistrer le message de contact. Veuillez réessayer.",
       "coverLetterGenerateFailed": "Impossible de générer la lettre de motivation : {error}",
       "outreachGenerateFailed": "Impossible de générer le message de contact : {error}",
-      "interviewPrepGenerateFailed": "Impossible de générer la préparation à l'entretien : {error}"
+      "interviewPrepGenerateFailed": "Impossible de générer la préparation à l'entretien : {error}",
+      "feedbackGenerateFailed": "Failed to generate resume feedback: {error}"
     },
     "leaveWithoutDraft": {
       "title": "Quitter avec des modifications non enregistrées ?",
@@ -688,6 +698,17 @@
           "pass": "{years} années trouvées dans les dates.",
           "warn": "Aucune date reconnaissable."
         }
+      }
+    },
+    "tailorLength": {
+      "title": "Tailoring length",
+      "applyConstraints": "Apply constraints",
+      "reTailor": "Re-tailor",
+      "reTailorConfirm": "Re-run full AI tailoring from your master resume with these length settings?",
+      "errors": {
+        "saveFailed": "Failed to save tailoring settings.",
+        "applyFailed": "Failed to apply length constraints.",
+        "reTailorFailed": "Failed to re-tailor resume."
       }
     }
   },
@@ -1062,6 +1083,10 @@
       "interviewPrep": {
         "label": "Préparation à l'entretien",
         "description": "Générez automatiquement une préparation à l'entretien en même temps que les CV personnalisés enregistrés"
+      },
+      "resumeFeedback": {
+        "label": "Resume Feedback",
+        "description": "Generate tailored resume feedback in the builder"
       }
     },
     "promptSettings": {
@@ -1092,6 +1117,13 @@
       "deleteAria": "Supprimer la clé {provider}",
       "deleteConfirmTitle": "Supprimer la clé API ?",
       "deleteConfirmDescription": "Supprimer la clé API {provider} enregistrée ? Vous pourrez la rajouter ultérieurement."
+    },
+    "tailorLength": {
+      "title": "Tailor length defaults",
+      "description": "Default page and bullet targets for new tailored resumes. The AI selects the best bullets from your master resume within these limits.",
+      "targetPages": "Target pages",
+      "bulletsMin": "Min bullets per job",
+      "bulletsMax": "Max bullets per job"
     }
   },
   "resumeViewer": {
@@ -1519,5 +1551,52 @@
       "prompt": "Utilise Resume Matcher pour lire le CV {resumeId} et l'offre à laquelle il est adapté, puis aide-moi à préparer l'entretien : questions probables, exemples à raconter et questions à leur poser.",
       "note": "Votre agent répond dans sa propre conversation. En mode agent, la préparation à l'entretien n'est pas enregistrée dans le CV."
     }
+  },
+  "feedback": {
+    "title": "Resume Feedback",
+    "buttonLabel": "Feedback",
+    "modal": {
+      "title": "Tailored Resume Feedback"
+    },
+    "regenerate": "Regenerate",
+    "loading": {
+      "generatingTitle": "Generating feedback...",
+      "generatingDescription": "Reviewing your tailored resume against the job description"
+    },
+    "regenerateDialog": {
+      "title": "Regenerate feedback?",
+      "description": "This will replace the current feedback report and clear all saved answers.",
+      "confirm": "Regenerate"
+    },
+    "summary": {
+      "kicker": "Feedback Report",
+      "title": "Summary",
+      "questionsCount": "{count} questions",
+      "empty": "No feedback report available.",
+      "done": "Done"
+    },
+    "question": {
+      "progress": "Question {current} of {total}",
+      "placeholder": "Add details to clarify this point...",
+      "shortcutHint": "Press Shift+Enter for new line, Cmd/Ctrl+Enter to continue",
+      "skip": "Skip"
+    },
+    "saveAndReturnToReview": "Save & return to review",
+    "review": {
+      "kicker": "Question Review",
+      "title": "Review Your Answers",
+      "questionLabel": "Question {number}",
+      "skipped": "Skipped",
+      "applyFeedback": "Apply Feedback"
+    },
+    "category": {
+      "gap": "Gap",
+      "risk": "Risk",
+      "clarification": "Clarification",
+      "improvement": "Improvement",
+      "ats": "ATS"
+    },
+    "copyToClipboard": "Copy to Clipboard",
+    "copied": "Copied!"
   }
 }

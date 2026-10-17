@@ -258,12 +258,9 @@
       "generateButton": "Generate {title}",
       "coverLetterFooter": "Tip: tailor first for best results.",
       "outreachFooter": "Tip: keep it short and personalized.",
-<<<<<<< HEAD
       "interviewPrepDescription": "Generate role-specific interview preparation based on your tailored resume and job description.",
-      "interviewPrepFooter": "Tip: use this after tailoring to prepare truthful, resume-grounded answers."
-=======
+      "interviewPrepFooter": "Tip: use this after tailoring to prepare truthful, resume-grounded answers.",
       "feedbackFooter": "Tip: use gaps and questions to guide your edits before applying."
->>>>>>> origin/main
     },
     "regenerateDialog": {
       "title": "Regenerate {title}?",
@@ -585,8 +582,8 @@
       "outreachSaveFailed": "Failed to save outreach message. Please try again.",
       "coverLetterGenerateFailed": "Failed to generate cover letter: {error}",
       "outreachGenerateFailed": "Failed to generate outreach message: {error}",
-<<<<<<< HEAD
-      "interviewPrepGenerateFailed": "Failed to generate interview preparation: {error}"
+      "interviewPrepGenerateFailed": "Failed to generate interview preparation: {error}",
+      "feedbackGenerateFailed": "Failed to generate resume feedback: {error}"
     },
     "leaveWithoutDraft": {
       "title": "Leave With Unsaved Changes?",
@@ -713,9 +710,6 @@
           "warn": "No recognizable dates found."
         }
       }
-=======
-      "feedbackGenerateFailed": "Failed to generate resume feedback: {error}"
->>>>>>> origin/main
     }
   },
   "enrichment": {

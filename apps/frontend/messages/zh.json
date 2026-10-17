@@ -257,13 +257,10 @@
       "generateButton": "生成 {title}",
       "coverLetterFooter": "提示：先完成简历定制效果更佳。",
       "outreachFooter": "提示：尽量简短并加入个性化细节。",
-<<<<<<< HEAD
       "interviewPrepDescription": "基于已定制简历和职位描述生成针对性的面试准备内容。",
-      "interviewPrepFooter": "提示：定制简历后使用，准备真实且基于简历证据的回答。"
-=======
       "feedbackDescription": "对照职位描述审阅这份定制简历，获取 HR 风格反馈与 ATS 分析。",
-      "feedbackFooter": "提示：在投递前，根据缺口与问题指引你的修改。"
->>>>>>> origin/main
+      "feedbackFooter": "提示：在投递前，根据缺口与问题指引你的修改。",
+      "interviewPrepFooter": "提示：定制简历后使用，准备真实且基于简历证据的回答。"
     },
     "regenerateDialog": {
       "title": "重新生成 {title}？",
@@ -585,8 +582,8 @@
       "outreachSaveFailed": "保存联系邮件失败，请重试。",
       "coverLetterGenerateFailed": "生成求职信失败：{error}",
       "outreachGenerateFailed": "生成联系邮件失败：{error}",
-<<<<<<< HEAD
-      "interviewPrepGenerateFailed": "生成面试准备失败：{error}"
+      "interviewPrepGenerateFailed": "生成面试准备失败：{error}",
+      "feedbackGenerateFailed": "生成简历反馈失败：{error}"
     },
     "leaveWithoutDraft": {
       "title": "要带着未保存的更改离开吗？",
@@ -713,9 +710,6 @@
           "warn": "没有找到可识别的日期。"
         }
       }
-=======
-      "feedbackGenerateFailed": "生成简历反馈失败：{error}"
->>>>>>> origin/main
     }
   },
   "enrichment": {

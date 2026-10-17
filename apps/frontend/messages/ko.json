@@ -228,7 +228,9 @@
       "coverLetterFooter": "팁: 최상의 결과를 위해 먼저 맞춤화하세요.",
       "outreachFooter": "팁: 짧고 개인화된 내용으로 작성하세요.",
       "interviewPrepDescription": "맞춤화된 이력서와 채용 공고를 기반으로 직무별 면접 준비 자료를 생성합니다.",
-      "interviewPrepFooter": "팁: 맞춤화 후 이 기능을 사용해 이력서에 기반한 진실된 답변을 준비하세요."
+      "interviewPrepFooter": "팁: 맞춤화 후 이 기능을 사용해 이력서에 기반한 진실된 답변을 준비하세요.",
+      "feedbackDescription": "Review this tailored resume against the job description with HR-style feedback and ATS analysis.",
+      "feedbackFooter": "Tip: use gaps and questions to guide your edits before applying."
     },
     "regenerateDialog": {
       "title": "{title}을(를) 다시 생성하시겠습니까?",
@@ -248,7 +250,8 @@
           "one": "{count}개 항목",
           "other": "{count}개 항목"
         },
-        "continueButton": "계속"
+        "continueButton": "계속",
+        "summary": "Professional Summary"
       },
       "instructionDialog": {
         "title": "무엇을 개선하고 싶으신가요?",
@@ -360,7 +363,9 @@
         },
         "fields": {
           "jobTitle": "직함",
-          "company": "회사"
+          "company": "회사",
+          "roleTitle": "Role title",
+          "roles": "Roles"
         },
         "placeholders": {
           "jobTitle": "시니어 개발자",
@@ -368,6 +373,10 @@
           "location": "원격 / 도시",
           "years": "2020년 1월 - 현재",
           "description": "성과를 설명하세요..."
+        },
+        "actions": {
+          "addRole": "Add role",
+          "removeRole": "Remove role"
         }
       },
       "education": {
@@ -532,7 +541,8 @@
       "interviewPrepGenerateFailed": "면접 준비 자료 생성에 실패했습니다: {error}",
       "autoSaveFailed": "동기화하지 못했습니다. 초안은 로컬에 안전하게 저장되어 있습니다.",
       "formattingSaveFailed": "서식을 저장하지 못했습니다. 다시 변경하면 재시도합니다.",
-      "loadFailed": "서버에서 이 이력서를 불러오지 못했습니다. 새로고침하여 다시 시도해 주세요. 저장된 사본을 덮어쓰지 않도록 편집이 비활성화되었습니다."
+      "loadFailed": "서버에서 이 이력서를 불러오지 못했습니다. 새로고침하여 다시 시도해 주세요. 저장된 사본을 덮어쓰지 않도록 편집이 비활성화되었습니다.",
+      "feedbackGenerateFailed": "Failed to generate resume feedback: {error}"
     },
     "autoSave": {
       "saving": "동기화 중...",
@@ -688,6 +698,17 @@
           "pass": "날짜에서 연도 {years}개를 찾았습니다.",
           "warn": "인식할 수 있는 날짜가 없습니다."
         }
+      }
+    },
+    "tailorLength": {
+      "title": "Tailoring length",
+      "applyConstraints": "Apply constraints",
+      "reTailor": "Re-tailor",
+      "reTailorConfirm": "Re-run full AI tailoring from your master resume with these length settings?",
+      "errors": {
+        "saveFailed": "Failed to save tailoring settings.",
+        "applyFailed": "Failed to apply length constraints.",
+        "reTailorFailed": "Failed to re-tailor resume."
       }
     }
   },
@@ -1062,6 +1083,10 @@
       "interviewPrep": {
         "label": "면접 준비",
         "description": "저장된 맞춤화 이력서와 함께 면접 준비 자료를 자동으로 생성합니다"
+      },
+      "resumeFeedback": {
+        "label": "Resume Feedback",
+        "description": "Generate tailored resume feedback in the builder"
       }
     },
     "promptSettings": {
@@ -1092,6 +1117,13 @@
       "deleteAria": "{provider} 키 삭제",
       "deleteConfirmTitle": "API 키를 삭제하시겠습니까?",
       "deleteConfirmDescription": "저장된 {provider} API 키를 삭제할까요? 나중에 다시 추가할 수 있습니다."
+    },
+    "tailorLength": {
+      "title": "Tailor length defaults",
+      "description": "Default page and bullet targets for new tailored resumes. The AI selects the best bullets from your master resume within these limits.",
+      "targetPages": "Target pages",
+      "bulletsMin": "Min bullets per job",
+      "bulletsMax": "Max bullets per job"
     }
   },
   "resumeViewer": {
@@ -1519,5 +1551,52 @@
       "prompt": "Resume Matcher로 이력서 {resumeId}와 그 이력서가 맞춤화된 채용 공고를 읽고 면접 준비를 도와줘: 예상 질문, 들려줄 사례, 내가 물어볼 질문.",
       "note": "에이전트는 자체 채팅에서 답합니다. 에이전트 모드에서는 면접 준비 내용이 이력서에 저장되지 않습니다."
     }
+  },
+  "feedback": {
+    "title": "Resume Feedback",
+    "buttonLabel": "Feedback",
+    "modal": {
+      "title": "Tailored Resume Feedback"
+    },
+    "regenerate": "Regenerate",
+    "loading": {
+      "generatingTitle": "Generating feedback...",
+      "generatingDescription": "Reviewing your tailored resume against the job description"
+    },
+    "regenerateDialog": {
+      "title": "Regenerate feedback?",
+      "description": "This will replace the current feedback report and clear all saved answers.",
+      "confirm": "Regenerate"
+    },
+    "summary": {
+      "kicker": "Feedback Report",
+      "title": "Summary",
+      "questionsCount": "{count} questions",
+      "empty": "No feedback report available.",
+      "done": "Done"
+    },
+    "question": {
+      "progress": "Question {current} of {total}",
+      "placeholder": "Add details to clarify this point...",
+      "shortcutHint": "Press Shift+Enter for new line, Cmd/Ctrl+Enter to continue",
+      "skip": "Skip"
+    },
+    "saveAndReturnToReview": "Save & return to review",
+    "review": {
+      "kicker": "Question Review",
+      "title": "Review Your Answers",
+      "questionLabel": "Question {number}",
+      "skipped": "Skipped",
+      "applyFeedback": "Apply Feedback"
+    },
+    "category": {
+      "gap": "Gap",
+      "risk": "Risk",
+      "clarification": "Clarification",
+      "improvement": "Improvement",
+      "ats": "ATS"
+    },
+    "copyToClipboard": "Copy to Clipboard",
+    "copied": "Copied!"
   }
 }

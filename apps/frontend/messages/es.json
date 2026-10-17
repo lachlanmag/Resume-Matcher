@@ -257,13 +257,10 @@
       "generateButton": "Generar {title}",
       "coverLetterFooter": "Consejo: adapta primero para mejores resultados.",
       "outreachFooter": "Consejo: manténlo breve y personalizado.",
-<<<<<<< HEAD
       "interviewPrepDescription": "Genera preparación para entrevistas según tu currículum adaptado y la descripción del puesto.",
-      "interviewPrepFooter": "Consejo: úsalo después de adaptar el currículum para preparar respuestas veraces basadas en evidencia."
-=======
       "feedbackDescription": "Revisa este currículum personalizado frente a la descripción del puesto con feedback de RR. HH. y análisis ATS.",
-      "feedbackFooter": "Consejo: usa lagunas y preguntas para guiar tus ediciones antes de aplicar."
->>>>>>> origin/main
+      "feedbackFooter": "Consejo: usa lagunas y preguntas para guiar tus ediciones antes de aplicar.",
+      "interviewPrepFooter": "Consejo: úsalo después de adaptar el currículum para preparar respuestas veraces basadas en evidencia."
     },
     "regenerateDialog": {
       "title": "¿Regenerar {title}?",
@@ -585,8 +582,8 @@
       "outreachSaveFailed": "No se pudo guardar el mensaje de contacto. Por favor, inténtalo de nuevo.",
       "coverLetterGenerateFailed": "No se pudo generar la carta de presentación: {error}",
       "outreachGenerateFailed": "No se pudo generar el mensaje de contacto: {error}",
-<<<<<<< HEAD
-      "interviewPrepGenerateFailed": "No se pudo generar la preparación de entrevista: {error}"
+      "interviewPrepGenerateFailed": "No se pudo generar la preparación de entrevista: {error}",
+      "feedbackGenerateFailed": "No se pudo generar el feedback del currículum: {error}"
     },
     "leaveWithoutDraft": {
       "title": "¿Salir con cambios sin guardar?",
@@ -713,9 +710,6 @@
           "warn": "No se encontraron fechas reconocibles."
         }
       }
-=======
-      "feedbackGenerateFailed": "No se pudo generar el feedback del currículum: {error}"
->>>>>>> origin/main
     }
   },
   "enrichment": {
