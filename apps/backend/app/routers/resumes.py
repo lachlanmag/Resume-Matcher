@@ -2,7 +2,6 @@
 
 import asyncio
 import copy
-from datetime import datetime, timezone
 import hashlib
 import json
 import logging
@@ -17,7 +16,6 @@ from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import ValidationError
 
-<<<<<<< HEAD
 from app.ai_budget import (
     AIOperationDeadlineExceeded,
     AIOperationRoute,
@@ -34,7 +32,13 @@ from app.database import (
     ResumeNotFoundError,
     db,
 )
-from app.pdf import PRINT_ERROR_SELECTOR, PDFRenderError, render_resume_pdf
+from app.pdf import (
+    PRINT_ERROR_SELECTOR,
+    PDFRenderError,
+    add_pdf_metadata,
+    evaluate_pdf_ats_extractability,
+    render_resume_pdf,
+)
 from app.preview import (
     PreviewBusyError,
     PreviewClaim,
@@ -48,28 +52,8 @@ from app.schemas import (
     ATSScore,
     ATSScoreRecord,
     ATSSubScores,
-    DuplicateResumeResponse,
-=======
-from app.config_cache import get_content_language, load_config as _load_config
-from app.database import db
-from app.pdf import (
-    add_pdf_metadata,
-    evaluate_pdf_ats_extractability,
-    render_resume_pdf,
-    PDFRenderError,
-)
-from app.config import settings
-
-logger = logging.getLogger(__name__)
-from app.schemas.feedback import (
-    FeedbackApplyRequest,
-    FeedbackAnswersPatch,
-    FeedbackGenerateRequest,
-    ResumeFeedback,
-)
-from app.schemas import (
     ApplyTailorLengthResponse,
->>>>>>> origin/main
+    DuplicateResumeResponse,
     GenerateContentResponse,
     GenerateInterviewPrepResponse,
     ImproveResumeConfirmRequest,
@@ -88,44 +72,24 @@ from app.schemas import (
     ResumeListResponse,
     ResumeSummary,
     ResumeUploadResponse,
-<<<<<<< HEAD
     SetDefaultMasterResponse,
-    TemplateSettings,
-=======
-    RawResume,
     TailorLengthSettings,
     TailorLengthSettingsPatch,
->>>>>>> origin/main
+    TemplateSettings,
     UpdateCoverLetterRequest,
     UpdateOutreachMessageRequest,
     UpdateTitleRequest,
     normalize_resume_data,
 )
-<<<<<<< HEAD
+from app.schemas.feedback import (
+    FeedbackAnswersPatch,
+    FeedbackApplyRequest,
+    FeedbackGenerateRequest,
+    ResumeFeedback,
+)
 from app.schemas.models import ResumeTemplate
-=======
-from app.schemas.work_experience import finalize_tailored_work_experience
-from app.services.parser import parse_document, parse_resume_to_json, restore_dates_from_markdown
-from app.services.improver import (
-    MONTH_PATTERN,
-    apply_diffs,
-    extract_job_keywords,
-    generate_improvements,
-    generate_length_selection_diffs,
-    generate_skill_target_plan,
-    generate_resume_diffs,
-    improve_resume,
-    verify_skill_target_plan,
-    verify_diff_result,
-)
-from app.services.tailor_length import (
-    enforce_tailor_length,
-    resolve_tailor_length_settings,
-    tailor_length_settings_from_resume_doc,
-)
-from app.services.refiner import refine_resume, calculate_keyword_match
->>>>>>> origin/main
 from app.schemas.refinement import RefinementConfig
+from app.schemas.work_experience import finalize_tailored_work_experience
 from app.services.ats import compute_ats_score
 from app.services.bullet_selector import SELECTABLE_SECTIONS
 from app.services.cover_letter import (
@@ -133,12 +97,16 @@ from app.services.cover_letter import (
     generate_outreach_message,
     generate_resume_title,
 )
-<<<<<<< HEAD
+from app.services.feedback import (
+    build_apply_preview,
+    generate_structured_feedback,
+)
 from app.services.improver import (
     MONTH_PATTERN,
     apply_diffs,
     extract_job_keywords,
     generate_improvements,
+    generate_length_selection_diffs,
     generate_resume_diffs,
     generate_skill_target_plan,
     improve_resume,
@@ -171,6 +139,11 @@ from app.services.resume_preservation import (
     grounding_review_warnings,
     validate_confirmed_resume,
 )
+from app.services.tailor_length import (
+    enforce_tailor_length,
+    resolve_tailor_length_settings,
+    tailor_length_settings_from_resume_doc,
+)
 from app.services.tailor_selection import (
     PAGE_FIT_FINAL_OVER_WARNING,
     final_page_check,
@@ -186,14 +159,6 @@ _PROCESSING_SHUTDOWN_GRACE_SECONDS = 1.0
 _PROCESSING_CLEANUP_TASKS: set[asyncio.Task[Any]] = set()
 REFINEMENT_FAILED_WARNING = "REFINEMENT_FAILED: Resume refinement was unavailable; the previous result was kept."
 DIFF_UNAVAILABLE_WARNING = "DIFF_UNAVAILABLE: Resume changes could not be calculated."
-=======
-from app.services.feedback import (
-    build_apply_preview,
-    generate_structured_feedback,
-)
-from app.prompts import DEFAULT_IMPROVE_PROMPT_ID, IMPROVE_PROMPT_OPTIONS
->>>>>>> origin/main
-
 
 async def _auto_create_tracker_application(
     *,
@@ -1399,14 +1364,11 @@ async def get_resume(resume_id: str = Query(...)) -> ResumeFetchResponse:
             ),
             parent_id=resume.get("parent_id"),
             title=resume.get("title"),
-<<<<<<< HEAD
             is_master=resume.get("is_master", False),
             is_default_master=resume.get("is_default_master", False),
             template_settings=resume.get("template_settings"),
-=======
             tailor_settings=tailor_settings,
             resume_feedback=resume_feedback,
->>>>>>> origin/main
         ),
     )
 
@@ -1480,11 +1442,8 @@ async def improve_resume_preview_endpoint(
                 job=job,
                 language=language,
                 prompt_id=prompt_id,
-<<<<<<< HEAD
                 progress=progress,
-=======
                 tailor_length_settings=tailor_length,
->>>>>>> origin/main
             ),
             timeout=remaining_timeout(),
         )
@@ -1523,11 +1482,8 @@ async def _improve_preview_flow(
     job: dict[str, Any],
     language: str,
     prompt_id: str,
-<<<<<<< HEAD
     progress: dict[str, str] | None = None,
-=======
-    tailor_length_settings: TailorLengthSettings,
->>>>>>> origin/main
+    tailor_length_settings: TailorLengthSettings | None = None,
 ) -> ImproveResumeResponse:
     """Inner flow for improve/preview, extracted so it can be wrapped in wait_for."""
     if progress is None:
@@ -1610,8 +1566,8 @@ async def _improve_preview_flow(
             prompt_id=prompt_id,
             original_resume_data=original_resume_data,
             skill_targets=skill_targets,
-<<<<<<< HEAD
             fixed_row_sections=fixed_row_sections,
+            tailor_length_settings=tailor_length_settings,
         )
 
         progress["stage"] = "apply_resume_diffs"
@@ -1999,6 +1955,7 @@ async def execute_tailoring_pipeline(
     resume_id: str,
     job_id: str,
     prompt_id: str | None = None,
+    tailor_length_settings: TailorLengthSettings | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]], str, dict[str, Any]]:
     """Core tailoring pipeline for a single resume and job description.
 
@@ -2045,9 +2002,7 @@ async def execute_tailoring_pipeline(
             language=language,
             prompt_id=effective_prompt_id,
             original_resume_data=original_resume_data,
-=======
             tailor_length_settings=tailor_length_settings,
->>>>>>> origin/main
         )
 
         improved_data, applied_changes, rejected_changes = apply_diffs(
@@ -2233,24 +2188,12 @@ async def execute_tailoring_pipeline(
         title=title,
     )
 
-<<<<<<< HEAD
     ats_score = _build_ats_score(
         improved_data,
         job_keywords,
         refinement_result,
         refinement_successful,
     )
-=======
-@router.post("/improve/confirm", response_model=ImproveResumeResponse)
-async def improve_resume_confirm_endpoint(
-    request: ImproveResumeConfirmRequest,
-) -> ImproveResumeResponse:
-    """Confirm and persist a tailored resume."""
-    resume = await db.get_resume(request.resume_id)
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-    _ensure_master_resume_for_tailor(resume)
->>>>>>> origin/main
 
     extra_meta = {
         "title": title,
