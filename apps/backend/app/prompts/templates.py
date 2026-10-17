@@ -45,11 +45,8 @@ RESUME_SCHEMA_EXAMPLE = """{
       "description": [
         "Led development of microservices architecture",
         "Improved system performance by 40%"
-<<<<<<< HEAD
       ],
       "descriptionStyles": ["bullet", "bullet"]
-=======
-      ]
     },
     {
       "id": 2,
@@ -71,7 +68,6 @@ RESUME_SCHEMA_EXAMPLE = """{
         "Led product strategy across multiple platform modules",
         "Delivered cross-functional initiatives with measurable adoption impact"
       ]
->>>>>>> origin/main
     }
   ],
   "education": [
@@ -141,11 +137,8 @@ IMPROVE_SCHEMA_EXAMPLE = """{
       "description": [
         "Led development of microservices architecture",
         "Improved system performance by 40%"
-<<<<<<< HEAD
       ],
       "descriptionStyles": ["bullet", "bullet"]
-=======
-      ]
     },
     {
       "id": 2,
@@ -167,7 +160,6 @@ IMPROVE_SCHEMA_EXAMPLE = """{
         "Led product strategy across multiple platform modules",
         "Delivered cross-functional initiatives with measurable adoption impact"
       ]
->>>>>>> origin/main
     }
   ],
   "education": [
@@ -240,14 +232,11 @@ Rules:
 - Preserve the original section name as a descriptive key
 - Normalize date separators: "2020-2021" → "2020 - 2021", "Current"/"Ongoing" → "Present". Do NOT discard months.
 - For ambiguous dates like "3 years experience", infer approximate years from context or use "~YYYY"
-<<<<<<< HEAD
 - Flag overlapping dates (concurrent roles) by preserving both, don't merge
 - Copy every skill, tool, framework, programming language and technology the resume lists into additional.technicalSkills, one item each, keeping the original wording. Split comma-separated lists into separate items. Never summarize, merge, shorten or drop skills, however long the list is. Spoken languages (English, Hindi, ...) go in additional.languages, not technicalSkills.
-=======
 - When the source shows multiple job titles under one employer heading, use one workExperience entry with a roles array (title + years per role) and a single shared description list for that employer
 - Do not merge separate employers; only combine roles that clearly belong to the same company in the source document
 - For concurrent roles at different companies, keep separate workExperience entries
->>>>>>> origin/main
 
 Resume to parse:
 {resume_text}"""
@@ -481,23 +470,14 @@ Guidelines:
 
 Output plain text only. No JSON, no markdown formatting."""
 
-<<<<<<< HEAD
 INTERVIEW_PREP_PROMPT = """Generate structured interview preparation for this tailored resume and job.
 
 IMPORTANT: Write in {output_language}.
 Do NOT translate JSON property names. Keep every JSON key exactly as shown in the schema; translate only string values.
-=======
-TAILORED_RESUME_FEEDBACK_PROMPT = """You are an HR representative at a SaaS company reviewing a candidate's tailored resume for a specific job posting.
-
-IMPORTANT: Write in {output_language}.
-
-You do not know the candidate personally. Evaluate only what is in the resume JSON below. Use the job description for role fit, ATS keyword matching, and tailoring quality. Do not invent experience, metrics, or tools not evidenced in the resume.
->>>>>>> origin/main
 
 Job Description:
 {job_description}
 
-<<<<<<< HEAD
 Candidate Resume (JSON):
 {resume_data}
 
@@ -543,7 +523,16 @@ Content requirements:
 - talking_points: 5-8 concise points.
 - Keep all suggested answer points factual and resume-grounded.
 - Do NOT use markdown fences or commentary outside the JSON."""
-=======
+
+TAILORED_RESUME_FEEDBACK_PROMPT = """You are an HR representative at a SaaS company reviewing a candidate's tailored resume for a specific job posting.
+
+IMPORTANT: Write in {output_language}.
+
+You do not know the candidate personally. Evaluate only what is in the resume JSON below. Use the job description for role fit, ATS keyword matching, and tailoring quality. Do not invent experience, metrics, or tools not evidenced in the resume.
+
+Job Description:
+{job_description}
+
 Tailored Resume (JSON):
 {resume_data}
 
@@ -664,7 +653,6 @@ Return JSON only with this exact shape:
 }}
 
 The questions array must contain 3 to 8 items drawn from gaps, risks, unsupported claims, ATS blockers, and improvement areas in the report. Categories must be one of: gap, risk, clarification, improvement, ats. question_id values must be unique (q1, q2, ...)."""
->>>>>>> origin/main
 
 GENERATE_TITLE_PROMPT = """Extract the job title and company name from this job description.
 
@@ -734,7 +722,6 @@ Output this exact JSON format:
   "strategy_notes": "brief notes for the next editing pass"
 }}"""
 
-<<<<<<< HEAD
 BULLET_RELEVANCE_PROMPT = """Score how relevant each resume bullet is to this job.
 
 Return ONLY a JSON object. Do not rewrite, merge, reorder, or invent bullets.
@@ -761,7 +748,7 @@ Output this exact JSON format:
   ]
 }}
 """
-=======
+
 LENGTH_SELECTION_PROMPT = """Select and tailor work experience bullets from the MASTER resume pools to fit length constraints.
 
 {length_constraints}
@@ -784,7 +771,6 @@ Current tailored resume:
 {tailored_resume}
 
 Output JSON: {{ "changes": [ ... ], "strategy_notes": "..." }}"""
->>>>>>> origin/main
 
 DIFF_IMPROVE_PROMPT = """Given this resume and job description, output a JSON object with targeted changes to better align the resume with the job.
 

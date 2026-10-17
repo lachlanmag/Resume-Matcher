@@ -63,11 +63,8 @@ __all__ = [
     "SKILL_TARGET_PLAN_PROMPT",
     "BULLET_RELEVANCE_PROMPT",
     "GENERATE_TITLE_PROMPT",
-<<<<<<< HEAD
     "INTERVIEW_PREP_PROMPT",
-=======
     "TAILORED_RESUME_FEEDBACK_PROMPT",
->>>>>>> origin/main
     "REQUIRED_FEATURE_PROMPT_PLACEHOLDERS",
     "validate_prompt_placeholders",
     "get_language_name",
