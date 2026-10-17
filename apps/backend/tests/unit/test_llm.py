@@ -1008,7 +1008,6 @@ class TestCompleteDynamicTimeout:
         assert router.acompletion.call_args.kwargs["timeout"] == 180
 
 
-<<<<<<< HEAD
 class TestScrubSecrets:
     """M-08: the redaction patterns must cover the providers we support."""
 
@@ -1790,7 +1789,6 @@ class TestMaxTokensRejectionFallback:
         assert result == "Hello"
         assert router.acompletion.await_count == 2
         assert router.acompletion.call_args.kwargs["max_completion_tokens"] == 2048
-=======
 # ---------------------------------------------------------------------------
 # Cursor provider routing
 # ---------------------------------------------------------------------------
@@ -1864,4 +1862,3 @@ class TestCursorProvider:
 
         assert result["healthy"] is True
         assert result["provider"] == "cursor"
->>>>>>> origin/main

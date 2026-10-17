@@ -66,7 +66,6 @@ class TestResumeCrud:
         fetched = await db.get_resume(with_md["resume_id"])
         assert fetched["original_markdown"] == "# raw"
 
-<<<<<<< HEAD
     async def test_interview_prep_round_trips_as_text(self, db):
         created = await db.create_resume(
             content="x",
@@ -100,7 +99,6 @@ class TestResumeCrud:
             assert names.count("interview_prep") == 1
         finally:
             engine.dispose()
-=======
     async def test_tailor_settings_round_trip(self, db):
         created = await db.create_resume(content="x")
         assert "tailor_settings" not in created
@@ -180,7 +178,6 @@ class TestResumeCrud:
             assert updated["tailor_settings"] == settings
         finally:
             await database.close()
->>>>>>> origin/main
 
 
 class TestMasterResume:

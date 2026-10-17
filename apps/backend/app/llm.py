@@ -1975,7 +1975,18 @@ async def complete_json(
             # `json_object` and accept only `json_schema`/`text`. Keep JSON mode
             # for providers known to support json_object and fall back to
             # prompt-only JSON for openai_compatible.
-            if use_json_mode and not json_mode_failed and config.provider not in ("openai_compatible", "cursor"):
+            # Fork's openai_compatible/cursor servers often reject response_format,
+            # but a verified-compatible endpoint (e.g. OpenCode Zen's HY3 route)
+            # should still get it when _openai_compatible_supports_json_mode
+            # (folded into use_json_mode above) identified it as safe.
+            provider_skips_response_format = (
+                config.provider == "cursor"
+                or (
+                    config.provider == "openai_compatible"
+                    and not _openai_compatible_supports_json_mode(config)
+                )
+            )
+            if use_json_mode and not json_mode_failed and not provider_skips_response_format:
                 kwargs["response_format"] = {"type": "json_object"}
 
             response = await _route_acompletion(config, router, **kwargs)
