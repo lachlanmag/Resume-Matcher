@@ -8,15 +8,11 @@ import type {
 import { getSortedSections } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
 import { DynamicResumeSection } from './dynamic-resume-section';
-<<<<<<< HEAD
 import { DescriptionList } from './description-list';
 import { TagList } from './tag-list';
 import { EarlierExperience, splitCondensed } from './earlier-experience';
 import { RESUME_SECTION, RESUME_SECTION_TITLE, resumeItem } from './page-break-attrs';
-=======
-import { SafeHtml } from './safe-html';
 import { WorkExperienceBlock } from './work-experience-block';
->>>>>>> origin/main
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/swiss-single.module.css';
 
@@ -125,33 +121,8 @@ export const ResumeSingleColumn: React.FC<ResumeSingleColumnProps> = ({
               {section.displayName}
             </h3>
             <div className={baseStyles['resume-items']}>
-<<<<<<< HEAD
-              {splitCondensed(workExperience).full.map((exp) => (
-                <div
-                  key={exp.id}
-                  {...resumeItem(exp.description)}
-                  className={baseStyles['resume-item']}
-                >
-                  <div
-                    className={`flex justify-between items-baseline ${baseStyles['resume-row-tight']}`}
-                  >
-                    <h4 className={baseStyles['resume-item-title']}>{exp.title}</h4>
-                    <span className={`${baseStyles['resume-date']} ml-4`}>
-                      {formatDateRange(exp.years)}
-                    </span>
-                  </div>
-                  <div
-                    className={`flex justify-between items-center ${baseStyles['resume-row']} ${baseStyles['resume-item-subtitle']}`}
-                  >
-                    <span>{exp.company}</span>
-                    {exp.location && <span>{exp.location}</span>}
-                  </div>
-                  <DescriptionList items={exp.description} styles={exp.descriptionStyles} />
-                </div>
-=======
               {workExperience.map((exp) => (
                 <WorkExperienceBlock key={exp.id} job={exp} />
->>>>>>> origin/main
               ))}
               {splitCondensed(workExperience).condensed.length > 0 && (
                 <EarlierExperience

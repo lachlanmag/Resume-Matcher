@@ -21,7 +21,8 @@ export function splitCondensed(entries: readonly Experience[] | null | undefined
 
 /** "Title, Company, Years": the order the ATS round trip expects for a condensed role. */
 export function condensedLine(entry: Experience): string {
-  return [entry.title, entry.company, entry.years ? formatDateRange(entry.years) : undefined]
+  const role = entry.roles?.[0];
+  return [role?.title, entry.company, role?.years ? formatDateRange(role.years) : undefined]
     .map((part) => part?.trim())
     .filter(Boolean)
     .join(', ');

@@ -3,7 +3,8 @@
 import React from 'react';
 import type { Experience } from '@/components/dashboard/resume-component';
 import { formatDateRange } from '@/lib/utils';
-import { SafeHtml } from './safe-html';
+import { DescriptionList } from './description-list';
+import { resumeItem } from './page-break-attrs';
 import baseStyles from '@/components/resume/styles/_base.module.css';
 
 export interface WorkExperienceBlockProps {
@@ -24,7 +25,6 @@ export function WorkExperienceBlock({
   titleClassName = baseStyles['resume-item-title'],
   roleTitleClassName = baseStyles['resume-item-subtitle'],
   dateClassName = baseStyles['resume-date'],
-  listClassName = baseStyles['resume-list'],
   textClassName = baseStyles['resume-text-sm'],
 }: WorkExperienceBlockProps) {
   const roles =
@@ -33,7 +33,7 @@ export function WorkExperienceBlock({
       : [{ id: 1, title: '', years: '' }];
 
   return (
-    <div className={baseStyles['resume-item']}>
+    <div {...resumeItem(job.description)} className={baseStyles['resume-item']}>
       <div
         className={`flex justify-between items-baseline ${baseStyles['resume-row-tight']}`}
       >
@@ -53,18 +53,11 @@ export function WorkExperienceBlock({
         </div>
       ))}
 
-      {job.description && job.description.length > 0 ? (
-        <ul className={`ml-4 ${listClassName} ${textClassName}`}>
-          {job.description.map((desc, index) => (
-            <li key={index} className="flex">
-              <span className="mr-1.5 flex-shrink-0">•&nbsp;</span>
-              <span>
-                <SafeHtml html={desc} />
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <DescriptionList
+        items={job.description}
+        styles={job.descriptionStyles}
+        textClassName={textClassName}
+      />
     </div>
   );
 }
