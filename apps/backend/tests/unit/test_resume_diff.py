@@ -177,15 +177,7 @@ def test_summary_unchanged() -> None:
 
 
 def test_experience_entry_added() -> None:
-<<<<<<< HEAD
-    original = {
-        "workExperience": [
-            {"title": "Dev", "company": "A", "years": "2020", "description": []}
-        ]
-    }
-=======
     original = {"workExperience": [_experience_entry(company="A", title="Dev", years="2020")]}
->>>>>>> origin/main
     improved = {
         "workExperience": [
             _experience_entry(company="A", title="Dev", years="2020"),
@@ -208,15 +200,7 @@ def test_experience_entry_removed() -> None:
             _experience_entry(company="B", title="Senior", years="2022"),
         ]
     }
-<<<<<<< HEAD
-    improved = {
-        "workExperience": [
-            {"title": "Dev", "company": "A", "years": "2020", "description": []}
-        ]
-    }
-=======
     improved = {"workExperience": [_experience_entry(company="A", title="Dev", years="2020")]}
->>>>>>> origin/main
 
     summary, changes = calculate_resume_diff(original, improved)
 
@@ -230,33 +214,11 @@ def test_experience_entry_removed() -> None:
 
 def test_experience_entry_modified() -> None:
     original = {
-<<<<<<< HEAD
-        "workExperience": [
-            {
-                "title": "Dev",
-                "company": "A",
-                "location": "NY",
-                "years": "2020",
-                "description": [],
-            }
-        ]
-    }
-    improved = {
-        "workExperience": [
-            {
-                "title": "Dev",
-                "company": "A",
-                "location": "Remote",
-                "years": "2020",
-                "description": [],
-            }
-=======
         "workExperience": [_experience_entry(company="A", title="Dev", years="2020", location="NY")]
     }
     improved = {
         "workExperience": [
             _experience_entry(company="A", title="Dev", years="2020", location="Remote")
->>>>>>> origin/main
         ]
     }
 
@@ -306,21 +268,12 @@ def test_no_changes_returns_empty() -> None:
     original = {
         "summary": "Same.",
         "workExperience": [
-<<<<<<< HEAD
-            {
-                "title": "Dev",
-                "company": "A",
-                "years": "2020",
-                "description": ["Built stuff"],
-            }
-=======
             _experience_entry(
                 company="A",
                 title="Dev",
                 years="2020",
                 description=["Built stuff"],
             )
->>>>>>> origin/main
         ],
         "additional": {"technicalSkills": ["Python"], "certificationsTraining": []},
     }

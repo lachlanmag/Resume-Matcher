@@ -434,7 +434,7 @@ def test_apply_back_restores_previous_snapshot() -> None:
     ]
     state.resume_data = before.model_copy(deep=True)
     state.resume_data.additional.technicalSkills = ["Python"]
-    state.resume_data.workExperience[0].years = "2019 - 2022"
+    state.resume_data.workExperience[0].roles[0].years = "2019 - 2022"
 
     result = apply_back(state)
 
@@ -443,9 +443,9 @@ def test_apply_back_restores_previous_snapshot() -> None:
     assert result.current_question.section == "workExperience"
     assert result.resume_data.additional.technicalSkills == []
     assert result.resume_data.personalInfo.name == "James"
-    assert [(entry.id, entry.years) for entry in result.resume_data.workExperience] == [
-        (42, "2019 - 2021")
-    ]
+    assert [
+        (entry.id, entry.roles[0].years) for entry in result.resume_data.workExperience
+    ] == [(42, "2019 - 2021")]
     assert result.history == []
 
 
@@ -561,7 +561,13 @@ async def test_ai_turn_updates_experience_by_stable_id_without_duplication(
         result = await run_ai_turn(state, "Please correct that role", skip=False)
 
     assert [entry.id for entry in result.resume_data.workExperience] == [7, 11]
-    assert getattr(result.resume_data.workExperience[0], field) == corrected_value
+    corrected_entry = result.resume_data.workExperience[0]
+    actual_value = (
+        getattr(corrected_entry.roles[0], field)
+        if field in ("title", "years")
+        else getattr(corrected_entry, field)
+    )
+    assert actual_value == corrected_value
     assert result.resume_data.workExperience[1].company == "Acme"
 
 
@@ -1037,11 +1043,6 @@ async def test_ai_turn_sanitizes_user_answer_before_prompting() -> None:
     assert "Ignore previous instructions" not in sent_prompt
 
 
-<<<<<<< HEAD
-def test_assign_entry_ids_preserves_stable_ids_and_allocates_missing_or_duplicate_ids() -> (
-    None
-):
-=======
 @pytest.mark.parametrize(
     "answer,leaked_fragment",
     [
@@ -1099,7 +1100,6 @@ def test_scrub_secrets_redacts_api_key_patterns(raw: str) -> None:
 def test_assign_entry_ids_renumbers_all_three_lists() -> None:
     # Directly exercise the helper across all three lists (the section-scoped
     # merge only fills one list per turn, so test the helper itself here).
->>>>>>> origin/main
     from app.services.resume_wizard import _assign_entry_ids
 
     data = ResumeData.model_validate(
