@@ -6,14 +6,11 @@ import asyncio
 import logging
 import os
 import sys
-<<<<<<< HEAD
 import threading
 import time
 from dataclasses import dataclass, field
 from functools import partial
-=======
 from io import BytesIO
->>>>>>> origin/main
 from pathlib import Path
 from typing import Any, Awaitable, NoReturn, Optional, TypeVar
 
@@ -893,7 +890,6 @@ async def render_resume_pdf(
     release_slot = True
     work_deadline, total_deadline = _render_deadlines()
     try:
-<<<<<<< HEAD
         subprocess_supported = True
         if not _browser_is_connected(_browser):
             with _subprocess_lock:
@@ -945,10 +941,6 @@ async def render_resume_pdf(
     finally:
         if release_slot:
             _release_render_slot()
-=======
-        return await _render_with_browser(_browser, url, selector, pdf_format, pdf_margins)
-    except PlaywrightError as e:
-        _raise_playwright_error(e, url)
 
 
 def add_pdf_metadata(pdf_bytes: bytes, metadata: dict[str, str | None]) -> bytes:
@@ -1032,4 +1024,3 @@ def evaluate_pdf_ats_extractability(pdf_bytes: bytes) -> tuple[list[str], list[s
         warnings.append("Skills appears before Experience in extracted text.")
 
     return warnings, errors
->>>>>>> origin/main

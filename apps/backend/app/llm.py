@@ -755,11 +755,8 @@ def _scrub_secrets(text: str) -> str:
 _PROVIDER_KEY_MAP: dict[str, str] = {
     "openai": "openai",
     "openai_compatible": "openai_compatible",
-<<<<<<< HEAD
     "azure_foundry": "azure_foundry",
-=======
     "cursor": "cursor",
->>>>>>> origin/main
     "anthropic": "anthropic",
     "gemini": "google",
     "openrouter": "openrouter",
@@ -774,11 +771,7 @@ _PROVIDER_KEY_MAP: dict[str, str] = {
 # default), because the env var may hold a real paid-API key that would then
 # leak to a local/compatible endpoint the user set up expecting no auth.
 _PROVIDERS_WITHOUT_ENV_KEY_FALLBACK: frozenset[str] = frozenset(
-<<<<<<< HEAD
-    {"openai_compatible", "ollama", "claude_cli", "chatgpt", "agent"}
-=======
-    {"openai_compatible", "cursor", "ollama"}
->>>>>>> origin/main
+    {"openai_compatible", "ollama", "claude_cli", "chatgpt", "agent", "cursor"}
 )
 
 
@@ -957,11 +950,8 @@ def get_model_name(config: LLMConfig) -> str:
         # client handles the request; works for llama.cpp, vLLM, LM Studio,
         # and any server exposing the OpenAI Chat Completions API shape.
         "openai_compatible": "openai/",
-<<<<<<< HEAD
         "azure_foundry": "azure_ai/",
-=======
         "cursor": "openai/",
->>>>>>> origin/main
         "anthropic": "anthropic/",
         "openrouter": "openrouter/",
         "gemini": "gemini/",
@@ -1201,14 +1191,11 @@ async def check_llm_health(
     # servers often run without auth, so a blank key is acceptable for those
     # providers — a sentinel is passed downstream (see _effective_api_key)
     # to satisfy the OpenAI client's non-empty-string validation.
-<<<<<<< HEAD
     if (
-        config.provider not in ("ollama", "openai_compatible", "claude_cli", "chatgpt")
+        config.provider
+        not in ("ollama", "openai_compatible", "claude_cli", "chatgpt", "cursor")
         and not config.api_key
     ):
-=======
-    if config.provider not in ("ollama", "openai_compatible", "cursor") and not config.api_key:
->>>>>>> origin/main
         return {
             "healthy": False,
             "provider": config.provider,
@@ -1520,13 +1507,8 @@ def _appears_truncated(data: dict, schema_type: str = "resume") -> bool:
     Args:
         data: Parsed JSON dict.
         schema_type: Expected schema — "resume" (full resume), "enrichment"
-<<<<<<< HEAD
-            (analyze output), "diff" (diff changes), "keywords", or
-            "interview_prep".
-=======
-            (analyze output), "feedback" (tailored resume feedback),
-            "diff" (diff changes), or "keywords".
->>>>>>> origin/main
+            (analyze output), "diff" (diff changes), "keywords",
+            "interview_prep", or "feedback" (tailored resume feedback).
             Determines which fields are checked for truncation.
     """
     if not isinstance(data, dict):
@@ -1549,7 +1531,6 @@ def _appears_truncated(data: dict, schema_type: str = "resume") -> bool:
             return True
         return False
 
-<<<<<<< HEAD
     if schema_type == "interview_prep":
         required = {
             "role_fit_analysis",
@@ -1563,7 +1544,10 @@ def _appears_truncated(data: dict, schema_type: str = "resume") -> bool:
             logging.warning(
                 "Possible truncation detected: interview_prep missing required keys: %s",
                 ", ".join(sorted(missing)),
-=======
+            )
+            return True
+        return False
+
     if schema_type == "feedback":
         if "report_markdown" not in data:
             logging.warning(
@@ -1573,7 +1557,6 @@ def _appears_truncated(data: dict, schema_type: str = "resume") -> bool:
         if data.get("report_markdown") == "":
             logging.warning(
                 "Possible truncation detected: feedback report_markdown is empty"
->>>>>>> origin/main
             )
             return True
         return False
@@ -1908,17 +1891,12 @@ async def complete_json(
     are handled by the Router and are NOT retried again here.
 
     Args:
-<<<<<<< HEAD
         schema_type: Expected schema — "resume", "enrichment", "diff",
-            "keywords", or "interview_prep". Passed to _appears_truncated for
-            context-aware truncation detection and used to tailor retry hints.
+            "keywords", "interview_prep", or "feedback". Passed to
+            _appears_truncated for context-aware truncation detection and
+            used to tailor retry hints.
         response_validator: Optional synchronous schema/source validator. A
             ``ValueError`` rejects the content inside this retry budget.
-=======
-        schema_type: Expected schema — "resume", "enrichment", "feedback",
-            "diff", or "keywords". Passed to _appears_truncated for
-            context-aware truncation detection and used to tailor retry hints.
->>>>>>> origin/main
     """
     validate_prompt_size(prompt + (system_prompt or ""))
     router, config = get_router(config)
@@ -2039,19 +2017,11 @@ async def complete_json(
                     if schema_type == "resume":
                         hint = "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL sections. Do not truncate."
                     elif schema_type == "enrichment":
-<<<<<<< HEAD
                         hint = "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: items_to_enrich, questions, analysis_summary. Do not truncate."
                     elif schema_type == "interview_prep":
                         hint = "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: role_fit_analysis, resume_questions, project_follow_ups, skill_gaps, talking_points. Do not truncate."
-=======
-                        hint = (
-                            "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: items_to_enrich, questions, analysis_summary. Do not truncate."
-                        )
                     elif schema_type == "feedback":
-                        hint = (
-                            "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: report_markdown, questions. Do not truncate report_markdown."
-                        )
->>>>>>> origin/main
+                        hint = "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: report_markdown, questions. Do not truncate report_markdown."
                     else:
                         hint = "\n\nIMPORTANT: Output ONLY a valid JSON object. Start with { and end with }."
                     messages[-1]["content"] = prompt + hint
