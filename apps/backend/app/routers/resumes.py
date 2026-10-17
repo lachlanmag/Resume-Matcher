@@ -2549,13 +2549,7 @@ async def download_resume_pdf(
         accentColor=accentColor,
         lang=lang,
     )
-<<<<<<< HEAD
     url = resume_print_url(resume_id, fit)
-=======
-    if lang:
-        params = f"{params}&lang={lang}"
-    url = f"{settings.pdf_render_base_url}/print/resumes/{resume_id}?{params}"
->>>>>>> origin/main
 
     # Use the exact margins provided; compact mode only affects spacing.
     pdf_margins = {
@@ -3002,16 +2996,6 @@ async def generate_outreach_endpoint(resume_id: str) -> GenerateContentResponse:
     )
 
 
-<<<<<<< HEAD
-@router.post(
-    "/{resume_id}/generate-interview-prep",
-    response_model=GenerateInterviewPrepResponse,
-)
-async def generate_interview_prep_endpoint(
-    resume_id: str,
-) -> GenerateInterviewPrepResponse:
-    """Generate interview preparation on-demand for an existing tailored resume."""
-=======
 async def _master_processed_data_for_improvement(
     improvement: dict[str, Any],
 ) -> dict[str, Any] | None:
@@ -3028,7 +3012,6 @@ async def _master_processed_data_for_improvement(
 
 async def _require_tailored_resume_with_job(resume_id: str) -> tuple[dict, dict, dict]:
     """Returns (resume, job, improvement). Raises HTTPException on failure."""
->>>>>>> origin/main
     resume = await db.get_resume(resume_id)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
@@ -3036,11 +3019,7 @@ async def _require_tailored_resume_with_job(resume_id: str) -> tuple[dict, dict,
     if not resume.get("parent_id"):
         raise HTTPException(
             status_code=400,
-<<<<<<< HEAD
-            detail="Interview preparation can only be generated for tailored resumes. "
-=======
-            detail="Feedback can only be generated for tailored resumes. "
->>>>>>> origin/main
+            detail="This can only be generated for tailored resumes. "
             "Please tailor this resume to a job description first.",
         )
 
@@ -3066,7 +3045,20 @@ async def _require_tailored_resume_with_job(resume_id: str) -> tuple[dict, dict,
             detail="Resume has no processed data. Please re-upload the resume.",
         )
 
-<<<<<<< HEAD
+    return resume, job, improvement
+
+
+@router.post(
+    "/{resume_id}/generate-interview-prep",
+    response_model=GenerateInterviewPrepResponse,
+)
+async def generate_interview_prep_endpoint(
+    resume_id: str,
+) -> GenerateInterviewPrepResponse:
+    """Generate interview preparation on-demand for an existing tailored resume."""
+    resume, job, _ = await _require_tailored_resume_with_job(resume_id)
+    resume_data = resume.get("processed_data")
+
     _validate_ai_sources(resume, job)
     language = get_content_language()
 
