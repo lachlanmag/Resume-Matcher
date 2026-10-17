@@ -3190,8 +3190,6 @@ async def recalculate_ats_score_for_resume(resume_id: str) -> ATSScoreRecord:
             status_code=500, detail="Failed to calculate ATS score. Please try again."
         ) from e
     return ATSScoreRecord.model_validate(record)
-=======
-    return resume, job, improvement
 
 
 @router.post("/{resume_id}/feedback/generate")
@@ -3386,7 +3384,6 @@ async def feedback_apply_endpoint(
             resume_feedback=updated_resume_feedback,
         ),
     )
->>>>>>> origin/main
 
 
 @router.get("/{resume_id}/job-description")
