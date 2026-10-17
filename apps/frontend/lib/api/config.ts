@@ -7,11 +7,8 @@ export type { TailorLengthSettings };
 export type LLMProvider =
   | 'openai'
   | 'openai_compatible'
-<<<<<<< HEAD
   | 'azure_foundry'
-=======
   | 'cursor'
->>>>>>> origin/main
   | 'anthropic'
   | 'openrouter'
   | 'gemini'
@@ -296,21 +293,15 @@ export const PROVIDER_INFO: Record<
 export interface FeatureConfig {
   enable_cover_letter: boolean;
   enable_outreach_message: boolean;
-<<<<<<< HEAD
   enable_interview_prep: boolean;
-=======
   enable_resume_feedback: boolean;
->>>>>>> origin/main
 }
 
 export interface FeatureConfigUpdate {
   enable_cover_letter?: boolean;
   enable_outreach_message?: boolean;
-<<<<<<< HEAD
   enable_interview_prep?: boolean;
-=======
   enable_resume_feedback?: boolean;
->>>>>>> origin/main
 }
 
 // Fetch feature configuration

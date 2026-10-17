@@ -7,7 +7,6 @@ import type { ResumeData } from '@/components/dashboard/resume-component';
 import { type TailorLengthSettings } from '@/lib/types/tailor-length';
 import { type TemplateSettings } from '@/lib/types/template-settings';
 import { type Locale } from '@/i18n/config';
-<<<<<<< HEAD
 import { clearResumeWizardCompletion } from '@/lib/utils/resume-wizard-storage';
 import {
   API_BASE,
@@ -18,10 +17,7 @@ import {
   apiFetch,
   parseErrorDetail,
 } from './client';
-=======
 import type { ResumeFeedback } from './feedback';
-import { API_BASE, DEFAULT_TIMEOUT_MS, apiPost, apiPatch, apiDelete, apiFetch } from './client';
->>>>>>> origin/main
 
 // Matches backend schemas/models.py ResumeData
 interface ProcessedResume {
@@ -156,15 +152,12 @@ interface ResumeResponse {
     interview_prep?: InterviewPrepData | null;
     parent_id?: string | null; // For determining if resume is tailored
     title?: string | null;
-<<<<<<< HEAD
     is_master?: boolean;
     is_default_master?: boolean;
     // The resume's saved formatting; null until it is formatted in the builder.
     template_settings?: TemplateSettings | null;
-=======
     tailor_settings?: TailorLengthSettings | null;
     resume_feedback?: ResumeFeedback | null;
->>>>>>> origin/main
   };
 }
 
@@ -203,6 +196,9 @@ export interface ImproveResumeOptions {
   promptId?: string;
   tailorLengthSettings?: TailorLengthSettings;
   replaceResumeId?: string;
+  maxBulletsPerEntry?: number;
+  pageFit?: PageFitSettings;
+  maxPages?: number;
 }
 
 function normalizeResumeId(resumeId: string): string {
@@ -282,6 +278,11 @@ function buildImprovePayload(
     prompt_id: options?.promptId ?? null,
     tailor_length_settings: options?.tailorLengthSettings ?? null,
     replace_resume_id: options?.replaceResumeId ?? null,
+    ...(options?.maxBulletsPerEntry !== undefined
+      ? { max_bullets_per_entry: options.maxBulletsPerEntry }
+      : {}),
+    ...(options?.pageFit !== undefined ? { page_fit: options.pageFit } : {}),
+    ...(options?.maxPages !== undefined ? { max_pages: options.maxPages } : {}),
   };
 }
 
@@ -299,27 +300,11 @@ export async function improveResume(
 export async function previewImproveResume(
   resumeId: string,
   jobId: string,
-<<<<<<< HEAD
-  promptId?: string,
-  options?: { maxBulletsPerEntry?: number; pageFit?: PageFitSettings; maxPages?: number }
-): Promise<ImprovedResult> {
-  return postImprove('/resumes/improve/preview', {
-    resume_id: resumeId,
-    job_id: jobId,
-    prompt_id: promptId ?? null,
-    ...(options?.maxBulletsPerEntry !== undefined
-      ? { max_bullets_per_entry: options.maxBulletsPerEntry }
-      : {}),
-    ...(options?.pageFit !== undefined ? { page_fit: options.pageFit } : {}),
-    ...(options?.maxPages !== undefined ? { max_pages: options.maxPages } : {}),
-  });
-=======
   options?: ImproveResumeOptions | string
 ): Promise<ImprovedResult> {
   const opts: ImproveResumeOptions | undefined =
     typeof options === 'string' ? { promptId: options } : options;
   return postImprove('/resumes/improve/preview', buildImprovePayload(resumeId, jobId, opts));
->>>>>>> origin/main
 }
 
 /** Confirms and saves a tailored resume */

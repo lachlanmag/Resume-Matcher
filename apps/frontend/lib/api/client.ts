@@ -5,14 +5,6 @@
  */
 
 const DEFAULT_PUBLIC_API_URL = '/';
-<<<<<<< HEAD
-// Server-side origin of the backend; same env var and default as the proxy in
-// next.config.ts, so print pages reach the backend wherever the proxy does.
-const INTERNAL_API_ORIGIN = (process.env.BACKEND_ORIGIN || 'http://127.0.0.1:8000').replace(
-  /\/+$/,
-  ''
-);
-=======
 const DEFAULT_BACKEND_ORIGIN = 'http://127.0.0.1:8000';
 // Server-side print routes fetch the backend directly (no Next.js proxy). Must
 // match BACKEND_ORIGIN in next.config.ts rewrites or PDF generation hangs until
@@ -20,7 +12,6 @@ const DEFAULT_BACKEND_ORIGIN = 'http://127.0.0.1:8000';
 const INTERNAL_API_ORIGIN = (
   process.env.BACKEND_ORIGIN?.trim() || DEFAULT_BACKEND_ORIGIN
 ).replace(/\/+$/, '');
->>>>>>> origin/main
 
 function normalizeApiUrl(value: string): string {
   const trimmed = value.trim();

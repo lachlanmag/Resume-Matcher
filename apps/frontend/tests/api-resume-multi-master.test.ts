@@ -36,7 +36,7 @@ describe('multi-master api client', () => {
     fetchMock.mockImplementation(() => okJson({ request_id: 'x', data: {} }));
     vi.stubGlobal('fetch', fetchMock);
     const pageFit = toPageFitSettings(DEFAULT_TEMPLATE_SETTINGS, 'en');
-    await previewImproveResume('r1', 'j1', undefined, { maxBulletsPerEntry: 3, pageFit });
+    await previewImproveResume('r1', 'j1', { maxBulletsPerEntry: 3, pageFit });
     const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
     expect(body.max_bullets_per_entry).toBe(3);
     expect(body.page_fit).toMatchObject({ template: 'swiss-single', pageSize: 'A4', lang: 'en' });
@@ -48,7 +48,13 @@ describe('multi-master api client', () => {
     vi.stubGlobal('fetch', fetchMock);
     await previewImproveResume('r1', 'j1');
     const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
-    expect(body).toEqual({ resume_id: 'r1', job_id: 'j1', prompt_id: null });
+    expect(body).toEqual({
+      resume_id: 'r1',
+      job_id: 'j1',
+      prompt_id: null,
+      tailor_length_settings: null,
+      replace_resume_id: null,
+    });
     expect(body).not.toHaveProperty('max_bullets_per_entry');
     expect(body).not.toHaveProperty('page_fit');
   });
