@@ -14,7 +14,7 @@ services:
     ports:
       # Reachable from this machine only. To open it from a phone or another computer,
       # set BIND_ADDRESS=0.0.0.0 and add the address you will use to ALLOWED_HOSTS.
-      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3001}:3000"
     # Makes host.docker.internal (your machine, e.g. for Ollama) resolve on Linux too.
     # Docker Desktop (macOS/Windows) already provides it.
     extra_hosts:
@@ -25,7 +25,7 @@ services:
     #  - llm_api_key
     environment:
       # domain in reverse proxy
-      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3000}
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3001}
       # Extra hostnames the app answers for (comma-separated), besides localhost and the
       # FRONTEND_BASE_URL host, e.g. 192.168.1.20 for LAN access. "*" allows any.
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-}
