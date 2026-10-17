@@ -498,13 +498,9 @@ class Database:
         """Update resume by ID.
 
         Raises:
-<<<<<<< HEAD
             ResumeNotFoundError: If resume not found. It subclasses
                 ``ValueError``, so existing ``except ValueError`` callers are
                 unaffected.
-=======
-            ValueError: If resume not found or ``updates`` contains unknown fields.
->>>>>>> origin/main
         """
         async with self._write_session() as session:
             row = await session.get(Resume, resume_id)
@@ -1065,7 +1061,6 @@ class Database:
             "created_at": now,
         }
 
-<<<<<<< HEAD
     async def get_improvement_by_job(self, job_id: str) -> dict[str, Any] | None:
         """Get the latest improvement record tailored against a job, if any."""
         async with self._session() as session:
@@ -1077,7 +1072,7 @@ class Database:
             )
             row = result.scalars().first()
             return self._improvement_to_dict(row) if row else None
-=======
+
     async def upsert_improvement(
         self,
         original_resume_id: str,
@@ -1106,7 +1101,6 @@ class Database:
             job_id=job_id,
             improvements=improvements,
         )
->>>>>>> origin/main
 
     async def get_improvement_by_tailored_resume(
         self, tailored_resume_id: str
