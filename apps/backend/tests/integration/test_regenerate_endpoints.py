@@ -252,11 +252,6 @@ class TestRegenerateEndpoints(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(updated["workExperience"][0]["description"], ["Keep me"])
         self.assertEqual(updated["workExperience"][1]["description"], ["New bullet"])
 
-<<<<<<< HEAD
-    async def test_apply_regenerated_disambiguates_duplicates_by_original_content(
-        self,
-    ) -> None:
-=======
     async def test_apply_regenerated_matches_experience_using_roles_titles(self) -> None:
         resume_id = "resume_1"
         processed_data = {
@@ -337,7 +332,6 @@ class TestRegenerateEndpoints(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(updated["workExperience"][0]["description"], ["New bullet"])
 
     async def test_apply_regenerated_disambiguates_duplicates_by_original_content(self) -> None:
->>>>>>> origin/main
         resume_id = "resume_1"
         processed_data = {
             "workExperience": [

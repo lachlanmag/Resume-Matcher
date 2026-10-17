@@ -162,7 +162,6 @@ class TestStatusEndpoint:
     @patch("app.routers.health.db", new_callable=AsyncMock)
     @patch("app.routers.health.check_llm_health", new_callable=AsyncMock)
     @patch("app.routers.health.get_llm_config")
-<<<<<<< HEAD
     async def test_status_claude_cli_is_configured_without_key(
         self, mock_config, mock_health, mock_db, client
     ):
@@ -177,7 +176,17 @@ class TestStatusEndpoint:
             "total_jobs": 0,
             "total_improvements": 0,
             "has_master_resume": True,
-=======
+        }
+        async with client:
+            resp = await client.get("/api/v1/status")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["llm_configured"] is True
+        assert data["status"] == "ready"
+
+    @patch("app.routers.health.db", new_callable=AsyncMock)
+    @patch("app.routers.health.check_llm_health", new_callable=AsyncMock)
+    @patch("app.routers.health.get_llm_config")
     async def test_status_cursor_configured_without_key(
         self, mock_config, mock_health, mock_db, client
     ):
@@ -197,15 +206,9 @@ class TestStatusEndpoint:
             "total_jobs": 0,
             "total_improvements": 0,
             "has_master_resume": False,
->>>>>>> origin/main
         }
         async with client:
             resp = await client.get("/api/v1/status")
         assert resp.status_code == 200
-<<<<<<< HEAD
         data = resp.json()
         assert data["llm_configured"] is True
-        assert data["status"] == "ready"
-=======
-        assert resp.json()["llm_configured"] is True
->>>>>>> origin/main

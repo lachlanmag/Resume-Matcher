@@ -290,11 +290,8 @@ class TestFeatureConfig:
         mock_load.return_value = {
             "enable_cover_letter": True,
             "enable_outreach_message": False,
-<<<<<<< HEAD
             "enable_interview_prep": True,
-=======
             "enable_resume_feedback": True,
->>>>>>> origin/main
         }
         async with client:
             resp = await client.get("/api/v1/config/features")
@@ -302,11 +299,8 @@ class TestFeatureConfig:
         data = resp.json()
         assert data["enable_cover_letter"] is True
         assert data["enable_outreach_message"] is False
-<<<<<<< HEAD
         assert data["enable_interview_prep"] is True
-=======
         assert data["enable_resume_feedback"] is True
->>>>>>> origin/main
 
     @patch("app.routers.config._save_config")
     @patch("app.routers.config._load_config")
@@ -518,7 +512,6 @@ class TestProviderConfigs:
         mock_load.return_value = {
             "provider": "openai_compatible",
             "model": "local-model",
-            "api_key": "sk-lm-test",
             "api_base": "http://127.0.0.1:1234/v1",
             "provider_configs": {},
         }
@@ -703,7 +696,46 @@ class TestLegacyKeyMigration:
             config_module.CONFIG_FILE_PATH.unlink()
         migrate_legacy_keys()
 
-<<<<<<< HEAD
+    async def test_skips_reimport_when_ciphertext_slot_exists(self, keys_env):
+        """An existing store slot blocks re-import even if ciphertext is undecryptable."""
+        import json
+        import app.config as config_module
+        from app.config import migrate_legacy_keys, get_api_keys_from_config
+
+        keys_env.set_api_key_ciphertext("openai", "not-valid-fernet-ciphertext")
+
+        config_module.CONFIG_FILE_PATH.write_text(
+            json.dumps({"provider": "openai", "api_keys": {"openai": "recovered-plaintext"}})
+        )
+        migrate_legacy_keys()
+
+        keys = get_api_keys_from_config()
+        assert keys.get("openai", "") == ""
+        on_disk = json.loads(config_module.CONFIG_FILE_PATH.read_text())
+        assert "api_keys" not in on_disk
+
+    async def test_migration_maps_cursor_legacy_single_key(self, keys_env, monkeypatch, tmp_path):
+        import json
+        import app.config as config_module
+        from app.config import migrate_legacy_keys, get_api_keys_from_config
+
+        config_module.CONFIG_FILE_PATH.write_text(
+            json.dumps(
+                {
+                    "provider": "cursor",
+                    "model": "auto",
+                    "api_key": "cursor-local-key",
+                }
+            )
+        )
+
+        migrate_legacy_keys()
+
+        keys = get_api_keys_from_config()
+        assert keys["cursor"] == "cursor-local-key"
+        on_disk = json.loads(config_module.CONFIG_FILE_PATH.read_text())
+        assert "api_key" not in on_disk
+
 
 class TestRequiresBaseUrlValidation:
     """M-05: requiresBaseUrl was a UI-only guard until now."""
@@ -759,6 +791,9 @@ class TestRequiresBaseUrlValidation:
         saved = json.loads((tmp_path / "data" / "config.json").read_text())
         # The custom base is bound to the key confirmed for it (none here).
         assert len(saved.pop("api_base_key_binding")) == 64
+        # Fork's per-provider config snapshot feature also persists here;
+        # not part of this test's concern.
+        saved.pop("provider_configs", None)
         assert saved == {
             "provider": "azure_foundry",
             "model": "gpt-5-mini",
@@ -784,50 +819,11 @@ class TestRequiresBaseUrlValidation:
             )
 
         assert resp.status_code == 200
-        assert json.loads((tmp_path / "data" / "config.json").read_text()) == {
+        saved = json.loads((tmp_path / "data" / "config.json").read_text())
+        saved.pop("provider_configs", None)
+        assert saved == {
             "provider": "openai",
             "model": "gpt-5-nano-2025-08-07",
         }
         mock_health.assert_awaited_once()
         assert sentinel_path.read_text() == '{"sentinel": "developer-state"}'
-=======
-    async def test_skips_reimport_when_ciphertext_slot_exists(self, keys_env):
-        """An existing store slot blocks re-import even if ciphertext is undecryptable."""
-        import json
-        import app.config as config_module
-        from app.config import migrate_legacy_keys, get_api_keys_from_config
-
-        keys_env.set_api_key_ciphertext("openai", "not-valid-fernet-ciphertext")
-
-        config_module.CONFIG_FILE_PATH.write_text(
-            json.dumps({"provider": "openai", "api_keys": {"openai": "recovered-plaintext"}})
-        )
-        migrate_legacy_keys()
-
-        keys = get_api_keys_from_config()
-        assert keys.get("openai", "") == ""
-        on_disk = json.loads(config_module.CONFIG_FILE_PATH.read_text())
-        assert "api_keys" not in on_disk
-
-    async def test_migration_maps_cursor_legacy_single_key(self, keys_env, monkeypatch, tmp_path):
-        import json
-        import app.config as config_module
-        from app.config import migrate_legacy_keys, get_api_keys_from_config
-
-        config_module.CONFIG_FILE_PATH.write_text(
-            json.dumps(
-                {
-                    "provider": "cursor",
-                    "model": "auto",
-                    "api_key": "cursor-local-key",
-                }
-            )
-        )
-
-        migrate_legacy_keys()
-
-        keys = get_api_keys_from_config()
-        assert keys["cursor"] == "cursor-local-key"
-        on_disk = json.loads(config_module.CONFIG_FILE_PATH.read_text())
-        assert "api_key" not in on_disk
->>>>>>> origin/main

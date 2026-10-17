@@ -383,7 +383,6 @@ class TestRetryProcessing:
             resp = await client.post("/api/v1/resumes/res-123/retry-processing")
         assert resp.status_code == 400
 
-<<<<<<< HEAD
     @patch("app.routers.resumes.parse_resume_to_json", new_callable=AsyncMock)
     @patch("app.routers.resumes.db", new_callable=AsyncMock)
     async def test_retry_empty_legacy_ready_resume(
@@ -559,7 +558,6 @@ class TestUploadResume:
         assert "Could not extract text from the uploaded file" in resp.json()["detail"]
         mock_db.create_resume_atomic_master.assert_not_called()
         mock_parse_resume_to_json.assert_not_called()
-=======
 
 class TestDownloadResumePdf:
     """GET /api/v1/resumes/{resume_id}/pdf"""
@@ -626,4 +624,3 @@ class TestDownloadResumePdf:
             "Missing expected section term: experience"
             in resp.headers["x-resume-pdf-errors"]
         )
->>>>>>> origin/main
