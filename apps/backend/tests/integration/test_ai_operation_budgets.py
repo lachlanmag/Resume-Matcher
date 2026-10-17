@@ -543,6 +543,9 @@ async def test_dedicated_ai_failures_reach_api_boundary(
         if failure == "deadline"
         else PromptSizeError("AI prompt exceeds the 512000-character limit")
     )
+    # preview/direct tailor the master resume (no parent_id); cover-letter/
+    # outreach/interview-prep operate on an already-tailored resume (needs one).
+    needs_parent_id = boundary in ("cover-letter", "outreach", "interview-prep")
     monkeypatch.setattr(
         resumes.db,
         "get_resume",
@@ -550,7 +553,7 @@ async def test_dedicated_ai_failures_reach_api_boundary(
             return_value={
                 "processed_data": sample_resume,
                 "content": "Synthetic source",
-                "parent_id": "master",
+                "parent_id": "master" if needs_parent_id else None,
             }
         ),
     )

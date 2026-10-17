@@ -311,13 +311,12 @@ async def test_duplicate_identity_reorder_preview_confirms_without_false_drift(
     source = ResumeData.model_validate(copy.deepcopy(sample_resume)).model_dump()
     first = source["workExperience"][0]
     first["id"] = 0
-    first["title"] = "Software Engineer"
+    first["roles"] = [{"id": 1, "title": "Software Engineer", "years": "2019 - 2020"}]
     first["company"] = "Acme"
-    first["years"] = "2019 - 2020"
     first["description"] = ["Built Python APIs"]
     first["descriptionStyles"] = ["bullet"]
     second = copy.deepcopy(first)
-    second["years"] = "2021 - 2023"
+    second["roles"] = [{"id": 1, "title": "Software Engineer", "years": "2021 - 2023"}]
     second["description"] = ["Maintained data pipelines"]
     source["workExperience"] = [first, second]
     candidate = copy.deepcopy(source)
@@ -335,7 +334,7 @@ async def test_duplicate_identity_reorder_preview_confirms_without_false_drift(
             assert preview.status_code == 200, preview.text
             preview_data = preview.json()["data"]
             assert [
-                entry["years"]
+                entry["roles"][0]["years"]
                 for entry in preview_data["resume_preview"]["workExperience"]
             ] == ["2021 - 2023", "2019 - 2020"]
 

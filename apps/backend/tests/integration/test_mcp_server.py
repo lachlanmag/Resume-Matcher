@@ -180,12 +180,12 @@ async def test_get_resume_survives_stored_data_that_breaks_the_schema(
         await isolated_db.update_resume(
             master["resume_id"],
             {
-                "processed_data": {"workExperience": "legacy text"},
+                "processed_data": {"education": "legacy text"},
                 "cover_letter": "Dear team",
             },
         )
         result = await call(mcp, "get_resume", {"resume_id": master["resume_id"]})
-    assert result["resume_data"] == {"workExperience": "legacy text"}
+    assert result["resume_data"] == {"education": "legacy text"}
     assert "update_resume" in result["resume_data_error"]
     assert result["cover_letter"] == "Dear team"
     assert "source_markdown" in result
@@ -204,7 +204,7 @@ async def test_render_checks_map_invalid_stored_data_to_a_stable_error(
     async with connect() as mcp:
         master = await _master(mcp, sample_resume)
         await isolated_db.update_resume(
-            master["resume_id"], {"processed_data": {"workExperience": "legacy text"}}
+            master["resume_id"], {"processed_data": {"education": "legacy text"}}
         )
         message = await call_error(mcp, tool, {"resume_id": master["resume_id"]})
     assert "stored data is invalid" in message
@@ -218,7 +218,7 @@ async def test_score_resume_maps_invalid_stored_data_to_a_stable_error(
     async with connect() as mcp:
         master = await _master(mcp, sample_resume)
         await isolated_db.update_resume(
-            master["resume_id"], {"processed_data": {"workExperience": "legacy text"}}
+            master["resume_id"], {"processed_data": {"education": "legacy text"}}
         )
         message = await call_error(
             mcp,

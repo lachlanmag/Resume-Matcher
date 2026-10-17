@@ -170,7 +170,7 @@ async def test_rendered_resume_errors(
 
 
 @pytest.mark.parametrize(
-    ("key", "value"), [("personalInfo", "bogus"), ("workExperience", ["bogus"])]
+    ("key", "value"), [("personalInfo", "bogus"), ("education", ["bogus"])]
 )
 async def test_rendered_resume_with_malformed_data_is_422(
     client: AsyncClient,

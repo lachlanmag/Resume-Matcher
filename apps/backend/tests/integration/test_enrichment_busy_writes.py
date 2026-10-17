@@ -21,10 +21,14 @@ def _apply_request(
 ) -> tuple[str, dict[str, Any] | list[dict[str, Any]]]:
     """Build a valid public request that changes one existing experience."""
     experience = source["workExperience"][0]
+    title = experience.get("title")
+    if title is None:
+        roles = experience.get("roles") or []
+        title = roles[0]["title"] if roles else ""
     item = {
         "item_id": "exp_0",
         "item_type": "experience",
-        "title": experience["title"],
+        "title": title,
         "subtitle": experience["company"],
     }
     if operation == "apply":

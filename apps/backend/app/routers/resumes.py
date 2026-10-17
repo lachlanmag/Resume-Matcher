@@ -1421,7 +1421,10 @@ async def improve_resume_preview_endpoint(
     resume = await db.get_resume(request.resume_id)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
-    _ensure_master_resume_for_tailor(resume)
+    # Not restricted to the master resume: fork's multi-master workflow
+    # re-tailors directly from a previously-tailored resume on its own track
+    # (see test_tailored_source_grounds_refiner_on_its_own_track), grounding
+    # refinement against that track's master via _grounding_master_data.
 
     job = await db.get_job(request.job_id)
     if not job:
@@ -1971,6 +1974,8 @@ async def execute_tailoring_pipeline(
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
+    tailor_length_settings = _resolve_tailor_length(tailor_length_settings, resume)
+
     job = await db.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job description not found")
@@ -2124,6 +2129,12 @@ async def execute_tailoring_pipeline(
         )
         response_warnings.extend(length_warnings)
 
+    # Canonicalize through ResumeData so schema defaults (descriptionStyles,
+    # condensed, roles, etc.) are baked into what's persisted, matching what
+    # resume_preview below returns — otherwise the saved processed_data and
+    # the API response silently diverge on any field Pydantic only fills in
+    # at validation time.
+    improved_data = ResumeData.model_validate(improved_data).model_dump(mode="json")
     improved_text = json.dumps(improved_data, indent=2)
 
     diff_summary, detailed_changes, diff_error = _calculate_diff_from_resume(
