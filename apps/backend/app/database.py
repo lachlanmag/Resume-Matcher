@@ -267,6 +267,10 @@ class Database:
         # Preserve TinyDB absence semantics: omit the key entirely when None.
         if row.original_markdown is not None:
             doc["original_markdown"] = row.original_markdown
+        if row.tailor_settings is not None:
+            doc["tailor_settings"] = row.tailor_settings
+        if row.resume_feedback is not None:
+            doc["resume_feedback"] = row.resume_feedback
         return doc
 
     @staticmethod
@@ -494,9 +498,13 @@ class Database:
         """Update resume by ID.
 
         Raises:
+<<<<<<< HEAD
             ResumeNotFoundError: If resume not found. It subclasses
                 ``ValueError``, so existing ``except ValueError`` callers are
                 unaffected.
+=======
+            ValueError: If resume not found or ``updates`` contains unknown fields.
+>>>>>>> origin/main
         """
         async with self._write_session() as session:
             row = await session.get(Resume, resume_id)
@@ -1057,6 +1065,7 @@ class Database:
             "created_at": now,
         }
 
+<<<<<<< HEAD
     async def get_improvement_by_job(self, job_id: str) -> dict[str, Any] | None:
         """Get the latest improvement record tailored against a job, if any."""
         async with self._session() as session:
@@ -1068,6 +1077,36 @@ class Database:
             )
             row = result.scalars().first()
             return self._improvement_to_dict(row) if row else None
+=======
+    async def upsert_improvement(
+        self,
+        original_resume_id: str,
+        tailored_resume_id: str,
+        job_id: str,
+        improvements: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Upsert improvement record for a tailored resume.
+
+        When re-tailoring an existing tailored resume via `replace_resume_id`,
+        ensure the stored job_id matches the latest tailoring call.
+        """
+        async with self._session() as session:
+            result = await session.execute(
+                select(Improvement).where(
+                    Improvement.tailored_resume_id == tailored_resume_id
+                )
+            )
+            for row in result.scalars().all():
+                await session.delete(row)
+            await session.commit()
+
+        return await self.create_improvement(
+            original_resume_id=original_resume_id,
+            tailored_resume_id=tailored_resume_id,
+            job_id=job_id,
+            improvements=improvements,
+        )
+>>>>>>> origin/main
 
     async def get_improvement_by_tailored_resume(
         self, tailored_resume_id: str

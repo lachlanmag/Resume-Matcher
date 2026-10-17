@@ -11,6 +11,8 @@ import {
   updateFeatureConfig,
   fetchPromptConfig,
   updatePromptConfig,
+  fetchTailorLengthConfig,
+  updateTailorLengthConfig,
   clearAllApiKeys,
   resetDatabase,
   PROVIDER_INFO,
@@ -29,6 +31,7 @@ import {
   type LLMHealthCheck,
   type PromptOption,
   type ReasoningEffort,
+  type ProviderConfigSnapshot,
   type FeaturePromptsUpdate,
   type ApiKeyProviderStatus,
   type ApiKeyProvider,
@@ -57,6 +60,12 @@ import { PageHeader } from '@/components/ui/page-header';
 import { SettingsAbout, SettingsSupportStrip } from '@/components/settings/community';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dropdown } from '@/components/ui/dropdown';
+import { TailorLengthControls } from '@/components/tailor/tailor-length-controls';
+import {
+  DEFAULT_TAILOR_LENGTH_SETTINGS,
+  type TailorLengthSettings,
+  validateTailorLengthSettings,
+} from '@/lib/types/tailor-length';
 import {
   FloppyDisk,
   Key,
@@ -90,7 +99,11 @@ type Status = 'idle' | 'loading' | 'saving' | 'saved' | 'error' | 'testing';
 const PROVIDERS: LLMProvider[] = [
   'openai',
   'openai_compatible',
+<<<<<<< HEAD
   'azure_foundry',
+=======
+  'cursor',
+>>>>>>> origin/main
   'anthropic',
   'openrouter',
   'gemini',
@@ -184,6 +197,7 @@ export default function SettingsPage() {
   // won't re-fire on next load). Typed tightly so invalid values can't leak
   // through the save path.
   const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort | 'auto'>('auto');
+<<<<<<< HEAD
   // Read once per mount (refs survive Strict Mode's effect replay).
   const chatGptReturnRef = useRef<ChatGptReturnOutcome | null | undefined>(undefined);
   const [chatGptReturn, setChatGptReturn] = useState<ChatGptReturnOutcome | null>(null);
@@ -193,6 +207,11 @@ export default function SettingsPage() {
     if (chatGptReturnRef.current === undefined) chatGptReturnRef.current = takeChatGptReturn();
     return chatGptReturnRef.current;
   }, []);
+=======
+  const [providerConfigs, setProviderConfigs] = useState<
+    Record<string, ProviderConfigSnapshot>
+  >({});
+>>>>>>> origin/main
 
   // Use cached system status (loaded on app start, refreshes every 30 min)
   const {
@@ -208,19 +227,29 @@ export default function SettingsPage() {
   // Feature config state
   const [enableCoverLetter, setEnableCoverLetter] = useState(false);
   const [enableOutreach, setEnableOutreach] = useState(false);
+<<<<<<< HEAD
   const [enableInterviewPrep, setEnableInterviewPrep] = useState(false);
+=======
+  const [enableResumeFeedback, setEnableResumeFeedback] = useState(false);
+>>>>>>> origin/main
   const [featureConfigLoading, setFeatureConfigLoading] = useState(false);
   const [promptConfigLoading, setPromptConfigLoading] = useState(false);
   const [promptOptions, setPromptOptions] = useState<PromptOption[]>([]);
   const [defaultPromptId, setDefaultPromptId] = useState('keywords');
+  const [tailorLengthSettings, setTailorLengthSettings] = useState<TailorLengthSettings>(
+    DEFAULT_TAILOR_LENGTH_SETTINGS
+  );
+  const [tailorLengthLoading, setTailorLengthLoading] = useState(false);
 
   // Custom feature prompts (cover letter, cold outreach). Empty string
   // means "use default"; the backend's *_default fields give us the
   // actual default text for placeholder display.
   const [coverLetterPrompt, setCoverLetterPrompt] = useState('');
   const [outreachPrompt, setOutreachPrompt] = useState('');
+  const [feedbackPrompt, setFeedbackPrompt] = useState('');
   const [coverLetterDefault, setCoverLetterDefault] = useState('');
   const [outreachDefault, setOutreachDefault] = useState('');
+  const [feedbackDefault, setFeedbackDefault] = useState('');
   const [featurePromptSaving, setFeaturePromptSaving] = useState<string | null>(null);
   const [featurePromptError, setFeaturePromptError] = useState<{
     field: string;
@@ -355,13 +384,14 @@ export default function SettingsPage() {
       const returnedFromChatGpt = readChatGptReturn();
       if (returnedFromChatGpt) setChatGptReturn(returnedFromChatGpt);
       try {
-        const [llmConfig, featureConfig, promptConfig, featurePrompts, keyStatus] =
+        const [llmConfig, featureConfig, promptConfig, featurePrompts, keyStatus, lengthConfig] =
           await Promise.all([
             fetchLlmConfig().catch(() => null),
             fetchFeatureConfig().catch(() => null),
             fetchPromptConfig().catch(() => null),
             fetchFeaturePrompts().catch(() => null),
             fetchApiKeyStatus().catch(() => null),
+            fetchTailorLengthConfig().catch(() => DEFAULT_TAILOR_LENGTH_SETTINGS),
           ]);
 
         if (cancelled) return;
@@ -392,6 +422,7 @@ export default function SettingsPage() {
           setApiKey('');
           setApiBase(resumeChatGpt ? '' : llmConfig.api_base || '');
           setReasoningEffort((llmConfig.reasoning_effort as ReasoningEffort | null) ?? 'auto');
+          setProviderConfigs(llmConfig.provider_configs ?? {});
 
           if (providerFromBackend !== safeProvider) {
             setError(t('settings.errors.unknownProvider', { provider: providerFromBackend }));
@@ -401,7 +432,11 @@ export default function SettingsPage() {
         if (featureConfig) {
           setEnableCoverLetter(featureConfig.enable_cover_letter);
           setEnableOutreach(featureConfig.enable_outreach_message);
+<<<<<<< HEAD
           setEnableInterviewPrep(featureConfig.enable_interview_prep);
+=======
+          setEnableResumeFeedback(featureConfig.enable_resume_feedback);
+>>>>>>> origin/main
         }
 
         if (promptConfig) {
@@ -409,11 +444,17 @@ export default function SettingsPage() {
           setDefaultPromptId(promptConfig.default_prompt_id || 'keywords');
         }
 
+        if (lengthConfig) {
+          setTailorLengthSettings(lengthConfig);
+        }
+
         if (featurePrompts) {
           setCoverLetterPrompt(featurePrompts.cover_letter_prompt);
           setOutreachPrompt(featurePrompts.outreach_message_prompt);
+          setFeedbackPrompt(featurePrompts.resume_feedback_prompt);
           setCoverLetterDefault(featurePrompts.cover_letter_default);
           setOutreachDefault(featurePrompts.outreach_message_default);
+          setFeedbackDefault(featurePrompts.resume_feedback_default);
         }
 
         setStatus('idle');
@@ -467,6 +508,7 @@ export default function SettingsPage() {
   // Handle provider change. Switching to a subscription provider waits for the
   // user to accept the risk in SubscriptionRiskDialog.
   const handleProviderChange = (newProvider: LLMProvider) => {
+<<<<<<< HEAD
     if ((newProvider === 'claude_cli' || newProvider === 'chatgpt') && newProvider !== provider) {
       setRiskProvider(newProvider);
       return;
@@ -491,6 +533,31 @@ export default function SettingsPage() {
       setApiBase(nextInfo.defaultBaseUrl ?? '');
     } else if (nextInfo.defaultBaseUrl && !apiBase.trim()) {
       setApiBase(nextInfo.defaultBaseUrl);
+=======
+    setProvider(newProvider);
+    const snapshot = providerConfigs[newProvider];
+
+    if (snapshot) {
+      setModel(snapshot.model || PROVIDER_INFO[newProvider].defaultModel);
+      setApiBase(snapshot.api_base || '');
+      setReasoningEffort((snapshot.reasoning_effort as ReasoningEffort | null) ?? 'auto');
+      const isMaskedKey = Boolean(snapshot.api_key) && snapshot.api_key.includes('*');
+      setHasStoredApiKey(snapshot.has_api_key || Boolean(snapshot.api_key));
+      setApiKey(isMaskedKey || snapshot.has_api_key ? '' : snapshot.api_key || '');
+      return;
+    }
+
+    setModel(PROVIDER_INFO[newProvider].defaultModel);
+
+    if (newProvider === 'ollama') {
+      setApiBase('http://localhost:11434');
+    } else if (newProvider === 'openai_compatible') {
+      setApiBase('http://localhost:8080/v1');
+    } else if (newProvider === 'cursor') {
+      setApiBase('http://127.0.0.1:8765/v1');
+    } else {
+      setApiBase('');
+>>>>>>> origin/main
     }
 
     // Clear the key input on switch, but drive the "has stored key" hint from
@@ -498,6 +565,7 @@ export default function SettingsPage() {
     // (each provider keeps its own key — switching no longer wipes anything).
     setApiKey('');
     setHasStoredApiKey(providerHasStoredKey(newProvider));
+    setReasoningEffort('auto');
   };
 
   // Save configuration
@@ -537,11 +605,18 @@ export default function SettingsPage() {
         // and the gpt-5 auto-migration won't re-fire.
         reasoning_effort: reasoningEffort === 'auto' ? '' : (reasoningEffort as ReasoningEffort),
       };
+<<<<<<< HEAD
       // Not persisted: proves the key may follow a changed Base URL.
       if (trimmedKey) {
         update.api_key = trimmedKey;
       }
       await updateLlmConfig(update);
+=======
+      const saved = await updateLlmConfig(update);
+      if (saved.provider_configs) {
+        setProviderConfigs(saved.provider_configs);
+      }
+>>>>>>> origin/main
 
       // Refresh the per-provider key status + cached system status after save.
       const statuses = await refreshApiKeyStatus();
@@ -609,7 +684,11 @@ export default function SettingsPage() {
 
   // Update feature config
   const handleFeatureConfigChange = async (
+<<<<<<< HEAD
     key: 'enable_cover_letter' | 'enable_outreach_message' | 'enable_interview_prep',
+=======
+    key: 'enable_cover_letter' | 'enable_outreach_message' | 'enable_resume_feedback',
+>>>>>>> origin/main
     value: boolean
   ) => {
     setFeatureConfigLoading(true);
@@ -617,7 +696,11 @@ export default function SettingsPage() {
       const updated = await updateFeatureConfig({ [key]: value });
       setEnableCoverLetter(updated.enable_cover_letter);
       setEnableOutreach(updated.enable_outreach_message);
+<<<<<<< HEAD
       setEnableInterviewPrep(updated.enable_interview_prep);
+=======
+      setEnableResumeFeedback(updated.enable_resume_feedback);
+>>>>>>> origin/main
     } catch (err) {
       console.error('Failed to update feature config', err);
       // Revert on error
@@ -626,7 +709,11 @@ export default function SettingsPage() {
       } else if (key === 'enable_outreach_message') {
         setEnableOutreach(!value);
       } else {
+<<<<<<< HEAD
         setEnableInterviewPrep(!value);
+=======
+        setEnableResumeFeedback(!value);
+>>>>>>> origin/main
       }
     } finally {
       setFeatureConfigLoading(false);
@@ -634,7 +721,7 @@ export default function SettingsPage() {
   };
 
   const handleFeaturePromptSave = async (
-    field: 'cover_letter_prompt' | 'outreach_message_prompt',
+    field: 'cover_letter_prompt' | 'outreach_message_prompt' | 'resume_feedback_prompt',
     value: string
   ) => {
     setFeaturePromptSaving(field);
@@ -646,6 +733,7 @@ export default function SettingsPage() {
       const fresh = await updateFeaturePrompts(update);
       setCoverLetterPrompt(fresh.cover_letter_prompt);
       setOutreachPrompt(fresh.outreach_message_prompt);
+      setFeedbackPrompt(fresh.resume_feedback_prompt);
     } catch (err) {
       if (err instanceof FeaturePromptsError) {
         setFeaturePromptError({ field: err.detail.field, missing: err.detail.missing });
@@ -671,6 +759,25 @@ export default function SettingsPage() {
       setError((err as Error).message || t('settings.errors.unableToSaveConfiguration'));
     } finally {
       setPromptConfigLoading(false);
+    }
+  };
+
+  const handleTailorLengthSave = async () => {
+    const validationError = validateTailorLengthSettings(tailorLengthSettings);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setTailorLengthLoading(true);
+    setError(null);
+    try {
+      const updated = await updateTailorLengthConfig(tailorLengthSettings);
+      setTailorLengthSettings(updated);
+    } catch (err) {
+      console.error('Failed to update tailor length config', err);
+      setError((err as Error).message || t('settings.errors.unableToSaveConfiguration'));
+    } finally {
+      setTailorLengthLoading(false);
     }
   };
 
@@ -1508,6 +1615,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+<<<<<<< HEAD
                 <ToggleSwitch
                   checked={enableInterviewPrep}
                   onCheckedChange={(checked) => {
@@ -1521,6 +1629,91 @@ export default function SettingsPage() {
               </div>
 
               <div className="pt-4 border-t border-paper">
+=======
+
+                <ToggleSwitch
+                  checked={enableResumeFeedback}
+                  onCheckedChange={(checked) => {
+                    setEnableResumeFeedback(checked);
+                    handleFeatureConfigChange('enable_resume_feedback', checked);
+                  }}
+                  label={t('settings.contentGeneration.resumeFeedback.label')}
+                  description={t('settings.contentGeneration.resumeFeedback.description')}
+                  disabled={featureConfigLoading}
+                />
+                {enableResumeFeedback && (
+                  <div className="pl-6 space-y-2">
+                    <Label htmlFor="feedbackPrompt">
+                      {t('settings.contentGeneration.customPromptLabel')}
+                    </Label>
+                    <textarea
+                      id="feedbackPrompt"
+                      rows={8}
+                      value={feedbackPrompt}
+                      onChange={(e) => setFeedbackPrompt(e.target.value)}
+                      placeholder={feedbackDefault}
+                      className="w-full rounded-none border border-black bg-white p-3 font-mono text-xs break-words focus:outline-none focus:shadow-[4px_4px_0_0_#000]"
+                    />
+                    <p className="text-xs text-steel-grey font-mono">
+                      {t('settings.contentGeneration.customPromptHelp')}
+                    </p>
+                    {featurePromptError?.field === 'resume_feedback_prompt' && (
+                      <p className="text-xs text-red-600 font-mono break-words">
+                        {t('settings.contentGeneration.customPromptErrorMissing', {
+                          missing: featurePromptError.missing.join(', '),
+                        })}
+                      </p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          handleFeaturePromptSave('resume_feedback_prompt', feedbackPrompt)
+                        }
+                        disabled={featurePromptSaving === 'resume_feedback_prompt'}
+                      >
+                        {featurePromptSaving === 'resume_feedback_prompt' ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          t('common.save')
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleFeaturePromptSave('resume_feedback_prompt', '')}
+                        disabled={featurePromptSaving === 'resume_feedback_prompt'}
+                      >
+                        {t('settings.contentGeneration.customPromptResetButton')}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 border-t border-paper-tint space-y-4">
+                <div>
+                  <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-ink-soft mb-2">
+                    {t('settings.tailorLength.title')}
+                  </h3>
+                  <TailorLengthControls
+                    settings={tailorLengthSettings}
+                    onChange={setTailorLengthSettings}
+                    disabled={tailorLengthLoading}
+                  />
+                  <Button
+                    variant="outline"
+                    className="mt-3"
+                    onClick={handleTailorLengthSave}
+                    disabled={tailorLengthLoading}
+                  >
+                    {tailorLengthLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      t('common.save')
+                    )}
+                  </Button>
+                </div>
+>>>>>>> origin/main
                 <Dropdown
                   options={localizedPromptOptions}
                   value={defaultPromptId}

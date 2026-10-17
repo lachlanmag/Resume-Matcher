@@ -19,6 +19,7 @@ Welcome! This guide will walk you through setting up Resume Matcher on your loca
   - [Option A: Cloud Providers](#option-a-cloud-providers)
   - [Option B: Local AI with Ollama](#option-b-local-ai-with-ollama-free)
   - [Option C: Your ChatGPT plan (Sign in with ChatGPT)](#option-c-your-chatgpt-plan-sign-in-with-chatgpt)
+  - [Option D: Cursor Subscription](#option-d-cursor-subscription-via-local-proxy)
 - [Docker Deployment](#docker-deployment)
 - [Accessing the Application](#accessing-the-application)
 - [Use Resume Matcher with a coding agent](#use-resume-matcher-with-a-coding-agent)
@@ -275,6 +276,7 @@ Resume Matcher supports multiple AI providers. You can configure your provider t
 | **OpenRouter** | `LLM_PROVIDER=openrouter`<br>`LLM_MODEL=deepseek/deepseek-chat` | [openrouter.ai](https://openrouter.ai/keys) |
 | **DeepSeek** | `LLM_PROVIDER=deepseek`<br>`LLM_MODEL=deepseek-chat` | [platform.deepseek.com](https://platform.deepseek.com/) |
 | **OpenAI-Compatible** | `LLM_PROVIDER=openai_compatible`<br>`LLM_MODEL=llama-3.1-8b`<br>`LLM_API_BASE=http://localhost:8080/v1` | — (local) |
+| **Cursor** | `LLM_PROVIDER=cursor`<br>`LLM_MODEL=auto`<br>`LLM_API_BASE=http://127.0.0.1:8765/v1` | Cursor subscription + [cursor-api-proxy](https://github.com/anyrobert/cursor-api-proxy) |
 
 **OpenAI-Compatible** targets any local server that exposes the OpenAI Chat Completions API — llama.cpp, vLLM, LM Studio, etc. API key is optional.
 
@@ -338,6 +340,78 @@ The equivalent `.env` (you still sign in from Settings):
 LLM_PROVIDER=chatgpt
 LLM_MODEL=gpt-6.1-sol  # replace with a model from your account's list in Settings
 ```
+
+### Option D: Cursor Subscription (via local proxy)
+
+Use your Cursor subscription as the LLM when you do not have separate OpenAI/Anthropic API keys. Resume Matcher talks to a local OpenAI-compatible proxy that wraps the Cursor Agent CLI.
+
+#### Step 1: Install the Cursor Agent CLI
+
+```bash
+curl https://cursor.com/install -fsS | bash
+agent login
+agent --list-models   # verify auth works
+```
+
+#### Quick start (proxy + backend + frontend)
+
+To launch everything in one terminal:
+
+```bash
+./scripts/dev-with-cursor.sh
+```
+
+This starts the Cursor proxy (if not already running), backend, and frontend. Press Ctrl+C to stop backend and frontend only—the proxy keeps running so Docker (`host.docker.internal:8765`) and future dev sessions can reuse it. Logs go to `/tmp/resume-matcher-*.log`.
+
+#### Step 2: Start the proxy only (keep this terminal open)
+
+```bash
+./scripts/start-cursor-proxy.sh
+```
+
+The helper scripts set `CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE=false` and `CURSOR_BRIDGE_FORCE=true` so your existing `agent login` session works through the proxy. Do **not** run bare `npx cursor-api-proxy` unless you also set those variables or export `CURSOR_API_KEY`.
+
+Default base URL: `http://127.0.0.1:8765/v1`
+
+#### Step 3: Configure in Settings
+
+1. Open **Settings** in the app
+2. Select **Cursor (Subscription)**
+3. Set Base URL to `http://127.0.0.1:8765/v1`
+4. Set Model to `auto` (or a model from `agent --list-models`)
+5. Save and run **Test Connection**
+
+> **Note:** This uses the community [cursor-api-proxy](https://github.com/anyrobert/cursor-api-proxy) project, not an official Cursor chat API. Agent-backed calls can be slower than cloud APIs.
+
+#### Cursor connection test fails (auth / exit code 1)
+
+If Settings shows `The Cursor agent process exited with code 1`:
+
+1. **Verify CLI login:** `agent status` should show you as logged in.
+2. **Restart the proxy using the helper script** (not bare `npx cursor-api-proxy`):
+   ```bash
+   ./scripts/start-cursor-proxy.sh
+   ```
+3. **Check proxy logs:** `tail -30 /tmp/resume-matcher-cursor-proxy.log`
+
+Common causes:
+
+| Log message | Fix |
+|-------------|-----|
+| `Authentication required` | Run `agent login`, or set `CURSOR_API_KEY` before starting the proxy ([Cursor Dashboard → Integrations](https://cursor.com/dashboard/integrations)) |
+| `Workspace Trust Required` | Use `./scripts/start-cursor-proxy.sh` (sets `CURSOR_BRIDGE_FORCE=true`) |
+
+Alternative for automation: `export CURSOR_API_KEY=cursor_...` before starting the proxy.
+
+#### Switching between Cursor and LM Studio
+
+Settings remembers your last-saved configuration **per provider**. To switch back to LM Studio:
+
+1. Start LM Studio and ensure its server is running (e.g. `http://127.0.0.1:1234/v1`)
+2. In Settings, select **OpenAI-Compatible (Local)** — your saved model, base URL, and key are restored
+3. Save to activate
+
+A manual backup of your config is kept at `apps/backend/data/config.lmstudio.backup.json` (gitignored).
 
 ---
 
@@ -733,14 +807,17 @@ npm run dev
 Your backend can't reach the frontend. Check:
 
 1. Frontend is running
-2. `FRONTEND_BASE_URL` in `.env` matches your frontend URL
-3. `CORS_ORIGINS` includes your frontend URL
+2. `FRONTEND_PDF_BASE_URL` (or `FRONTEND_BASE_URL` if unset) points to where Playwright can reach the frontend — in Docker this is `http://localhost:3000`, not the host-mapped port
+3. `FRONTEND_BASE_URL` matches your browser URL and `CORS_ORIGINS` includes it
 
-If frontend runs on port 3001:
+If you run **local dev on 3000 and Docker on 3001** at the same time:
+
+- **Local** (`apps/backend/.env`): `FRONTEND_BASE_URL=http://localhost:3000` (no extra vars needed)
+- **Docker** (`docker-compose.yml` defaults): host URL on 3001 for CORS, in-container URL on 3000 for PDF:
 
 ```env
 FRONTEND_BASE_URL=http://localhost:3001
-CORS_ORIGINS=["http://localhost:3001", "http://127.0.0.1:3001"]
+FRONTEND_PDF_BASE_URL=http://localhost:3000
 ```
 
 ### Chinese / Japanese / Korean text renders as boxes (□□□) in the PDF
@@ -768,6 +845,10 @@ sudo pacman -S noto-fonts-cjk
 ```
 
 Restart the backend afterwards so Chromium picks up the new font cache.
+
+### PDF download fails or hangs (Docker)
+
+Playwright runs inside the container and must hit port **3000** there; your browser uses **3001** on the host.
 
 ### Ollama connection fails
 

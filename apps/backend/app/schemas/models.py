@@ -3,9 +3,14 @@
 import copy
 import re
 from enum import Enum
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+from app.schemas.feedback import ResumeFeedback
+from app.schemas.work_experience import (
+    normalize_experience_entry,
+    normalize_work_experience_list,
+)
 
 from app.ai_limits import validate_source_size
 from app.config import normalize_provider
@@ -154,25 +159,40 @@ class PersonalInfo(BaseModel):
     github: str | None = None
 
 
-class Experience(BaseModel):
-    """Work experience entry."""
+class ExperienceRole(BaseModel):
+    """Title and dates for one role within an employer job entry."""
 
     id: int = 0
     title: str = ""
+    years: str = ""
+
+
+class Experience(BaseModel):
+    """Work experience job entry (employer with one or more roles)."""
+
+    id: int = 0
     company: str = ""
     location: str | None = None
-    years: str = ""
+    roles: list[ExperienceRole] = Field(default_factory=list)
     description: list[str] = Field(default_factory=list)
     descriptionStyles: list[Literal["bullet", "plain"]] = Field(default_factory=list)
     # Renders as one "Title, Company, years" line under "Earlier experience"; the
     # description and location stay stored but are not shown.
     condensed: bool = False
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_legacy_shape(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            return normalize_experience_entry(data)
+        return data
+
     @field_validator("description", mode="before")
     @classmethod
     def _normalize_description(cls, value: Any) -> list[str]:
         return _coerce_string_list(value)
 
+<<<<<<< HEAD
     @field_validator("descriptionStyles", mode="before")
     @classmethod
     def _normalize_description_styles(
@@ -192,6 +212,12 @@ class Experience(BaseModel):
         self.descriptionStyles = _align_description_styles(
             self.description, self.descriptionStyles
         )
+=======
+    @model_validator(mode="after")
+    def _ensure_roles(self) -> Self:
+        if not self.roles:
+            self.roles = [ExperienceRole(id=1, title="", years="")]
+>>>>>>> origin/main
         return self
 
 
@@ -413,6 +439,8 @@ def normalize_resume_data(data: dict[str, Any]) -> dict[str, Any]:
         data["sectionMeta"] = copy.deepcopy(DEFAULT_SECTION_META)
     if "customSections" not in data:
         data["customSections"] = {}
+    if "workExperience" in data:
+        data["workExperience"] = normalize_work_experience_list(data.get("workExperience"))
     return data
 
 
@@ -459,6 +487,7 @@ class RawResume(BaseModel):
     processing_status: str = "pending"  # pending, processing, ready, failed
 
 
+<<<<<<< HEAD
 class InterviewPrepQuestion(BaseModel):
     """Interview question grounded in the tailored resume and job context."""
 
@@ -483,6 +512,70 @@ class InterviewPrepData(BaseModel):
     project_follow_ups: list[InterviewPrepQuestion]
     skill_gaps: list[InterviewPrepSkillGap]
     talking_points: list[str]
+=======
+DEFAULT_TARGET_PAGES = 2
+DEFAULT_BULLETS_PER_JOB_MIN = 3
+DEFAULT_BULLETS_PER_JOB_MAX = 5
+MIN_TARGET_PAGES = 1
+MAX_TARGET_PAGES = 3
+MIN_BULLETS_PER_JOB = 1
+MAX_BULLETS_PER_JOB = 10
+
+
+class TailorLengthSettings(BaseModel):
+    """Length targets for resume tailoring (pages and bullets per job)."""
+
+    target_pages: int = Field(default=DEFAULT_TARGET_PAGES, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    bullets_per_job_min: int = Field(
+        default=DEFAULT_BULLETS_PER_JOB_MIN, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+    bullets_per_job_max: int = Field(
+        default=DEFAULT_BULLETS_PER_JOB_MAX, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+
+    @model_validator(mode="after")
+    def max_gte_min(self) -> Self:
+        if self.bullets_per_job_max < self.bullets_per_job_min:
+            raise ValueError("bullets_per_job_max must be >= bullets_per_job_min")
+        return self
+
+
+class TailorLengthConfigRequest(BaseModel):
+    """Request to update global tailor length defaults."""
+
+    target_pages: int | None = Field(default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    bullets_per_job_min: int | None = Field(
+        default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+    bullets_per_job_max: int | None = Field(
+        default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+
+
+class TailorLengthConfigResponse(TailorLengthSettings):
+    """Response for tailor length configuration."""
+
+
+class TailorLengthSettingsPatch(BaseModel):
+    """Partial update for per-resume tailor length settings."""
+
+    target_pages: int | None = Field(default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    bullets_per_job_min: int | None = Field(
+        default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+    bullets_per_job_max: int | None = Field(
+        default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+    )
+
+
+class ApplyTailorLengthResponse(BaseModel):
+    """Response after applying length constraints to a tailored resume."""
+
+    request_id: str
+    resume_id: str
+    resume_preview: ResumeData
+    warnings: list[str] = Field(default_factory=list)
+>>>>>>> origin/main
 
 
 class ResumeFetchData(BaseModel):
@@ -496,10 +589,15 @@ class ResumeFetchData(BaseModel):
     interview_prep: InterviewPrepData | None = None
     parent_id: str | None = None  # For determining if resume is tailored
     title: str | None = None
+<<<<<<< HEAD
     is_master: bool = False
     is_default_master: bool = False
     # None until the resume is formatted in the builder (= the default template).
     template_settings: "TemplateSettings | None" = None
+=======
+    tailor_settings: TailorLengthSettings | None = None
+    resume_feedback: ResumeFeedback | None = None
+>>>>>>> origin/main
 
 
 class ResumeFetchResponse(BaseModel):
@@ -674,6 +772,7 @@ class ImproveResumeRequest(BaseModel):
     resume_id: str
     job_id: str
     prompt_id: str | None = None
+<<<<<<< HEAD
     max_bullets_per_entry: int | None = Field(None, ge=1, le=10)
     page_fit: PageFitSettings | None = None
     # Page budget for page_fit; ignored without page_fit.
@@ -696,6 +795,13 @@ class BulletSelectionSummary(BaseModel):
     # it could not be rendered (final_pages is then the pre-rewrite measurement),
     # None = no final check applies (page fit skipped, over or unavailable).
     final_check: Literal["ok", "skipped"] | None = None
+=======
+    tailor_length_settings: TailorLengthSettings | None = None
+    replace_resume_id: str | None = Field(
+        default=None,
+        description="When set, confirm updates this tailored resume instead of creating a new one",
+    )
+>>>>>>> origin/main
 
 
 class ImprovementSuggestion(BaseModel):
@@ -852,6 +958,8 @@ class ImproveResumeConfirmRequest(BaseModel):
     preview_id: str | None = None
     improved_data: ResumeData
     improvements: list[ImprovementSuggestion]
+    tailor_length_settings: TailorLengthSettings | None = None
+    replace_resume_id: str | None = None
 
     @model_validator(mode="after")
     def _validate_source_budget(self) -> "ImproveResumeConfirmRequest":
@@ -888,6 +996,16 @@ class LLMConfigRequest(BaseModel):
         return normalize_provider(value)
 
 
+class ProviderConfigSnapshot(BaseModel):
+    """Last-saved LLM settings for a provider (for Settings UI switching)."""
+
+    model: str
+    api_base: str | None = None
+    api_key: str = ""  # Masked
+    has_api_key: bool = False
+    reasoning_effort: ReasoningEffortLiteral | None = None
+
+
 class LLMConfigResponse(BaseModel):
     """Response for LLM configuration."""
 
@@ -896,6 +1014,7 @@ class LLMConfigResponse(BaseModel):
     api_key: str  # Masked
     api_base: str | None = None
     reasoning_effort: ReasoningEffortLiteral | None = None
+    provider_configs: dict[str, ProviderConfigSnapshot] | None = None
 
 
 class FeatureConfigRequest(BaseModel):
@@ -903,7 +1022,11 @@ class FeatureConfigRequest(BaseModel):
 
     enable_cover_letter: bool | None = None
     enable_outreach_message: bool | None = None
+<<<<<<< HEAD
     enable_interview_prep: bool | None = None
+=======
+    enable_resume_feedback: bool | None = None
+>>>>>>> origin/main
 
 
 class FeatureConfigResponse(BaseModel):
@@ -911,7 +1034,11 @@ class FeatureConfigResponse(BaseModel):
 
     enable_cover_letter: bool = False
     enable_outreach_message: bool = False
+<<<<<<< HEAD
     enable_interview_prep: bool = False
+=======
+    enable_resume_feedback: bool = True
+>>>>>>> origin/main
 
 
 class LanguageConfigRequest(BaseModel):
@@ -960,6 +1087,7 @@ class FeaturePromptsRequest(BaseModel):
 
     cover_letter_prompt: str | None = None
     outreach_message_prompt: str | None = None
+    resume_feedback_prompt: str | None = None
 
 
 class FeaturePromptsResponse(BaseModel):
@@ -972,8 +1100,10 @@ class FeaturePromptsResponse(BaseModel):
 
     cover_letter_prompt: str
     outreach_message_prompt: str
+    resume_feedback_prompt: str
     cover_letter_default: str
     outreach_message_default: str
+    resume_feedback_default: str
 
 
 # API Key Management Models
@@ -1091,12 +1221,12 @@ class ResumeChange(BaseModel):
     path: str = Field(
         description="Dot+bracket path, e.g. 'workExperience[0].description[1]'"
     )
-    action: Literal["replace", "append", "reorder", "add_skill"]
+    action: Literal["replace", "append", "reorder", "add_skill", "replace_list"]
     original: str | list[str] | None = Field(
         default=None,
         description="Current text at path — for verification. May be a list (the "
-        "current items) for the reorder action; only used for text verification of "
-        "replace/append, ignored otherwise.",
+        "current items) for the reorder/replace_list actions; only used for text "
+        "verification of replace/append/replace_list, ignored otherwise.",
     )
     value: str | list[str] = Field(description="New content")
     reason: str = Field(description="Why this change helps match the JD")
@@ -1107,8 +1237,10 @@ class ResumeChange(BaseModel):
         the current items). For the text actions it must stay a string/None — a
         list there would silently bypass the replace verification gate and crash
         the invented-metrics check, so reject it at parse time."""
-        if isinstance(self.original, list) and self.action != "reorder":
-            raise ValueError("'original' may be a list only for the reorder action")
+        if isinstance(self.original, list) and self.action not in ("reorder", "replace_list"):
+            raise ValueError(
+                "'original' may be a list only for the reorder or replace_list actions"
+            )
         return self
 
 

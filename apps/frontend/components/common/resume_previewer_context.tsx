@@ -14,14 +14,24 @@ export interface PersonalInfo {
   github?: string;
 }
 
+export interface ExperienceRoleEntry {
+  id: number;
+  title?: string;
+  years?: string;
+}
+
 export interface ExperienceEntry {
   id: number;
-  title: string;
-  company: string;
+  company?: string;
   location?: string;
+<<<<<<< HEAD
   years?: string;
   description: string[];
   descriptionStyles?: ('bullet' | 'plain')[];
+=======
+  roles: ExperienceRoleEntry[];
+  description?: string[];
+>>>>>>> origin/main
 }
 
 export interface EducationEntry {

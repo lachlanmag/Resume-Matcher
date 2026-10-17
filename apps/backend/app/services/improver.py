@@ -25,10 +25,26 @@ from app.prompts import (
     SKILL_TARGET_PLAN_PROMPT,
     get_language_name,
 )
+<<<<<<< HEAD
 from app.prompts.templates import IMPROVE_SCHEMA_EXAMPLE
 from app.schemas import ResumeData, ResumeDiffSummary, ResumeFieldDiff
 from app.schemas.models import ImproveDiffResult, ResumeChange
 from app.services.parser import has_meaningful_resume_content
+=======
+from app.prompts.templates import (
+    IMPROVE_SCHEMA_EXAMPLE,
+    IMPROVE_WORK_EXPERIENCE_RULES,
+    LENGTH_SELECTION_PROMPT,
+)
+from app.schemas import ResumeData, ResumeFieldDiff, ResumeDiffSummary
+from app.schemas.models import ImproveDiffResult, ResumeChange, TailorLengthSettings
+from app.services.tailor_length import (
+    build_length_constraints_block,
+    parse_original_list,
+    plan_per_job_bullet_targets,
+)
+from app.schemas.work_experience import compare_work_experience_identity
+>>>>>>> origin/main
 
 logger = logging.getLogger(__name__)
 
@@ -292,11 +308,28 @@ def _set_at_path(data: dict[str, Any], path: str, value: Any) -> bool:
 
 
 def _verify_original_matches(actual: Any, expected: str | list[str] | None) -> bool:
+<<<<<<< HEAD
     """Verify that the original text from the diff matches the actual value.
 
     A replace must quote what it replaces: without ``original`` there is
     nothing to verify, so the change is rejected rather than applied blind.
     """
+=======
+    """Verify that the original text from the diff matches the actual value."""
+    if expected is None:
+        return True  # no original provided (e.g. append) — nothing to verify
+    if isinstance(expected, list):
+        if not isinstance(actual, list):
+            return False
+        if len(actual) != len(expected):
+            return False
+        for a, e in zip(actual, expected):
+            if not isinstance(a, str) or not isinstance(e, str):
+                return False
+            if a.strip().casefold() != e.strip().casefold():
+                return False
+        return True
+>>>>>>> origin/main
     if not isinstance(expected, str):
         return False  # a non-str original on a text action is malformed — reject
     if not isinstance(actual, str):
@@ -482,6 +515,48 @@ def apply_diffs(
                 continue
             applied.append(change)
 
+        elif action == "replace_list":
+            if not path.endswith(".description"):
+                logger.info("Diff rejected (replace_list on non-description): %s", path)
+                rejected.append(change)
+                continue
+            if not isinstance(actual_value, list):
+                logger.info("Diff rejected (replace_list on non-list): %s", path)
+                rejected.append(change)
+                continue
+            expected_original = change.original
+            if isinstance(expected_original, str):
+                parsed = parse_original_list(expected_original)
+                # Malformed "original" must not bypass verification.
+                # `parse_original_list()` returns `None` for invalid JSON or non-list JSON.
+                if parsed is None:
+                    logger.info(
+                        "Diff rejected (replace_list malformed original): %s",
+                        path,
+                    )
+                    rejected.append(change)
+                    continue
+                expected_original = parsed
+            if not _verify_original_matches(actual_value, expected_original):
+                logger.info(
+                    "Diff rejected (replace_list original mismatch): %s", path
+                )
+                rejected.append(change)
+                continue
+            if not isinstance(change.value, list):
+                logger.info("Diff rejected (replace_list value not list): %s", path)
+                rejected.append(change)
+                continue
+            new_list = [str(v).strip() for v in change.value if str(v).strip()]
+            if not new_list:
+                logger.info("Diff rejected (replace_list empty value): %s", path)
+                rejected.append(change)
+                continue
+            if not _set_at_path(result, path, new_list):
+                rejected.append(change)
+                continue
+            applied.append(change)
+
         elif action == "add_skill":
             if path != "additional.technicalSkills":
                 logger.info("Diff rejected (add_skill outside skills): %s", path)
@@ -569,7 +644,7 @@ def verify_diff_result(
 
     # Check 3: Identity fields unchanged
     for key, id_fields in [
-        ("workExperience", ["company", "title"]),
+        ("workExperience", None),
         ("education", ["institution", "degree"]),
     ]:
         orig_entries = original.get(key, [])
@@ -577,7 +652,10 @@ def verify_diff_result(
         for i, (orig, res) in enumerate(zip(orig_entries, result_entries)):
             if not isinstance(orig, dict) or not isinstance(res, dict):
                 continue
-            for field in id_fields:
+            if key == "workExperience":
+                warnings.extend(compare_work_experience_identity(orig, res, i))
+                continue
+            for field in id_fields or []:
                 o_val = str(orig.get(field, "")).strip()
                 r_val = str(res.get(field, "")).strip()
                 if o_val and o_val != r_val:
@@ -620,8 +698,13 @@ async def generate_resume_diffs(
     prompt_id: str | None = None,
     original_resume_data: dict[str, Any] | None = None,
     skill_targets: list[dict[str, Any]] | None = None,
+<<<<<<< HEAD
     *,
     fixed_row_sections: tuple[str, ...] = (),
+=======
+    tailor_length_settings: TailorLengthSettings | None = None,
+    template_settings: dict[str, Any] | None = None,
+>>>>>>> origin/main
 ) -> ImproveDiffResult:
     """Generate targeted resume diffs via LLM.
 
@@ -671,6 +754,20 @@ async def generate_resume_diffs(
     else:
         resume_input = original_resume
 
+    length_constraints = ""
+    if original_resume_data is not None and tailor_length_settings is not None:
+        per_job_targets = plan_per_job_bullet_targets(
+            original_resume_data,
+            tailor_length_settings,
+            template_settings,
+        )
+        length_constraints = build_length_constraints_block(
+            original_resume_data,
+            tailor_length_settings,
+            per_job_targets,
+            template_settings,
+        )
+
     prompt = DIFF_IMPROVE_PROMPT.format(
         strategy_instruction=strategy_instruction,
         output_language=output_language,
@@ -678,6 +775,7 @@ async def generate_resume_diffs(
         skill_targets=_prepare_skill_targets_for_prompt(skill_targets),
         job_description=sanitized_jd,
         original_resume=resume_input,
+        length_constraints=length_constraints or "(No length constraints.)",
     )
 
     config = get_llm_config()
@@ -691,6 +789,71 @@ async def generate_resume_diffs(
     )
 
     return ImproveDiffResult.model_validate(_validate_diff_result(result))
+
+
+async def generate_length_selection_diffs(
+    *,
+    master_data: dict[str, Any],
+    tailored_data: dict[str, Any],
+    job_description: str,
+    tailor_length_settings: TailorLengthSettings,
+    language: str = "en",
+    template_settings: dict[str, Any] | None = None,
+) -> ImproveDiffResult:
+    """Re-select work experience bullets from master pools to satisfy length settings."""
+    output_language = get_language_name(language)
+    sanitized_jd = _sanitize_user_input(job_description)
+    per_job_targets = plan_per_job_bullet_targets(
+        master_data,
+        tailor_length_settings,
+        template_settings,
+        budget_resume_data=tailored_data,
+    )
+    length_constraints = build_length_constraints_block(
+        master_data,
+        tailor_length_settings,
+        per_job_targets,
+        template_settings,
+    )
+    prompt = LENGTH_SELECTION_PROMPT.format(
+        length_constraints=length_constraints,
+        output_language=output_language,
+        job_description=sanitized_jd,
+        master_resume=json.dumps(master_data, ensure_ascii=False),
+        tailored_resume=json.dumps(tailored_data, ensure_ascii=False),
+    )
+    result = await complete_json(
+        prompt=prompt,
+        system_prompt="You are an expert resume editor. Output only valid JSON with replace_list changes.",
+        max_tokens=4096,
+        schema_type="diff",
+    )
+    raw_changes = result.get("changes", [])
+    if not isinstance(raw_changes, list):
+        raw_changes = []
+    changes: list[ResumeChange] = []
+    for raw in raw_changes:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            original = raw.get("original")
+            if isinstance(original, list):
+                original = json.dumps(original, ensure_ascii=False)
+            changes.append(
+                ResumeChange(
+                    path=str(raw.get("path", "")),
+                    action=raw.get("action", "replace_list"),
+                    original=original,
+                    value=raw.get("value", []),
+                    reason=str(raw.get("reason", "")),
+                )
+            )
+        except Exception as e:
+            logger.warning("Skipping malformed selection change: %s — %s", raw, e)
+    return ImproveDiffResult(
+        changes=changes,
+        strategy_notes=str(result.get("strategy_notes", "")),
+    )
 
 
 async def extract_job_keywords(job_description: str) -> dict[str, Any]:
@@ -1052,6 +1215,7 @@ async def improve_resume(
         schema=IMPROVE_SCHEMA_EXAMPLE,
         output_language=output_language,
         critical_truthfulness_rules=truthfulness_rules,
+        work_experience_rules=IMPROVE_WORK_EXPERIENCE_RULES,
     )
 
     result = await complete_json(
@@ -1069,12 +1233,28 @@ def _format_entry_label(parts: list[str], fallback: str) -> str:
 
 
 def _format_experience_entry(entry: dict[str, Any], index: int) -> str:
+    roles = entry.get("roles", [])
+    role_titles: list[str] = []
+    single_role_years = ""
+    if isinstance(roles, list):
+        for role in roles:
+            if isinstance(role, dict):
+                title = str(role.get("title", "")).strip()
+                if title:
+                    role_titles.append(title)
+        if len(roles) == 1 and isinstance(roles[0], dict):
+            single_role_years = str(roles[0].get("years", "")).strip()
+    if not role_titles:
+        legacy_title = str(entry.get("title", "")).strip()
+        if legacy_title:
+            role_titles.append(legacy_title)
+        single_role_years = str(entry.get("years", "")).strip()
+    roles_label = "; ".join(role_titles)
+    label_parts = [entry.get("company", ""), roles_label]
+    if single_role_years:
+        label_parts.append(single_role_years)
     return _format_entry_label(
-        [
-            entry.get("title", ""),
-            entry.get("company", ""),
-            entry.get("years", ""),
-        ],
+        label_parts,
         f"Work experience #{index + 1}",
     )
 

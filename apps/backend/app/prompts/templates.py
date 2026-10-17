@@ -33,15 +33,45 @@ RESUME_SCHEMA_EXAMPLE = """{
   "workExperience": [
     {
       "id": 1,
-      "title": "Senior Software Engineer",
       "company": "Tech Corp",
       "location": "San Francisco, CA",
-      "years": "Jan 2020 - Present",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Senior Software Engineer",
+          "years": "Jan 2020 - Present"
+        }
+      ],
       "description": [
         "Led development of microservices architecture",
         "Improved system performance by 40%"
+<<<<<<< HEAD
       ],
       "descriptionStyles": ["bullet", "bullet"]
+=======
+      ]
+    },
+    {
+      "id": 2,
+      "company": "Example Industries",
+      "location": "New York, NY",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Product Owner",
+          "years": "Sep 2021 - Nov 2023"
+        },
+        {
+          "id": 2,
+          "title": "Senior Business Analyst",
+          "years": "Jul 2019 - Sep 2021"
+        }
+      ],
+      "description": [
+        "Led product strategy across multiple platform modules",
+        "Delivered cross-functional initiatives with measurable adoption impact"
+      ]
+>>>>>>> origin/main
     }
   ],
   "education": [
@@ -99,15 +129,45 @@ IMPROVE_SCHEMA_EXAMPLE = """{
   "workExperience": [
     {
       "id": 1,
-      "title": "Senior Software Engineer",
       "company": "Tech Corp",
       "location": "San Francisco, CA",
-      "years": "Jan 2020 - Present",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Senior Software Engineer",
+          "years": "Jan 2020 - Present"
+        }
+      ],
       "description": [
         "Led development of microservices architecture",
         "Improved system performance by 40%"
+<<<<<<< HEAD
       ],
       "descriptionStyles": ["bullet", "bullet"]
+=======
+      ]
+    },
+    {
+      "id": 2,
+      "company": "Example Industries",
+      "location": "New York, NY",
+      "roles": [
+        {
+          "id": 1,
+          "title": "Product Owner",
+          "years": "Sep 2021 - Nov 2023"
+        },
+        {
+          "id": 2,
+          "title": "Senior Business Analyst",
+          "years": "Jul 2019 - Sep 2021"
+        }
+      ],
+      "description": [
+        "Led product strategy across multiple platform modules",
+        "Delivered cross-functional initiatives with measurable adoption impact"
+      ]
+>>>>>>> origin/main
     }
   ],
   "education": [
@@ -180,8 +240,14 @@ Rules:
 - Preserve the original section name as a descriptive key
 - Normalize date separators: "2020-2021" → "2020 - 2021", "Current"/"Ongoing" → "Present". Do NOT discard months.
 - For ambiguous dates like "3 years experience", infer approximate years from context or use "~YYYY"
+<<<<<<< HEAD
 - Flag overlapping dates (concurrent roles) by preserving both, don't merge
 - Copy every skill, tool, framework, programming language and technology the resume lists into additional.technicalSkills, one item each, keeping the original wording. Split comma-separated lists into separate items. Never summarize, merge, shorten or drop skills, however long the list is. Spoken languages (English, Hindi, ...) go in additional.languages, not technicalSkills.
+=======
+- When the source shows multiple job titles under one employer heading, use one workExperience entry with a roles array (title + years per role) and a single shared description list for that employer
+- Do not merge separate employers; only combine roles that clearly belong to the same company in the source document
+- For concurrent roles at different companies, keep separate workExperience entries
+>>>>>>> origin/main
 
 Resume to parse:
 {resume_text}"""
@@ -240,6 +306,12 @@ CRITICAL_TRUTHFULNESS_RULES = {
     ),
 }
 
+IMPROVE_WORK_EXPERIENCE_RULES = """- For workExperience: preserve each employer entry's roles array (title + years per role); do not flatten to top-level title/years or split one employer into multiple entries
+- Copy roles[i].years EXACTLY as they appear in the original (including month prefixes like "Jan 2020 - Present"); do not shorten, reformat, or drop months
+- When multiple job titles belong to one employer in the original, keep one workExperience entry with a roles array and a single shared description list
+- Do not merge separate employers; only combine roles that clearly belong to the same company
+- For concurrent roles at different companies, keep separate workExperience entries"""
+
 IMPROVE_RESUME_PROMPT_NUDGE = """Lightly nudge this resume toward the job description. Output ONLY the JSON object, no other text.
 
 {critical_truthfulness_rules}
@@ -256,7 +328,7 @@ Rules:
 - Preserve descriptionStyles arrays and keep them aligned one-to-one with description arrays
 - Keep proper nouns (names, company names, locations) unchanged
 - For customSections: preserve exact structure, item count, titles, subtitles, and years. If an item's description is an empty array [] in the original, keep it empty []. Do NOT generate descriptions for items that had none.
-- Copy the "years" field values EXACTLY as they appear in the original resume (including any month prefixes like "Jan 2020 - Present"). Do not shorten, reformat, or drop months.
+{work_experience_rules}
 - If the resume is non-technical, do NOT add technical jargon
 - Do NOT use em dash ("—") anywhere in the writing/output, even if it exists, remove it
 
@@ -286,7 +358,7 @@ Rules:
 - Do NOT change role, industry, or seniority level
 - Preserve descriptionStyles arrays and keep them aligned one-to-one with description arrays
 - For customSections: preserve exact structure, item count, titles, subtitles, and years. If an item's description is an empty array [] in the original, keep it empty []. Do NOT generate descriptions for items that had none.
-- Copy the "years" field values EXACTLY as they appear in the original resume (including any month prefixes like "Jan 2020 - Present"). Do not shorten, reformat, or drop months.
+{work_experience_rules}
 - If resume is non-technical, keep language non-technical while still aligning keywords
 - Do NOT use em dash ("—") anywhere in the writing/output, even if it exists, remove it
 
@@ -318,7 +390,7 @@ Rules:
 - Preserve descriptionStyles arrays and keep them aligned one-to-one with description arrays
 - For customSections: preserve exact structure, item count, titles, subtitles, and years. If an item's description is an empty array [] in the original, keep it empty []. Do NOT generate descriptions for items that had none.
 - Improve custom section content the same way as standard sections
-- Copy the "years" field values EXACTLY as they appear in the original resume (including any month prefixes like "Jan 2020 - Present"). Do not shorten, reformat, or drop months.
+{work_experience_rules}
 - Calculate and emphasize total relevant experience duration when it matches requirements
 - Do NOT use em dash ("—") anywhere in the writing/output, even if it exists, remove it
 
@@ -409,14 +481,23 @@ Guidelines:
 
 Output plain text only. No JSON, no markdown formatting."""
 
+<<<<<<< HEAD
 INTERVIEW_PREP_PROMPT = """Generate structured interview preparation for this tailored resume and job.
 
 IMPORTANT: Write in {output_language}.
 Do NOT translate JSON property names. Keep every JSON key exactly as shown in the schema; translate only string values.
+=======
+TAILORED_RESUME_FEEDBACK_PROMPT = """You are an HR representative at a SaaS company reviewing a candidate's tailored resume for a specific job posting.
+
+IMPORTANT: Write in {output_language}.
+
+You do not know the candidate personally. Evaluate only what is in the resume JSON below. Use the job description for role fit, ATS keyword matching, and tailoring quality. Do not invent experience, metrics, or tools not evidenced in the resume.
+>>>>>>> origin/main
 
 Job Description:
 {job_description}
 
+<<<<<<< HEAD
 Candidate Resume (JSON):
 {resume_data}
 
@@ -462,6 +543,128 @@ Content requirements:
 - talking_points: 5-8 concise points.
 - Keep all suggested answer points factual and resume-grounded.
 - Do NOT use markdown fences or commentary outside the JSON."""
+=======
+Tailored Resume (JSON):
+{resume_data}
+
+Provide an objective hiring review plus ATS readiness assessment. Use markdown headings exactly as listed below.
+
+## Candidate summary
+
+3 to 5 bullet points on overall fit for this specific role (not a generic PM role).
+
+## Strengths
+
+Specific evidence from the resume: metrics, scope, ownership, cross-functional work, customer impact, roadmap execution, experimentation, domain relevance to this JD.
+
+## Concerns or gaps
+
+Missing signals, vague claims, risk areas, and what is unclear. Call out bullets that read as JD mirroring without supporting evidence.
+
+## Tailoring quality
+
+Assess how well this tailored resume aligns with the job description without overreach:
+
+- **Strong tailoring:** JD terms backed by real outcomes or scope in experience bullets.
+- **Weak tailoring:** keywords in summary/skills only, or phrasing that parallels the JD without proof.
+- **Keyword stuffing risk:** Medium / Low / High, with examples.
+- **Unsupported claims:** list any bullets that imply skills, tools, or domain experience not clearly evidenced.
+
+## Role fit score
+
+Score from 1 to 10 for this specific JD:
+
+- Product strategy
+- Execution and delivery
+- Data and experimentation
+- Stakeholder management
+- Domain relevance to this posting
+- Communication clarity in resume
+
+Include a one-line **Overall role fit** score (e.g. 8/10) with a short rationale.
+
+## ATS assessment
+
+**1) Overall ATS readiness**
+
+- Score from 1 to 10 with a one-sentence rationale.
+- Pass / Partial / Fail for: likely to reach human review for this posting.
+
+**2) Parsability and format risks**
+
+For each item, state Pass, Partial, or Fail with brief evidence (note when format cannot be verified from JSON alone):
+
+- Standard section headings
+- Linear, scannable structure
+- Parse-friendly dates
+- Bullet consistency and length
+- Contact info completeness
+- Skills presentation (list vs dense paragraph)
+
+**3) Keyword coverage**
+
+List the top 10 to 15 screening terms from the job description. Mark each Present, Partial (synonym only), or Missing, with where it appears or why it is absent.
+
+**4) Keyword quality**
+
+- Strong matches (evidence-backed)
+- Weak matches (skills/summary only)
+- Stuffing or tailoring artifacts
+
+**5) Seniority and title alignment**
+
+Implied level vs what this JD expects.
+
+**6) Top ATS blockers (ranked)
+
+Up to 5 issues ranked by impact on screening pass rate.
+
+## ATS optimization recommendations
+
+For each recommendation provide Issue, Fix, Priority (High/Medium/Low). Only suggest keywords or metrics supportable from the resume; mark anything needing candidate verification.
+
+Include must-fix format items, should-fix keyword gaps (3 to 7 safe insertions tied to real experience), and what to avoid (stuffing, unsupported domain claims).
+
+## Hiring recommendation
+
+Choose one: **Strong yes**, **Yes**, **Maybe**, **No**. Give a short evidence-based reason. Note if ATS issues could block a qualified candidate.
+
+## Interview focus areas
+
+5 to 8 targeted questions to validate weak or unclear areas.
+
+## Resume improvement suggestions
+
+Concrete edits to improve persuasiveness for this role (outcomes, scope, clarity, length). Do not duplicate the ATS list verbatim.
+
+## Gaps and questions for the candidate
+
+List 3 to 8 specific questions where additional context could strengthen the resume or resolve ambiguity (e.g. tools used, scope owned, location, short tenure). Mark items that would change the hiring recommendation if confirmed.
+
+Guidelines:
+
+- Be evidence-based and neutral.
+- Do not assume skills not shown in the resume.
+- Prefer outcomes and metrics over responsibilities.
+- Flag inflated or unsupported claims, especially from aggressive JD tailoring.
+- Do not recommend adding keywords without evidence; mark as "verify with candidate."
+- Do not use em dash ("—") anywhere in the output.
+
+Return JSON only with this exact shape:
+{{
+  "report_markdown": "<full markdown report using the headings above>",
+  "questions": [
+    {{
+      "question_id": "q1",
+      "category": "gap",
+      "prompt": "<specific question for the candidate>",
+      "context": "<optional short context>"
+    }}
+  ]
+}}
+
+The questions array must contain 3 to 8 items drawn from gaps, risks, unsupported claims, ATS blockers, and improvement areas in the report. Categories must be one of: gap, risk, clarification, improvement, ats. question_id values must be unique (q1, q2, ...)."""
+>>>>>>> origin/main
 
 GENERATE_TITLE_PROMPT = """Extract the job title and company name from this job description.
 
@@ -531,6 +734,7 @@ Output this exact JSON format:
   "strategy_notes": "brief notes for the next editing pass"
 }}"""
 
+<<<<<<< HEAD
 BULLET_RELEVANCE_PROMPT = """Score how relevant each resume bullet is to this job.
 
 Return ONLY a JSON object. Do not rewrite, merge, reorder, or invent bullets.
@@ -557,8 +761,34 @@ Output this exact JSON format:
   ]
 }}
 """
+=======
+LENGTH_SELECTION_PROMPT = """Select and tailor work experience bullets from the MASTER resume pools to fit length constraints.
+
+{length_constraints}
+
+RULES:
+1. For each workExperience[i], output ONE change with action "replace_list" on path "workExperience[i].description"
+2. "value" must be the full list of selected bullets (at most the per-job target count)
+3. Choose bullets from the MASTER pool for that job; rephrase for JD fit without inventing facts
+4. "original" must be the JSON array of the current tailored bullets at that path (copy exactly)
+5. Generate all text in {output_language}
+6. Do not change companies, dates, or job entries
+
+Job Description:
+{job_description}
+
+Master resume (bullet pools):
+{master_resume}
+
+Current tailored resume:
+{tailored_resume}
+
+Output JSON: {{ "changes": [ ... ], "strategy_notes": "..." }}"""
+>>>>>>> origin/main
 
 DIFF_IMPROVE_PROMPT = """Given this resume and job description, output a JSON object with targeted changes to better align the resume with the job.
+
+{length_constraints}
 
 RULES:
 1. Only modify content; never change names, companies, dates, institutions, or degrees
@@ -573,13 +803,14 @@ RULES:
 10. Exception to rule 2: you may add a skill only if it appears in the verified skill targets below
 11. By DEFAULT, scan the summary and every work, project, and education description for content that already demonstrates a job-description keyword or skill, and reframe that text using the job description's terminology where it is not already phrased that way (per rule 9, leave content that already aligns well), while preserving the candidate's actual accomplishment. Do NOT add new work, metrics, or responsibilities; only restate existing content in the JD's language, and verify every reframe stays factually accurate.
 12. Preserve original capitalization, especially for proper nouns, technical terms (e.g., REST, API, AWS), and acronyms. Do not change the casing of words that were capitalized in the original.
+13. When length constraints specify a per-job bullet target, prefer ONE "replace_list" change per workExperience[i].description selecting from the master pool
 
 PATHS you can target:
 - "summary" — the resume summary text
 - "workExperience[i].description[j]" — a specific bullet (i = entry index, j = bullet index)
-- "workExperience[i].description" — append a new bullet (action: "append")
+- "workExperience[i].description" — append a new bullet (action: "append") OR replace entire list (action: "replace_list")
 - "personalProjects[i].description[j]" — a specific project bullet
-- "personalProjects[i].description" — append a new project bullet (action: "append")
+- "personalProjects[i].description" — append a new project bullet (action: "append") OR replace entire list (action: "replace_list")
 - "education[i].description" — the education entry's description text (replace only; it is a single string, not a list)
 - "additional.technicalSkills" — reorder the skills list (action: "reorder") or add one verified skill (action: "add_skill")
 - "additional.languages" — reorder the languages list (action: "reorder")
@@ -597,12 +828,19 @@ Verified skill targets:
 Job Description:
 {job_description}
 
-Original Resume:
+Original Resume (MASTER — full bullet pools):
 {original_resume}
 
 Output this exact JSON format, nothing else:
 {{
   "changes": [
+    {{
+      "path": "workExperience[0].description",
+      "action": "replace_list",
+      "original": ["bullet one from master", "bullet two"],
+      "value": ["selected tailored bullet 1", "selected tailored bullet 2"],
+      "reason": "selected strongest JD-aligned bullets within length target"
+    }},
     {{
       "path": "workExperience[0].description[1]",
       "action": "replace",

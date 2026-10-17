@@ -6,7 +6,11 @@ from fastapi import APIRouter
 
 from app.chatgpt_auth import is_connected as chatgpt_is_connected
 from app.database import db
+<<<<<<< HEAD
 from app.llm import AGENT_PROVIDER, check_llm_health, get_llm_config
+=======
+from app.llm import check_llm_health, get_llm_config, is_llm_provider_configured
+>>>>>>> origin/main
 from app.schemas import HealthResponse, StatusResponse
 
 logger = logging.getLogger(__name__)
@@ -45,6 +49,7 @@ async def get_status() -> StatusResponse:
     agent_mode = False
     try:
         config = get_llm_config()
+<<<<<<< HEAD
         # In agent mode the user's coding agent does the AI work, so the app
         # has no model of its own to configure.
         agent_mode = config.provider == AGENT_PROVIDER
@@ -55,6 +60,9 @@ async def get_status() -> StatusResponse:
             or config.provider in ("ollama", "openai_compatible", "claude_cli")
             or (config.provider == "chatgpt" and chatgpt_is_connected())
         )
+=======
+        llm_configured = is_llm_provider_configured(config)
+>>>>>>> origin/main
         llm_status = await check_llm_health(config)
         llm_healthy = bool(llm_status.get("healthy"))
     except Exception:

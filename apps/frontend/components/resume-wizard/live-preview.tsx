@@ -4,6 +4,10 @@ import { Check } from '@phosphor-icons/react';
 import type { ResumeData } from '@/components/dashboard/resume-component';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useTranslations } from '@/lib/i18n';
+import {
+  getExperienceRoleTitles,
+  normalizeWorkExperience,
+} from '@/lib/utils/work-experience';
 
 interface LivePreviewProps {
   resumeData: ResumeData;
@@ -28,7 +32,7 @@ function dedupeSkills(skills: string[]): string[] {
 export function LivePreview({ resumeData, inferredSkills }: LivePreviewProps) {
   const { t } = useTranslations();
   const personalInfo = resumeData.personalInfo ?? {};
-  const experience = resumeData.workExperience ?? [];
+  const experience = normalizeWorkExperience(resumeData.workExperience ?? []);
   const projects = resumeData.personalProjects ?? [];
   const education = resumeData.education ?? [];
   const technicalSkills = resumeData.additional?.technicalSkills ?? [];
@@ -69,6 +73,7 @@ export function LivePreview({ resumeData, inferredSkills }: LivePreviewProps) {
               <p className="border-b border-ink pb-1 font-mono text-xs font-bold uppercase tracking-wider">
                 {t('resumeWizard.preview.experience')}
               </p>
+<<<<<<< HEAD
               {experience.map((item) => (
                 <div key={item.id} className="mt-2">
                   <p className="font-sans text-sm font-bold">
@@ -86,6 +91,31 @@ export function LivePreview({ resumeData, inferredSkills }: LivePreviewProps) {
                   </ul>
                 </div>
               ))}
+=======
+              {experience.map((item) => {
+                const yearsLine = (item.roles ?? [])
+                  .map((role) => role.years?.trim())
+                  .filter(Boolean)
+                  .join(' · ');
+                return (
+                  <div key={item.id} className="mt-2">
+                    <p className="font-sans text-sm font-bold">
+                      {[getExperienceRoleTitles(item), item.company].filter(Boolean).join(' · ')}
+                    </p>
+                    {yearsLine && (
+                      <p className="font-mono text-xs text-steel-grey">{yearsLine}</p>
+                    )}
+                    <ul className="mt-1 list-none space-y-1">
+                      {(item.description ?? []).map((line, index) => (
+                        <li key={index} className="font-sans text-xs leading-snug">
+                          {line}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+>>>>>>> origin/main
             </section>
           )}
 

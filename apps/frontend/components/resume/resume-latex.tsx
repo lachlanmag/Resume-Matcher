@@ -7,9 +7,17 @@ import type {
 } from '@/components/dashboard/resume-component';
 import { getSortedSections } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
+<<<<<<< HEAD
 import { DescriptionList } from './description-list';
 import { EarlierExperience, splitCondensed } from './earlier-experience';
 import { RESUME_SECTION, RESUME_SECTION_TITLE, resumeItem } from './page-break-attrs';
+=======
+import {
+  getExperienceRoleTitles,
+  getExperienceYearsLine,
+} from '@/lib/utils/work-experience';
+import { SafeHtml } from './safe-html';
+>>>>>>> origin/main
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/latex.module.css';
 
@@ -151,6 +159,7 @@ export const ResumeLatex: React.FC<ResumeLatexProps> = ({
               {section.displayName}
             </h3>
             <div className={baseStyles['resume-items']}>
+<<<<<<< HEAD
               {splitCondensed(workExperience).full.map((exp) => (
                 <div
                   key={exp.id}
@@ -159,6 +168,17 @@ export const ResumeLatex: React.FC<ResumeLatexProps> = ({
                 >
                   {renderEntryHeader(exp.company, exp.years, exp.title, exp.location)}
                   {renderBullets(exp.description, exp.descriptionStyles)}
+=======
+              {workExperience.map((exp) => (
+                <div key={exp.id} className={baseStyles['resume-item']}>
+                  {renderEntryHeader(
+                    exp.company,
+                    getExperienceYearsLine(exp),
+                    getExperienceRoleTitles(exp),
+                    exp.location
+                  )}
+                  {renderBullets(exp.description)}
+>>>>>>> origin/main
                 </div>
               ))}
               {splitCondensed(workExperience).condensed.length > 0 && (

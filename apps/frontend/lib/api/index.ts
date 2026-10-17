@@ -25,10 +25,25 @@ export {
   fetchResume,
   fetchResumeList,
   updateResume,
+  patchTailorSettings,
+  applyTailorLength,
   downloadResumePdf,
   deleteResume,
   type ResumeListItem,
+  type TailorLengthSettings as ResumeTailorLengthSettings,
+  type ImproveResumeOptions,
 } from './resume';
+
+// Feedback operations
+export {
+  generateFeedback,
+  patchFeedbackAnswers,
+  previewFeedbackApply,
+  applyFeedback,
+  type FeedbackQuestion,
+  type ResumeFeedback,
+  type FeedbackApplyPreview,
+} from './feedback';
 
 // Resume wizard operations
 export {
@@ -57,6 +72,7 @@ export {
   fetchPromptConfig,
   updatePromptConfig,
   type LLMProvider,
+  type ProviderConfigSnapshot,
   type LLMConfig,
   type LLMConfigUpdate,
   type DatabaseStats,
@@ -65,4 +81,7 @@ export {
   type PromptOption,
   type PromptConfig,
   type PromptConfigUpdate,
+  fetchTailorLengthConfig,
+  updateTailorLengthConfig,
+  type TailorLengthSettings,
 } from './config';

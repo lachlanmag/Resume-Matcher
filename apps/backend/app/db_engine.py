@@ -9,8 +9,13 @@ spin up fully isolated engines against a temp-file database or a scratch schema.
 from pathlib import Path
 from typing import Any
 
+<<<<<<< HEAD
 from sqlalchemy import Column, create_engine, event, inspect, text
 from sqlalchemy.engine import Connection, Engine
+=======
+from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy.engine import Engine
+>>>>>>> origin/main
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.schema import CreateColumn
 
@@ -94,6 +99,7 @@ def make_sync_engine(
     return engine
 
 
+<<<<<<< HEAD
 def _add_missing_column(
     conn: Connection, column: Column[Any], schema: str | None = None
 ) -> None:
@@ -125,11 +131,29 @@ def _init_postgres(engine: Engine, schema: str | None) -> None:
 
 
 def init_models_sync(engine: Engine, schema: str | None = None) -> None:
+=======
+def _apply_schema_patches(engine: Engine) -> None:
+    """Add columns missing from databases created before model updates."""
+    inspector = inspect(engine)
+    if not inspector.has_table("resumes"):
+        return
+    columns = {col["name"] for col in inspector.get_columns("resumes")}
+    if "tailor_settings" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE resumes ADD COLUMN tailor_settings JSON"))
+    if "resume_feedback" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE resumes ADD COLUMN resume_feedback JSON"))
+
+
+def init_models_sync(engine: Engine) -> None:
+>>>>>>> origin/main
     """Create all tables (idempotent) using a sync engine connection."""
     if engine.dialect.name == "postgresql":
         _init_postgres(engine, schema)
         return
     Base.metadata.create_all(engine)
+<<<<<<< HEAD
 
     # ``create_all`` does not ALTER existing SQLite tables. Keep this additive
     # migration idempotent so older local databases can load resumes safely.
@@ -184,3 +208,6 @@ def init_models_sync(engine: Engine, schema: str | None = None) -> None:
         conn.exec_driver_sql(
             "CREATE INDEX IF NOT EXISTS ix_preview_compatibility ON tailoring_previews (source_id, job_id, payload_hash, created_at)"
         )
+=======
+    _apply_schema_patches(engine)
+>>>>>>> origin/main

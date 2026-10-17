@@ -383,6 +383,7 @@ class TestRetryProcessing:
             resp = await client.post("/api/v1/resumes/res-123/retry-processing")
         assert resp.status_code == 400
 
+<<<<<<< HEAD
     @patch("app.routers.resumes.parse_resume_to_json", new_callable=AsyncMock)
     @patch("app.routers.resumes.db", new_callable=AsyncMock)
     async def test_retry_empty_legacy_ready_resume(
@@ -558,3 +559,71 @@ class TestUploadResume:
         assert "Could not extract text from the uploaded file" in resp.json()["detail"]
         mock_db.create_resume_atomic_master.assert_not_called()
         mock_parse_resume_to_json.assert_not_called()
+=======
+
+class TestDownloadResumePdf:
+    """GET /api/v1/resumes/{resume_id}/pdf"""
+
+    @patch("app.routers.resumes.evaluate_pdf_ats_extractability")
+    @patch("app.routers.resumes.add_pdf_metadata")
+    @patch("app.routers.resumes.render_resume_pdf", new_callable=AsyncMock)
+    @patch("app.routers.resumes.db", new_callable=AsyncMock)
+    async def test_download_resume_pdf_includes_warning_header(
+        self,
+        mock_db,
+        mock_render_pdf,
+        mock_add_pdf_metadata,
+        mock_evaluate_ats,
+        client,
+        mock_resume_record,
+    ):
+        mock_db.get_resume.return_value = mock_resume_record
+        mock_render_pdf.return_value = b"%PDF-raw"
+        mock_add_pdf_metadata.return_value = b"%PDF-metadata"
+        mock_evaluate_ats.return_value = (
+            ["Education appears before Experience in extracted text."],
+            [],
+        )
+
+        async with client:
+            resp = await client.get("/api/v1/resumes/res-123/pdf")
+
+        assert resp.status_code == 200
+        assert resp.headers.get("x-resume-pdf-warnings") is not None
+        assert (
+            "Education appears before Experience in extracted text."
+            in resp.headers["x-resume-pdf-warnings"]
+        )
+        assert resp.headers.get("x-resume-pdf-errors") is None
+
+    @patch("app.routers.resumes.evaluate_pdf_ats_extractability")
+    @patch("app.routers.resumes.add_pdf_metadata")
+    @patch("app.routers.resumes.render_resume_pdf", new_callable=AsyncMock)
+    @patch("app.routers.resumes.db", new_callable=AsyncMock)
+    async def test_download_resume_pdf_includes_error_header(
+        self,
+        mock_db,
+        mock_render_pdf,
+        mock_add_pdf_metadata,
+        mock_evaluate_ats,
+        client,
+        mock_resume_record,
+    ):
+        mock_db.get_resume.return_value = mock_resume_record
+        mock_render_pdf.return_value = b"%PDF-raw"
+        mock_add_pdf_metadata.return_value = b"%PDF-metadata"
+        mock_evaluate_ats.return_value = (
+            [],
+            ["Missing expected section term: experience"],
+        )
+
+        async with client:
+            resp = await client.get("/api/v1/resumes/res-123/pdf")
+
+        assert resp.status_code == 200
+        assert resp.headers.get("x-resume-pdf-errors") is not None
+        assert (
+            "Missing expected section term: experience"
+            in resp.headers["x-resume-pdf-errors"]
+        )
+>>>>>>> origin/main

@@ -11,9 +11,17 @@ import type {
 } from '@/components/dashboard/resume-component';
 import { getSortedSections, getSectionMeta } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
+<<<<<<< HEAD
 import { DescriptionList } from './description-list';
 import { EarlierExperience, splitCondensed } from './earlier-experience';
 import { RESUME_SECTION, RESUME_SECTION_TITLE, resumeItem } from './page-break-attrs';
+=======
+import {
+  getExperienceRoleTitles,
+  getExperienceYearsLine,
+} from '@/lib/utils/work-experience';
+import { SafeHtml } from './safe-html';
+>>>>>>> origin/main
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/vivid.module.css';
 
@@ -314,8 +322,33 @@ export const ResumeVivid: React.FC<ResumeVividProps> = ({
                 {getSectionDisplayName('workExperience', headingFallbacks.experience)}
               </h3>
               <div className={baseStyles['resume-items']}>
+<<<<<<< HEAD
                 {splitCondensed(workExperience).full.map((exp) => (
                   <VividExperienceItem key={exp.id} exp={exp} />
+=======
+                {workExperience.map((exp) => (
+                  <div key={exp.id} className={baseStyles['resume-item']}>
+                    <div
+                      className={`flex justify-between items-baseline ${baseStyles['resume-row-tight']}`}
+                    >
+                      <span>
+                        <span className={styles.entryCompany}>{exp.company}</span>
+                        {getExperienceRoleTitles(exp) && (
+                          <>
+                            <span className={styles.entrySep}>|</span>
+                            <span className={styles.entryRole}>
+                              {getExperienceRoleTitles(exp)}
+                            </span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                    <div className={`${baseStyles['resume-row-tight']} ${styles.entryMeta}`}>
+                      {[getExperienceYearsLine(exp), exp.location].filter(Boolean).join(' | ')}
+                    </div>
+                    {renderArrowBullets(exp.description)}
+                  </div>
+>>>>>>> origin/main
                 ))}
                 {splitCondensed(workExperience).condensed.length > 0 && (
                   <EarlierExperience

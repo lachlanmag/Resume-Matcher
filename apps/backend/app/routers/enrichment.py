@@ -5,7 +5,12 @@ import copy
 import json
 import logging
 import re
+<<<<<<< HEAD
 from typing import Any
+=======
+from collections.abc import Callable
+from uuid import uuid4
+>>>>>>> origin/main
 
 from fastapi import APIRouter, HTTPException
 
@@ -23,8 +28,11 @@ from app.prompts.enrichment import (
     ENHANCE_DESCRIPTION_PROMPT,
     REGENERATE_ITEM_PROMPT,
     REGENERATE_SKILLS_PROMPT,
+    REGENERATE_SUMMARY_PROMPT,
+    SUMMARY_MAX_CHARACTERS,
 )
 from app.prompts.templates import get_language_name
+from app.schemas.work_experience import experience_role_titles
 from app.schemas.enrichment import (
     AnalysisResponse,
     AnswerInput,
@@ -122,7 +130,7 @@ def _extract_item_from_resume(processed_data: dict, item_id: str) -> dict:
         return {
             "item_id": item_id,
             "item_type": "experience",
-            "title": entry.get("title", ""),
+            "title": experience_role_titles(entry),
             "subtitle": entry.get("company", ""),
             "current_description": desc
             if isinstance(desc, list)
@@ -541,6 +549,18 @@ async def apply_enhancements(resume_id: str, request: ApplyEnhancementsRequest) 
 # ============================================
 
 
+def _normalize_summary_paragraph(content: object) -> str:
+    """Collapse summary content into a single paragraph string."""
+    if content is None:
+        return ""
+    if isinstance(content, list):
+        parts = [str(entry).strip() for entry in content if entry and str(entry).strip()]
+        text = " ".join(parts)
+    else:
+        text = str(content).strip()
+    return " ".join(text.split())
+
+
 async def _regenerate_experience_or_project(
     item: RegenerateItemInput,
     instruction: str,
@@ -578,6 +598,38 @@ async def _regenerate_experience_or_project(
         subtitle=item.subtitle,
         original_content=item.current_content,
         new_content=new_bullets,
+        diff_summary=str(result.get("change_summary") or ""),
+    )
+
+
+async def _regenerate_summary(
+    item: RegenerateItemInput,
+    instruction: str,
+    output_language: str,
+) -> RegeneratedItem:
+    """Regenerate the professional summary as a single paragraph."""
+    current_summary = _normalize_summary_paragraph(item.current_content) or "(No summary)"
+
+    prompt = REGENERATE_SUMMARY_PROMPT.format(
+        output_language=output_language,
+        current_summary=current_summary,
+        user_instruction=instruction,
+        max_characters=SUMMARY_MAX_CHARACTERS,
+    )
+
+    result = await complete_json(prompt, max_tokens=2048, schema_type="diff")
+
+    new_summary = _normalize_summary_paragraph(result.get("new_summary"))
+    if not new_summary:
+        new_summary = _normalize_summary_paragraph(result.get("new_bullets"))
+
+    return RegeneratedItem(
+        item_id=item.item_id,
+        item_type=item.item_type,
+        title=item.title,
+        subtitle=item.subtitle,
+        original_content=item.current_content,
+        new_content=[new_summary] if new_summary else [],
         diff_summary=str(result.get("change_summary") or ""),
     )
 
@@ -638,8 +690,22 @@ async def regenerate_items(request: RegenerateRequest) -> RegenerateResponse:
     # Get language name for LLM
     output_language = get_language_name(request.output_language)
 
+<<<<<<< HEAD
     # A bounded collection may queue work, but at most four items call AI.
     semaphore = asyncio.Semaphore(MAX_ITEM_WORKERS)
+=======
+    # Process all items in parallel for better performance
+    tasks = []
+    for item in request.items:
+        if item.item_type == "skills":
+            tasks.append(_regenerate_skills(item, request.instruction, output_language))
+        elif item.item_type == "summary":
+            tasks.append(_regenerate_summary(item, request.instruction, output_language))
+        elif item.item_type in {"experience", "project"}:
+            tasks.append(
+                _regenerate_experience_or_project(item, request.instruction, output_language)
+            )
+>>>>>>> origin/main
 
     async def regenerate_one(item: RegenerateItemInput) -> RegeneratedItem:
         async with semaphore:
@@ -746,6 +812,7 @@ async def apply_regenerated_items(
         expected_subtitle: str | None,
         expected_original_content: list[str],
         content_key: str,
+        title_resolver: Callable[[dict], str] | None = None,
     ) -> int | None:
         expected_title_norm = _normalize_match_value(expected_title)
         expected_subtitle_norm = _normalize_match_value(expected_subtitle)
@@ -753,11 +820,16 @@ async def apply_regenerated_items(
         if not expected_title_norm:
             return None
 
+        def _entry_title(entry: dict) -> str:
+            if title_resolver is not None:
+                return title_resolver(entry)
+            return str(entry.get(title_key, ""))
+
         matches: list[int] = []
         for i, entry in enumerate(entries):
             if not isinstance(entry, dict):
                 continue
-            entry_title = _normalize_match_value(str(entry.get(title_key, "")))
+            entry_title = _normalize_match_value(_entry_title(entry))
             entry_subtitle = _normalize_match_value(str(entry.get(subtitle_key, "")))
 
             if entry_title != expected_title_norm:
@@ -811,10 +883,15 @@ async def apply_regenerated_items(
 
             resolved_index: int | None = None
             if 0 <= index < len(experiences):
+<<<<<<< HEAD
                 entry = (
                     experiences[index] if isinstance(experiences[index], dict) else {}
                 )
                 entry_title = _normalize_match_value(str(entry.get("title", "")))
+=======
+                entry = experiences[index] if isinstance(experiences[index], dict) else {}
+                entry_title = _normalize_match_value(experience_role_titles(entry))
+>>>>>>> origin/main
                 entry_company = _normalize_match_value(str(entry.get("company", "")))
                 if (
                     entry_title == _normalize_match_value(expected_title)
@@ -837,6 +914,7 @@ async def apply_regenerated_items(
                     expected_subtitle=expected_company,
                     expected_original_content=expected_original_content,
                     content_key="description",
+                    title_resolver=experience_role_titles,
                 )
 
             if resolved_index is None:
@@ -944,6 +1022,16 @@ async def apply_regenerated_items(
                 updated_data["technicalSkills"] = new_content
             else:
                 apply_failures.append(item_id)
+
+        elif item_type == "summary":
+            expected_original_content = item.original_content
+            current_summary = updated_data.get("summary")
+
+            if not _lines_equal(current_summary, expected_original_content):
+                apply_failures.append(item_id)
+                continue
+
+            updated_data["summary"] = _normalize_summary_paragraph(new_content)
 
     if apply_failures:
         logger.warning(

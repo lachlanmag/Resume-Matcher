@@ -9,16 +9,31 @@ import { useTranslations } from '@/lib/i18n';
 interface LoadingStepProps {
   message: string;
   submessage?: string;
+  elapsedSeconds?: number;
 }
 
-function LoadingStep({ message, submessage }: LoadingStepProps) {
+function LoadingStep({ message, submessage, elapsedSeconds }: LoadingStepProps) {
   return (
+<<<<<<< HEAD
     <div role="status" className="flex flex-col items-start gap-2 py-6">
       <p className="flex items-center gap-3 font-mono text-sm font-bold uppercase tracking-wider text-ink">
         <SpinnerGap aria-hidden="true" className="size-5 shrink-0 animate-spin" />
         {message}
       </p>
       {submessage && <p className="max-w-[60ch] text-sm text-ink-soft text-pretty">{submessage}</p>}
+=======
+    <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-6">
+      <div className="relative">
+        <Loader2 className="w-12 h-12 animate-spin text-black" />
+      </div>
+      <div className="text-center">
+        <p className="text-xl font-mono font-bold">{message}</p>
+        {submessage && <p className="text-sm text-steel-grey mt-2 font-mono">{submessage}</p>}
+        {elapsedSeconds !== undefined && elapsedSeconds > 0 && (
+          <p className="text-sm font-mono text-steel-grey mt-3">{elapsedSeconds}s</p>
+        )}
+      </div>
+>>>>>>> origin/main
     </div>
   );
 }
@@ -33,12 +48,32 @@ export function AnalyzingStep() {
   );
 }
 
-export function GeneratingStep() {
+export function GeneratingStep({
+  elapsedSeconds,
+  message,
+  submessage,
+}: {
+  elapsedSeconds?: number;
+  message?: string;
+  submessage?: string;
+} = {}) {
   const { t } = useTranslations();
   return (
     <LoadingStep
-      message={t('enrichment.loading.generatingTitle')}
-      submessage={t('enrichment.loading.generatingDescription')}
+      message={message ?? t('enrichment.loading.generatingTitle')}
+      submessage={submessage ?? t('enrichment.loading.generatingDescription')}
+      elapsedSeconds={elapsedSeconds}
+    />
+  );
+}
+
+export function FeedbackGeneratingStep({ elapsedSeconds }: { elapsedSeconds?: number }) {
+  const { t } = useTranslations();
+  return (
+    <GeneratingStep
+      elapsedSeconds={elapsedSeconds}
+      message={t('feedback.loading.generatingTitle')}
+      submessage={t('feedback.loading.generatingDescription')}
     />
   );
 }

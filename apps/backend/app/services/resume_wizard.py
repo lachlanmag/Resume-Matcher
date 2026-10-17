@@ -23,6 +23,7 @@ from app.prompts.templates import get_language_name
 from app.schemas.models import (
     Education,
     Experience,
+    ExperienceRole,
     Project,
     ResumeData,
     normalize_resume_data,
@@ -258,10 +259,11 @@ def _merge_entries[T: _IdentifiedEntry](
 
 
 def _experience_key(item: Experience) -> tuple[str, ...]:
+    primary = item.roles[0] if item.roles else ExperienceRole()
     return (
-        item.title.strip().casefold(),
         item.company.strip().casefold(),
-        item.years.strip().casefold(),
+        primary.title.strip().casefold(),
+        primary.years.strip().casefold(),
     )
 
 

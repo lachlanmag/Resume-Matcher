@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Long-running Cursor API proxy for local dev and Docker (host.docker.internal:8765).
+# Start once and leave running; dev-with-cursor.sh will not stop it on exit.
+# Stop with: ./scripts/stop-cursor-proxy.sh
+set -euo pipefail
+
+if ! command -v agent >/dev/null 2>&1; then
+  echo "Cursor Agent CLI not found. Install it with:"
+  echo "  curl https://cursor.com/install -fsS | bash"
+  echo "Then run: agent login"
+  exit 1
+fi
+
+# Default chat-only mode uses an isolated temp HOME, so `agent login` credentials
+# are not visible to spawned CLI processes. For local Resume Matcher use, prefer
+# the real workspace + --force so existing `agent login` works non-interactively.
+export CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE="${CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE:-false}"
+export CURSOR_BRIDGE_FORCE="${CURSOR_BRIDGE_FORCE:-true}"
+CURSOR_API_PROXY_VERSION="${CURSOR_API_PROXY_VERSION:-1.1.0}"
+
+echo "Starting cursor-api-proxy@${CURSOR_API_PROXY_VERSION} on http://127.0.0.1:8765/v1 ..."
+echo "  (CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE=${CURSOR_BRIDGE_CHAT_ONLY_WORKSPACE}, CURSOR_BRIDGE_FORCE=${CURSOR_BRIDGE_FORCE})"
+exec npx --yes "cursor-api-proxy@${CURSOR_API_PROXY_VERSION}"

@@ -1,5 +1,9 @@
 """LLM prompt templates."""
 
+from app.prompts.feedback import (
+    APPLY_FEEDBACK_PROMPT,
+    APPLY_FEEDBACK_TRUTHFULNESS_RULES,
+)
 from app.prompts.templates import (
     BULLET_RELEVANCE_PROMPT,
     CRITICAL_TRUTHFULNESS_RULES,
@@ -15,6 +19,7 @@ from app.prompts.templates import (
     INTERVIEW_PREP_PROMPT,
     PARSE_RESUME_PROMPT,
     SKILL_TARGET_PLAN_PROMPT,
+    TAILORED_RESUME_FEEDBACK_PROMPT,
     get_language_name,
 )
 
@@ -43,6 +48,8 @@ def validate_prompt_placeholders(prompt: str) -> list[str]:
 
 
 __all__ = [
+    "APPLY_FEEDBACK_PROMPT",
+    "APPLY_FEEDBACK_TRUTHFULNESS_RULES",
     "PARSE_RESUME_PROMPT",
     "EXTRACT_KEYWORDS_PROMPT",
     "IMPROVE_RESUME_PROMPT",
@@ -56,7 +63,11 @@ __all__ = [
     "SKILL_TARGET_PLAN_PROMPT",
     "BULLET_RELEVANCE_PROMPT",
     "GENERATE_TITLE_PROMPT",
+<<<<<<< HEAD
     "INTERVIEW_PREP_PROMPT",
+=======
+    "TAILORED_RESUME_FEEDBACK_PROMPT",
+>>>>>>> origin/main
     "REQUIRED_FEATURE_PROMPT_PLACEHOLDERS",
     "validate_prompt_placeholders",
     "get_language_name",

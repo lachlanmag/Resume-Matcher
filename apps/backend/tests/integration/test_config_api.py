@@ -278,11 +278,23 @@ class TestFeatureConfig:
     """GET/PUT /api/v1/config/features"""
 
     @patch("app.routers.config._load_config")
+    async def test_get_features_defaults_feedback_enabled(self, mock_load, client):
+        mock_load.return_value = {}
+        async with client:
+            resp = await client.get("/api/v1/config/features")
+        assert resp.status_code == 200
+        assert resp.json()["enable_resume_feedback"] is True
+
+    @patch("app.routers.config._load_config")
     async def test_get_features(self, mock_load, client):
         mock_load.return_value = {
             "enable_cover_letter": True,
             "enable_outreach_message": False,
+<<<<<<< HEAD
             "enable_interview_prep": True,
+=======
+            "enable_resume_feedback": True,
+>>>>>>> origin/main
         }
         async with client:
             resp = await client.get("/api/v1/config/features")
@@ -290,7 +302,11 @@ class TestFeatureConfig:
         data = resp.json()
         assert data["enable_cover_letter"] is True
         assert data["enable_outreach_message"] is False
+<<<<<<< HEAD
         assert data["enable_interview_prep"] is True
+=======
+        assert data["enable_resume_feedback"] is True
+>>>>>>> origin/main
 
     @patch("app.routers.config._save_config")
     @patch("app.routers.config._load_config")
@@ -321,6 +337,7 @@ class TestFeaturePrompts:
         mock_load.return_value = {
             "cover_letter_prompt": "Custom cover prompt",
             "outreach_message_prompt": "",
+            "resume_feedback_prompt": "Custom feedback",
         }
         async with client:
             resp = await client.get("/api/v1/config/feature-prompts")
@@ -329,12 +346,16 @@ class TestFeaturePrompts:
         data = resp.json()
         assert data["cover_letter_prompt"] == "Custom cover prompt"
         assert data["outreach_message_prompt"] == ""
+        assert data["resume_feedback_prompt"] == "Custom feedback"
         assert "{job_description}" in data["cover_letter_default"]
         assert "{resume_data}" in data["cover_letter_default"]
         assert "{output_language}" in data["cover_letter_default"]
         assert "{job_description}" in data["outreach_message_default"]
         assert "{resume_data}" in data["outreach_message_default"]
         assert "{output_language}" in data["outreach_message_default"]
+        assert "{job_description}" in data["resume_feedback_default"]
+        assert "{resume_data}" in data["resume_feedback_default"]
+        assert "{output_language}" in data["resume_feedback_default"]
 
     @patch("app.routers.config._load_config")
     async def test_put_feature_prompts_rejects_missing_placeholders(
@@ -353,6 +374,23 @@ class TestFeaturePrompts:
         assert resp.json()["detail"] == {
             "code": "missing_placeholders",
             "field": "cover_letter_prompt",
+            "missing": ["{resume_data}", "{output_language}"],
+        }
+
+    @patch("app.routers.config._load_config")
+    async def test_put_feature_prompts_rejects_missing_feedback_placeholders(
+        self, mock_load, client
+    ):
+        mock_load.return_value = {}
+        async with client:
+            resp = await client.put("/api/v1/config/feature-prompts", json={
+                "resume_feedback_prompt": "Review {job_description}",
+            })
+
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == {
+            "code": "missing_placeholders",
+            "field": "resume_feedback_prompt",
             "missing": ["{resume_data}", "{output_language}"],
         }
 
@@ -444,6 +482,59 @@ class TestResetDatabase:
         async with client:
             resp = await client.post("/api/v1/config/reset")
         assert resp.status_code == 422
+
+
+class TestProviderConfigs:
+    """Per-provider saved settings for Settings UI switching."""
+
+    @patch("app.routers.config._save_config")
+    @patch("app.routers.config._load_config")
+    async def test_get_seeds_provider_configs(self, mock_load, mock_save, client):
+        mock_load.return_value = {
+            "provider": "openai_compatible",
+            "model": "local-model",
+            "api_key": "sk-lm-test",
+            "api_base": "http://127.0.0.1:1234/v1",
+            "reasoning_effort": "",
+        }
+        async with client:
+            resp = await client.get("/api/v1/config/llm-api-key")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "openai_compatible" in data["provider_configs"]
+        snap = data["provider_configs"]["openai_compatible"]
+        assert snap["model"] == "local-model"
+        assert snap["api_base"] == "http://127.0.0.1:1234/v1"
+        assert snap["has_api_key"] is True
+        assert "*" in snap["api_key"]
+        mock_save.assert_called_once()
+
+    @patch("app.routers.config._log_llm_health_check", new_callable=AsyncMock)
+    @patch("app.routers.config._save_config")
+    @patch("app.routers.config._load_config")
+    async def test_put_saves_provider_snapshot(
+        self, mock_load, mock_save, mock_log_health, client
+    ):
+        mock_load.return_value = {
+            "provider": "openai_compatible",
+            "model": "local-model",
+            "api_key": "sk-lm-test",
+            "api_base": "http://127.0.0.1:1234/v1",
+            "provider_configs": {},
+        }
+        async with client:
+            resp = await client.put("/api/v1/config/llm-api-key", json={
+                "provider": "cursor",
+                "model": "auto",
+                "api_base": "http://127.0.0.1:8765/v1",
+                "api_key": "",
+            })
+        assert resp.status_code == 200
+        saved = mock_save.call_args.args[0]
+        assert saved["provider_configs"]["cursor"]["model"] == "auto"
+        assert saved["provider_configs"]["cursor"]["api_base"] == "http://127.0.0.1:8765/v1"
+        data = resp.json()
+        assert data["provider_configs"]["cursor"]["model"] == "auto"
 
 
 # ---------------------------------------------------------------------------
@@ -612,6 +703,7 @@ class TestLegacyKeyMigration:
             config_module.CONFIG_FILE_PATH.unlink()
         migrate_legacy_keys()
 
+<<<<<<< HEAD
 
 class TestRequiresBaseUrlValidation:
     """M-05: requiresBaseUrl was a UI-only guard until now."""
@@ -698,3 +790,44 @@ class TestRequiresBaseUrlValidation:
         }
         mock_health.assert_awaited_once()
         assert sentinel_path.read_text() == '{"sentinel": "developer-state"}'
+=======
+    async def test_skips_reimport_when_ciphertext_slot_exists(self, keys_env):
+        """An existing store slot blocks re-import even if ciphertext is undecryptable."""
+        import json
+        import app.config as config_module
+        from app.config import migrate_legacy_keys, get_api_keys_from_config
+
+        keys_env.set_api_key_ciphertext("openai", "not-valid-fernet-ciphertext")
+
+        config_module.CONFIG_FILE_PATH.write_text(
+            json.dumps({"provider": "openai", "api_keys": {"openai": "recovered-plaintext"}})
+        )
+        migrate_legacy_keys()
+
+        keys = get_api_keys_from_config()
+        assert keys.get("openai", "") == ""
+        on_disk = json.loads(config_module.CONFIG_FILE_PATH.read_text())
+        assert "api_keys" not in on_disk
+
+    async def test_migration_maps_cursor_legacy_single_key(self, keys_env, monkeypatch, tmp_path):
+        import json
+        import app.config as config_module
+        from app.config import migrate_legacy_keys, get_api_keys_from_config
+
+        config_module.CONFIG_FILE_PATH.write_text(
+            json.dumps(
+                {
+                    "provider": "cursor",
+                    "model": "auto",
+                    "api_key": "cursor-local-key",
+                }
+            )
+        )
+
+        migrate_legacy_keys()
+
+        keys = get_api_keys_from_config()
+        assert keys["cursor"] == "cursor-local-key"
+        on_disk = json.loads(config_module.CONFIG_FILE_PATH.read_text())
+        assert "api_key" not in on_disk
+>>>>>>> origin/main

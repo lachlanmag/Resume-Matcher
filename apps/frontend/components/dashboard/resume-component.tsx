@@ -56,13 +56,22 @@ export interface PersonalInfo {
   github?: string;
 }
 
+<<<<<<< HEAD
 export interface Experience {
   condensed?: boolean;
+=======
+export interface ExperienceRole {
+>>>>>>> origin/main
   id: number;
   title?: string;
+  years?: string;
+}
+
+export interface Experience {
+  id: number;
   company?: string;
   location?: string;
-  years?: string;
+  roles: ExperienceRole[];
   description?: string[];
   descriptionStyles?: ('bullet' | 'plain')[];
 }

@@ -12,14 +12,26 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+<<<<<<< HEAD
 import { EmptyState } from '@/components/ui/empty-state';
 import { Check, CaretDown, CaretRight } from '@phosphor-icons/react';
+=======
+import {
+  Briefcase,
+  FolderKanban,
+  Lightbulb,
+  FileText,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
+>>>>>>> origin/main
 import { useTranslations } from '@/lib/i18n';
 import type { RegenerateItemInput } from '@/lib/api/enrichment';
 
 interface RegenerateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  summaryItem: RegenerateItemInput | null;
   experienceItems: RegenerateItemInput[];
   projectItems: RegenerateItemInput[];
   skillsItem: RegenerateItemInput | null;
@@ -38,6 +50,7 @@ interface RegenerateDialogProps {
 export const RegenerateDialog: React.FC<RegenerateDialogProps> = ({
   open,
   onOpenChange,
+  summaryItem,
   experienceItems,
   projectItems,
   skillsItem,
@@ -47,7 +60,7 @@ export const RegenerateDialog: React.FC<RegenerateDialogProps> = ({
 }) => {
   const { t } = useTranslations();
   const [expandedSections, setExpandedSections] = React.useState<Set<string>>(
-    new Set(['experience', 'projects', 'skills'])
+    new Set(['summary', 'experience', 'projects', 'skills'])
   );
 
   const toggleSection = (section: string) => {
@@ -72,7 +85,8 @@ export const RegenerateDialog: React.FC<RegenerateDialogProps> = ({
     }
   };
 
-  const hasItems = experienceItems.length > 0 || projectItems.length > 0 || skillsItem !== null;
+  const hasItems =
+    summaryItem !== null || experienceItems.length > 0 || projectItems.length > 0 || skillsItem !== null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -87,6 +101,39 @@ export const RegenerateDialog: React.FC<RegenerateDialogProps> = ({
         <DialogBody className="space-y-4">
           {!hasItems && (
             <EmptyState title={t('builder.regenerate.selectDialog.noItemsAvailable')} />
+          )}
+
+          {/* Summary Section */}
+          {summaryItem && (
+            <div className="border border-black">
+              <button
+                type="button"
+                onClick={() => toggleSection('summary')}
+                aria-expanded={expandedSections.has('summary')}
+                className="w-full p-4 flex items-center justify-between bg-background hover:bg-secondary transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5" />
+                  <span className="font-mono text-sm uppercase tracking-wider font-medium">
+                    {t('builder.regenerate.selectDialog.summary')}
+                  </span>
+                </div>
+                {expandedSections.has('summary') ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+              </button>
+              {expandedSections.has('summary') && (
+                <div className="border-t border-black">
+                  <ItemRow
+                    item={summaryItem}
+                    isSelected={isSelected(summaryItem)}
+                    onToggle={() => toggleItem(summaryItem)}
+                  />
+                </div>
+              )}
+            </div>
           )}
 
           {/* Experience Section */}

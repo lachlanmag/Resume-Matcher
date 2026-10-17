@@ -446,7 +446,7 @@ class TestAppearsTruncated:
         """A candidate can legitimately omit education entries."""
         data = {
             "personalInfo": {"name": "John"},
-            "workExperience": [{"title": "Dev"}],
+            "workExperience": [{"company": "Co", "roles": [{"title": "Dev"}]}],
             "education": [],
             "skills": ["Python"],
         }
@@ -456,7 +456,7 @@ class TestAppearsTruncated:
         """An empty optional skill list is schema-valid."""
         data = {
             "personalInfo": {"name": "John"},
-            "workExperience": [{"title": "Dev"}],
+            "workExperience": [{"company": "Co", "roles": [{"title": "Dev"}]}],
             "education": [{"degree": "BS"}],
             "skills": [],
         }
@@ -466,7 +466,7 @@ class TestAppearsTruncated:
         """Well-formed resume with all sections present is not truncated."""
         data = {
             "personalInfo": {"name": "John"},
-            "workExperience": [{"title": "Dev"}],
+            "workExperience": [{"company": "Co", "roles": [{"title": "Dev"}]}],
             "education": [{"degree": "BS"}],
             "skills": ["Python"],
         }
@@ -476,7 +476,7 @@ class TestAppearsTruncated:
         """Missing fields are not the same as empty arrays — not flagged."""
         data = {
             "personalInfo": {"name": "John"},
-            "workExperience": [{"title": "Dev"}],
+            "workExperience": [{"company": "Co", "roles": [{"title": "Dev"}]}],
             # education and skills omitted
         }
         assert _appears_truncated(data, schema_type="resume") is False
@@ -874,9 +874,10 @@ class TestCompleteJsonFallback:
         )
 
         assert result == {"answer": "ok"}
-        # JSON mode was sent on the first (rejected) call, dropped on the retry.
+        # openai_compatible skips response_format up front; if the server still
+        # rejects, complete_json retries prompt-only JSON mode.
         calls = router.acompletion.call_args_list
-        assert calls[0].kwargs.get("response_format") == {"type": "json_object"}
+        assert "response_format" not in calls[0].kwargs
         assert "response_format" not in calls[1].kwargs
 
     @pytest.mark.asyncio
@@ -1007,6 +1008,7 @@ class TestCompleteDynamicTimeout:
         assert router.acompletion.call_args.kwargs["timeout"] == 180
 
 
+<<<<<<< HEAD
 class TestScrubSecrets:
     """M-08: the redaction patterns must cover the providers we support."""
 
@@ -1788,3 +1790,78 @@ class TestMaxTokensRejectionFallback:
         assert result == "Hello"
         assert router.acompletion.await_count == 2
         assert router.acompletion.call_args.kwargs["max_completion_tokens"] == 2048
+=======
+# ---------------------------------------------------------------------------
+# Cursor provider routing
+# ---------------------------------------------------------------------------
+
+
+class TestCursorProvider:
+    """Tests for cursor provider LiteLLM routing."""
+
+    def test_get_model_name_adds_openai_prefix(self):
+        from app.llm import LLMConfig, get_model_name
+
+        config = LLMConfig(
+            provider="cursor",
+            model="auto",
+            api_key="",
+            api_base="http://127.0.0.1:8765/v1",
+        )
+        assert get_model_name(config) == "openai/auto"
+
+    def test_resolve_api_key_skips_env_fallback(self):
+        from app.llm import resolve_api_key
+
+        stored = {"api_key": "", "api_keys": {}}
+        with patch("app.llm.settings") as mock_settings:
+            mock_settings.llm_api_key = "sk-env-should-not-leak"
+            assert resolve_api_key(stored, "cursor") == ""
+
+    def test_effective_api_key_uses_sentinel_when_blank(self):
+        from app.llm import _effective_api_key
+
+        assert _effective_api_key("cursor", "") == "sk-no-key"
+        assert _effective_api_key("cursor", "real-key") == "real-key"
+
+    def test_is_llm_provider_configured_without_key(self):
+        from app.llm import LLMConfig, is_llm_provider_configured
+
+        cursor = LLMConfig(
+            provider="cursor",
+            model="auto",
+            api_key="",
+            api_base="http://127.0.0.1:8765/v1",
+        )
+        assert is_llm_provider_configured(cursor) is True
+
+        openai = LLMConfig(
+            provider="openai",
+            model="gpt-4",
+            api_key="",
+        )
+        assert is_llm_provider_configured(openai) is False
+
+    @pytest.mark.asyncio
+    async def test_health_check_allows_blank_key(self):
+        from app.llm import LLMConfig, check_llm_health
+
+        config = LLMConfig(
+            provider="cursor",
+            model="auto",
+            api_key="",
+            api_base="http://127.0.0.1:8765/v1",
+        )
+        with patch("app.llm.litellm.acompletion", new_callable=AsyncMock) as mock_ac:
+            choice = MagicMock()
+            choice.message.content = "Hi there"
+            response = MagicMock()
+            response.choices = [choice]
+            response.model = "auto"
+            mock_ac.return_value = response
+
+            result = await check_llm_health(config)
+
+        assert result["healthy"] is True
+        assert result["provider"] == "cursor"
+>>>>>>> origin/main

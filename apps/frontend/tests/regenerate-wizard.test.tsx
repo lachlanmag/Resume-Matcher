@@ -25,6 +25,7 @@ describe('RegenerateDialog', () => {
       <RegenerateDialog
         open
         onOpenChange={vi.fn()}
+        summaryItem={null}
         experienceItems={[]}
         projectItems={[]}
         skillsItem={null}
@@ -64,6 +65,7 @@ describe('RegenerateDialog', () => {
       <RegenerateDialog
         open
         onOpenChange={vi.fn()}
+        summaryItem={null}
         experienceItems={experienceItems}
         projectItems={[]}
         skillsItem={null}
@@ -96,6 +98,7 @@ describe('RegenerateDialog', () => {
         <RegenerateDialog
           open
           onOpenChange={vi.fn()}
+          summaryItem={null}
           experienceItems={experienceItems}
           projectItems={[]}
           skillsItem={null}
@@ -117,6 +120,7 @@ describe('RegenerateDialog', () => {
     expect(continueButton).toBeEnabled();
   });
 
+<<<<<<< HEAD
   it('marks a selected row with ink, not blue (selection is ink, blue is action)', () => {
     const experienceItems: RegenerateItemInput[] = [
       {
@@ -127,6 +131,15 @@ describe('RegenerateDialog', () => {
         current_content: ['Did thing'],
       },
     ];
+=======
+  it('renders and selects summary when available', () => {
+    const summaryItem: RegenerateItemInput = {
+      item_id: 'summary',
+      item_type: 'summary',
+      title: 'builder.regenerate.selectDialog.summary',
+      current_content: ['Results-driven engineer with 8 years of experience.'],
+    };
+>>>>>>> origin/main
 
     const Wrapper = () => {
       const [selectedItems, setSelectedItems] = React.useState<RegenerateItemInput[]>([]);
@@ -134,7 +147,12 @@ describe('RegenerateDialog', () => {
         <RegenerateDialog
           open
           onOpenChange={vi.fn()}
+<<<<<<< HEAD
           experienceItems={experienceItems}
+=======
+          summaryItem={summaryItem}
+          experienceItems={[]}
+>>>>>>> origin/main
           projectItems={[]}
           skillsItem={null}
           selectedItems={selectedItems}
@@ -145,6 +163,7 @@ describe('RegenerateDialog', () => {
     };
 
     render(<Wrapper />);
+<<<<<<< HEAD
 
     const row = screen.getByRole('button', { name: /Senior Software Engineer/i });
     const box = row.querySelector('span[aria-hidden="true"]') as HTMLElement;
@@ -183,6 +202,18 @@ it('offers refresh retry after saved changes and prevents rejecting an applied r
   expect(
     screen.getByRole('button', { name: 'builder.regenerate.diffPreview.rejectButton' })
   ).toBeDisabled();
+=======
+    expect(screen.getAllByText('builder.regenerate.selectDialog.summary').length).toBeGreaterThan(0);
+
+    const continueButton = screen.getByRole('button', {
+      name: 'builder.regenerate.selectDialog.continueButton',
+    });
+    expect(continueButton).toBeDisabled();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /builder\.regenerate\.selectDialog\.summary/i })[1]);
+    expect(continueButton).toBeEnabled();
+  });
+>>>>>>> origin/main
 });
 
 describe('RegenerateDiffPreview', () => {

@@ -8,9 +8,14 @@ import type {
 import { getSortedSections, getSectionMeta } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
 import { DynamicResumeSection } from './dynamic-resume-section';
+<<<<<<< HEAD
 import { DescriptionList } from './description-list';
 import { EarlierExperience, splitCondensed } from './earlier-experience';
 import { RESUME_SECTION, RESUME_SECTION_TITLE, resumeItem } from './page-break-attrs';
+=======
+import { SafeHtml } from './safe-html';
+import { WorkExperienceBlock } from './work-experience-block';
+>>>>>>> origin/main
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/modern-two-column.module.css';
 
@@ -192,6 +197,7 @@ export const ResumeModernTwoColumn: React.FC<ResumeModernTwoColumnProps> = ({
                 {getSectionDisplayName('workExperience', headingFallbacks.experience)}
               </h3>
               <div className={baseStyles['resume-items']}>
+<<<<<<< HEAD
                 {splitCondensed(workExperience).full.map((exp) => (
                   <div
                     key={exp.id}
@@ -222,6 +228,18 @@ export const ResumeModernTwoColumn: React.FC<ResumeModernTwoColumnProps> = ({
                       textClassName={baseStyles['resume-text-xs']}
                     />
                   </div>
+=======
+                {workExperience.map((exp) => (
+                  <WorkExperienceBlock
+                    key={exp.id}
+                    job={exp}
+                    titleClassName={baseStyles['resume-item-title-sm']}
+                    roleTitleClassName={baseStyles['resume-item-subtitle-sm']}
+                    dateClassName={baseStyles['resume-date']}
+                    listClassName={baseStyles['resume-list']}
+                    textClassName={baseStyles['resume-text-xs']}
+                  />
+>>>>>>> origin/main
                 ))}
                 {splitCondensed(workExperience).condensed.length > 0 && (
                   <EarlierExperience

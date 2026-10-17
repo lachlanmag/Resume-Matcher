@@ -257,8 +257,13 @@
       "generateButton": "Gerar {title}",
       "coverLetterFooter": "Dica: personalize primeiro para melhores resultados.",
       "outreachFooter": "Dica: mantenha curta e personalizada.",
+<<<<<<< HEAD
       "interviewPrepDescription": "Gere preparação para entrevista com base no currículo adaptado e na descrição da vaga.",
       "interviewPrepFooter": "Dica: use depois de adaptar o currículo para preparar respostas verdadeiras e baseadas em evidências."
+=======
+      "feedbackDescription": "Revise este currículo personalizado em relação à vaga com feedback de RH e análise ATS.",
+      "feedbackFooter": "Dica: use lacunas e perguntas para orientar suas edições antes de candidatar-se."
+>>>>>>> origin/main
     },
     "regenerateDialog": {
       "title": "Regenerar {title}?",
@@ -269,11 +274,12 @@
       "selectDialog": {
         "title": "Selecione itens para regenerar",
         "subtitle": "Escolha quais partes do seu currículo você quer melhorar",
+        "summary": "Resumo profissional",
         "experience": "Experiência profissional",
         "projects": "Projetos",
         "skills": "Habilidades técnicas",
         "noItemsSelected": "Selecione pelo menos um item",
-        "noItemsAvailable": "Não há itens disponíveis para regenerar. Adicione experiência, projetos ou habilidades primeiro.",
+        "noItemsAvailable": "Não há itens disponíveis para regenerar. Adicione resumo, experiência, projetos ou habilidades primeiro.",
         "itemCount": {
           "one": "{count} item",
           "other": "{count} itens"
@@ -314,6 +320,17 @@
         "noChangesToApply": "Não há alterações para aplicar.",
         "networkError": "Erro de rede. Verifique sua conexão.",
         "refreshFailed": "As alterações foram salvas, mas não foi possível atualizar o currículo. Tente atualizar novamente."
+      }
+    },
+    "tailorLength": {
+      "title": "Comprimento da personalização",
+      "applyConstraints": "Aplicar restrições",
+      "reTailor": "Personalizar novamente",
+      "reTailorConfirm": "Executar novamente a personalização completa a partir do currículo mestre com estas configurações?",
+      "errors": {
+        "saveFailed": "Falha ao salvar configurações.",
+        "applyFailed": "Falha ao aplicar restrições de comprimento.",
+        "reTailorFailed": "Falha ao personalizar novamente."
       }
     },
     "jdMatch": {
@@ -390,7 +407,13 @@
         },
         "fields": {
           "jobTitle": "Cargo",
+          "roleTitle": "Título do cargo",
+          "roles": "Cargos",
           "company": "Empresa"
+        },
+        "actions": {
+          "addRole": "Adicionar cargo",
+          "removeRole": "Remover cargo"
         },
         "placeholders": {
           "jobTitle": "Desenvolvedor Sênior",
@@ -562,6 +585,7 @@
       "outreachSaveFailed": "Falha ao salvar mensagem de contato. Por favor, tente novamente.",
       "coverLetterGenerateFailed": "Falha ao gerar carta de apresentação: {error}",
       "outreachGenerateFailed": "Falha ao gerar mensagem de contato: {error}",
+<<<<<<< HEAD
       "interviewPrepGenerateFailed": "Falha ao gerar preparação para entrevista: {error}"
     },
     "leaveWithoutDraft": {
@@ -689,6 +713,9 @@
           "warn": "Nenhuma data reconhecível."
         }
       }
+=======
+      "feedbackGenerateFailed": "Falha ao gerar feedback do currículo: {error}"
+>>>>>>> origin/main
     }
   },
   "enrichment": {
@@ -1055,6 +1082,10 @@
         "label": "Mensagem de Contato Frio",
         "description": "Gerar uma mensagem de networking para LinkedIn ou email"
       },
+      "resumeFeedback": {
+        "label": "Feedback do currículo",
+        "description": "Gerar feedback personalizado do currículo no editor"
+      },
       "customPromptLabel": "Prompt personalizado (opcional)",
       "customPromptHelp": "Deve incluir estes marcadores (cada um entre chaves): job_description, resume_data, output_language. Deixe em branco para usar o prompt padrão.",
       "customPromptResetButton": "Restaurar padrão",
@@ -1063,6 +1094,13 @@
         "label": "Preparação para entrevista",
         "description": "Gerar automaticamente preparação para entrevista junto com currículos adaptados salvos"
       }
+    },
+    "tailorLength": {
+      "title": "Comprimento da personalização (padrão)",
+      "description": "Páginas e intervalo de tópicos por emprego para novos currículos personalizados. A IA seleciona os melhores tópicos do currículo mestre.",
+      "targetPages": "Páginas alvo",
+      "bulletsMin": "Mín. tópicos por emprego",
+      "bulletsMax": "Máx. tópicos por emprego"
     },
     "promptSettings": {
       "title": "Configurações de Prompt",
@@ -1193,6 +1231,53 @@
     "print": {
       "emptyContent": "Nenhum conteúdo de carta de apresentação disponível."
     }
+  },
+  "feedback": {
+    "title": "Feedback do currículo",
+    "buttonLabel": "Feedback",
+    "modal": {
+      "title": "Feedback do currículo personalizado"
+    },
+    "regenerate": "Regenerar",
+    "loading": {
+      "generatingTitle": "Gerando feedback...",
+      "generatingDescription": "Analisando seu currículo personalizado em relação à descrição da vaga"
+    },
+    "regenerateDialog": {
+      "title": "Regenerar feedback?",
+      "description": "Isso substituirá o relatório de feedback atual e limpará todas as respostas salvas.",
+      "confirm": "Regenerar"
+    },
+    "summary": {
+      "kicker": "Relatório de feedback",
+      "title": "Resumo",
+      "questionsCount": "{count} perguntas",
+      "empty": "Nenhum relatório de feedback disponível.",
+      "done": "Concluído"
+    },
+    "question": {
+      "progress": "Pergunta {current} de {total}",
+      "placeholder": "Adicione detalhes para esclarecer este ponto...",
+      "shortcutHint": "Pressione Shift+Enter para nova linha, Cmd/Ctrl+Enter para continuar",
+      "skip": "Pular"
+    },
+    "saveAndReturnToReview": "Salvar e voltar à revisão",
+    "review": {
+      "kicker": "Revisão de perguntas",
+      "title": "Revise suas respostas",
+      "questionLabel": "Pergunta {number}",
+      "skipped": "Ignorada",
+      "applyFeedback": "Aplicar feedback"
+    },
+    "category": {
+      "gap": "Lacuna",
+      "risk": "Risco",
+      "clarification": "Esclarecimento",
+      "improvement": "Melhoria",
+      "ats": "ATS"
+    },
+    "copyToClipboard": "Copiar para a área de transferência",
+    "copied": "Copiado!"
   },
   "outreach": {
     "title": "Mensagem de Contato",

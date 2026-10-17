@@ -174,6 +174,15 @@ Analyze your resume against the job description with a match score, keyword high
 
 Export your tailored resume and cover letter in PDF.
 
+- Resume PDF exports now include standard metadata fields (`Title`, `Author`, `Subject`, `Keywords`) to improve document interoperability.
+- Run an ATS extraction sanity check against any exported PDF:
+
+```bash
+./scripts/ats-pdf-check.sh /path/to/resume.pdf
+```
+
+The script uses `pdftotext` when available and falls back to `pdfminer`. It validates that key ATS sections are extractable and warns when section ordering looks risky.
+
 ### Templates
 
 The templates export text-based PDFs in A4 or US Letter that applicant tracking systems can parse.

@@ -1,6 +1,8 @@
+name: resume-matcher-lm
+
 services:
   resume-matcher:
-    image: ghcr.io/srbhr/resume-matcher
+    image: ghcr.io/lachlanmag/resume-matcher
     build:
       context: .
       # Optional, for slow networks (empty by default = no change):
@@ -10,11 +12,11 @@ services:
         - DEBIAN_SECURITY_MIRROR=${DEBIAN_SECURITY_MIRROR:-}
         - PIP_INDEX_URL=${PIP_INDEX_URL:-}
         - PLAYWRIGHT_DOWNLOAD_HOST=${PLAYWRIGHT_DOWNLOAD_HOST:-}
-    container_name: resume-matcher
+    container_name: ${CONTAINER_NAME:-resume-matcher-lm}
     ports:
       # Reachable from this machine only. To open it from a phone or another computer,
       # set BIND_ADDRESS=0.0.0.0 and add the address you will use to ALLOWED_HOSTS.
-      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3001}:3000"
     # Makes host.docker.internal (your machine, e.g. for Ollama) resolve on Linux too.
     # Docker Desktop (macOS/Windows) already provides it.
     extra_hosts:
@@ -24,8 +26,10 @@ services:
     #secrets:
     #  - llm_api_key
     environment:
-      # domain in reverse proxy
-      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3000}
+      # Browser-facing URL (host port). Used for CORS.
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3001}
+      # In-container URL for Playwright PDF rendering (frontend listens on 3000 inside).
+      - FRONTEND_PDF_BASE_URL=${FRONTEND_PDF_BASE_URL:-http://localhost:3000}
       # Extra hostnames the app answers for (comma-separated), besides localhost and the
       # FRONTEND_BASE_URL host, e.g. 192.168.1.20 for LAN access. "*" allows any.
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-}
@@ -36,7 +40,7 @@ services:
       - LOG_LLM=${LOG_LLM:-WARNING}
       #- LOG_LLM_FILE=${LOG_LLM_FILE:-}
       # LLM Configuration - configure via Settings UI or set env vars for explicit overrides
-      # Supported providers: openai, anthropic, openrouter, gemini, deepseek, ollama
+      # Supported providers: openai, openai_compatible, cursor, anthropic, openrouter, gemini, deepseek, ollama
       # Defaults are defined in apps/backend/app/config.py
       - LLM_PROVIDER=${LLM_PROVIDER:-openai}
       - LLM_MODEL=${LLM_MODEL:-}
@@ -48,9 +52,12 @@ services:
       # - LLM_API_BASE=http://host.docker.internal:11434
       # On Linux, Ollama must also listen beyond 127.0.0.1 (see SETUP.md, "Using Ollama
       # with Docker").
+      # For Cursor via cursor-api-proxy on the host:
+      # - LLM_PROVIDER=cursor
+      # - LLM_API_BASE=http://host.docker.internal:8765/v1
       - LLM_API_BASE=${LLM_API_BASE:-}
       # CORS origins (JSON array format). FRONTEND_BASE_URL is auto-included.
-      #- CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
+      #- CORS_ORIGINS=["http://localhost:3001","http://127.0.0.1:3001"]
     restart: unless-stopped
     # Fast iteration: `docker compose watch` (Compose 2.22+). Backend code is synced into
     # the running container and the app restarts; no image rebuild. Frontend, dependency

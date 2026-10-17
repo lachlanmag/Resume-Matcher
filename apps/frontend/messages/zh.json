@@ -257,8 +257,13 @@
       "generateButton": "生成 {title}",
       "coverLetterFooter": "提示：先完成简历定制效果更佳。",
       "outreachFooter": "提示：尽量简短并加入个性化细节。",
+<<<<<<< HEAD
       "interviewPrepDescription": "基于已定制简历和职位描述生成针对性的面试准备内容。",
       "interviewPrepFooter": "提示：定制简历后使用，准备真实且基于简历证据的回答。"
+=======
+      "feedbackDescription": "对照职位描述审阅这份定制简历，获取 HR 风格反馈与 ATS 分析。",
+      "feedbackFooter": "提示：在投递前，根据缺口与问题指引你的修改。"
+>>>>>>> origin/main
     },
     "regenerateDialog": {
       "title": "重新生成 {title}？",
@@ -269,11 +274,12 @@
       "selectDialog": {
         "title": "选择要重新生成的项目",
         "subtitle": "选择您想要改进的简历部分",
+        "summary": "职业摘要",
         "experience": "工作经历",
         "projects": "项目经历",
         "skills": "技术技能",
         "noItemsSelected": "请至少选择一个项目",
-        "noItemsAvailable": "没有可重新生成的项目。请先添加工作经历、项目经历或技能。",
+        "noItemsAvailable": "没有可重新生成的项目。请先添加职业摘要、工作经历、项目经历或技能。",
         "itemCount": {
           "one": "{count} 条",
           "other": "{count} 条"
@@ -314,6 +320,17 @@
         "noChangesToApply": "没有可应用的变更。",
         "networkError": "网络错误，请检查您的连接。",
         "refreshFailed": "更改已保存，但无法刷新简历。请重试刷新。"
+      }
+    },
+    "tailorLength": {
+      "title": "定制长度",
+      "applyConstraints": "应用长度限制",
+      "reTailor": "重新定制",
+      "reTailorConfirm": "是否使用当前长度设置从主简历重新运行完整 AI 定制？",
+      "errors": {
+        "saveFailed": "保存定制设置失败。",
+        "applyFailed": "应用长度限制失败。",
+        "reTailorFailed": "重新定制失败。"
       }
     },
     "jdMatch": {
@@ -390,7 +407,13 @@
         },
         "fields": {
           "jobTitle": "职位名称",
+          "roleTitle": "职位名称",
+          "roles": "职位",
           "company": "公司"
+        },
+        "actions": {
+          "addRole": "添加职位",
+          "removeRole": "删除职位"
         },
         "placeholders": {
           "jobTitle": "高级开发工程师",
@@ -562,6 +585,7 @@
       "outreachSaveFailed": "保存联系邮件失败，请重试。",
       "coverLetterGenerateFailed": "生成求职信失败：{error}",
       "outreachGenerateFailed": "生成联系邮件失败：{error}",
+<<<<<<< HEAD
       "interviewPrepGenerateFailed": "生成面试准备失败：{error}"
     },
     "leaveWithoutDraft": {
@@ -689,6 +713,9 @@
           "warn": "没有找到可识别的日期。"
         }
       }
+=======
+      "feedbackGenerateFailed": "生成简历反馈失败：{error}"
+>>>>>>> origin/main
     }
   },
   "enrichment": {
@@ -1055,6 +1082,10 @@
         "label": "冷启动外联消息",
         "description": "生成用于 LinkedIn 或邮件的社交/外联消息"
       },
+      "resumeFeedback": {
+        "label": "简历反馈",
+        "description": "在编辑器中生成定制简历反馈"
+      },
       "customPromptLabel": "自定义提示词（可选）",
       "customPromptHelp": "必须包含以下占位符（各自使用大括号括起来）：job_description、resume_data、output_language。留空则使用默认提示词。",
       "customPromptResetButton": "恢复默认",
@@ -1063,6 +1094,13 @@
         "label": "面试准备",
         "description": "保存定制简历时自动生成面试准备内容"
       }
+    },
+    "tailorLength": {
+      "title": "定制长度默认值",
+      "description": "新定制简历的默认页数与每段工作经历要点数范围。AI 会在限制内从主简历中选择最佳要点。",
+      "targetPages": "目标页数",
+      "bulletsMin": "每份工作最少要点",
+      "bulletsMax": "每份工作最多要点"
     },
     "promptSettings": {
       "title": "提示词设置",
@@ -1193,6 +1231,53 @@
     "print": {
       "emptyContent": "暂无求职信内容。"
     }
+  },
+  "feedback": {
+    "title": "简历反馈",
+    "buttonLabel": "反馈",
+    "modal": {
+      "title": "定制简历反馈"
+    },
+    "regenerate": "重新生成",
+    "loading": {
+      "generatingTitle": "正在生成反馈...",
+      "generatingDescription": "正在根据职位描述审阅您的定制简历"
+    },
+    "regenerateDialog": {
+      "title": "重新生成反馈？",
+      "description": "这将替换当前反馈报告并清除所有已保存的回答。",
+      "confirm": "重新生成"
+    },
+    "summary": {
+      "kicker": "反馈报告",
+      "title": "摘要",
+      "questionsCount": "{count} 个问题",
+      "empty": "暂无反馈报告。",
+      "done": "完成"
+    },
+    "question": {
+      "progress": "第 {current} 题，共 {total} 题",
+      "placeholder": "添加细节以澄清这一点...",
+      "shortcutHint": "按 Shift+Enter 换行，Cmd/Ctrl+Enter 继续",
+      "skip": "跳过"
+    },
+    "saveAndReturnToReview": "保存并返回审查",
+    "review": {
+      "kicker": "问题审查",
+      "title": "审查你的回答",
+      "questionLabel": "问题 {number}",
+      "skipped": "已跳过",
+      "applyFeedback": "应用反馈"
+    },
+    "category": {
+      "gap": "差距",
+      "risk": "风险",
+      "clarification": "澄清",
+      "improvement": "改进",
+      "ats": "ATS"
+    },
+    "copyToClipboard": "复制到剪贴板",
+    "copied": "已复制！"
   },
   "outreach": {
     "title": "联系邮件",

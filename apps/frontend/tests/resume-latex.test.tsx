@@ -10,10 +10,9 @@ const data: ResumeData = {
   workExperience: [
     {
       id: 1,
-      title: 'DevRel Engineer',
       company: 'Apideck',
       location: 'Remote',
-      years: '2025-Present',
+      roles: [{ id: 1, title: 'DevRel Engineer', years: '2025-Present' }],
       description: ['Lead client demos.'],
     },
   ],

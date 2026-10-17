@@ -1,0 +1,78 @@
+[
+  {
+    "name": "legacy_flat_row",
+    "input": {
+      "id": 1,
+      "title": "Product Manager",
+      "company": "Felix",
+      "years": "Nov 2023 - Nov 2025",
+      "description": ["Owned roadmap"]
+    },
+    "expected": {
+      "id": 1,
+      "company": "Felix",
+      "location": null,
+      "roles": [
+        { "id": 1, "title": "Product Manager", "years": "Nov 2023 - Nov 2025" }
+      ],
+      "description": ["Owned roadmap"]
+    }
+  },
+  {
+    "name": "multi_role_shape",
+    "input": {
+      "id": 3,
+      "company": "For The Record",
+      "roles": [
+        { "id": 1, "title": "Product Owner", "years": "Sep 2021 - Nov 2023" },
+        { "id": 2, "title": "Senior Business Analyst", "years": "Jul 2019 - Sep 2021" }
+      ],
+      "description": ["Led product strategy"]
+    },
+    "expected": {
+      "id": 3,
+      "company": "For The Record",
+      "location": null,
+      "roles": [
+        { "id": 1, "title": "Product Owner", "years": "Sep 2021 - Nov 2023" },
+        { "id": 2, "title": "Senior Business Analyst", "years": "Jul 2019 - Sep 2021" }
+      ],
+      "description": ["Led product strategy"]
+    }
+  },
+  {
+    "name": "roles_inherit_legacy_fields",
+    "input": {
+      "id": 1,
+      "title": "Engineer",
+      "company": "Co",
+      "years": "2020",
+      "roles": [{ "id": 1, "title": "", "years": "" }],
+      "description": []
+    },
+    "expected": {
+      "id": 1,
+      "company": "Co",
+      "location": null,
+      "roles": [{ "id": 1, "title": "Engineer", "years": "2020" }],
+      "description": []
+    }
+  },
+  {
+    "name": "template_placeholder_cleared",
+    "input": {
+      "id": 1,
+      "title": "YOUR POSITION TITLE",
+      "company": "Co",
+      "years": "Jan 2020 - Present",
+      "description": []
+    },
+    "expected": {
+      "id": 1,
+      "company": "Co",
+      "location": null,
+      "roles": [{ "id": 1, "title": "", "years": "Jan 2020 - Present" }],
+      "description": []
+    }
+  }
+]

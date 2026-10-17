@@ -1,10 +1,17 @@
 import { apiFetch } from './client';
+import type { TailorLengthSettings } from '@/lib/types/tailor-length';
+
+export type { TailorLengthSettings };
 
 // Supported LLM providers
 export type LLMProvider =
   | 'openai'
   | 'openai_compatible'
+<<<<<<< HEAD
   | 'azure_foundry'
+=======
+  | 'cursor'
+>>>>>>> origin/main
   | 'anthropic'
   | 'openrouter'
   | 'gemini'
@@ -19,12 +26,21 @@ export type LLMProvider =
 // "do not send the parameter" — the default for max compatibility.
 export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
 
+export interface ProviderConfigSnapshot {
+  model: string;
+  api_base: string | null;
+  api_key: string;
+  has_api_key: boolean;
+  reasoning_effort: ReasoningEffort | null;
+}
+
 export interface LLMConfig {
   provider: LLMProvider;
   model: string;
   api_key: string;
   api_base: string | null;
   reasoning_effort: ReasoningEffort | null;
+  provider_configs?: Record<string, ProviderConfigSnapshot> | null;
 }
 
 export interface LLMConfigUpdate {
@@ -226,6 +242,11 @@ export const PROVIDER_INFO: Record<
     baseUrlI18nKey: 'azure',
     baseUrlPlaceholder: 'https://<resource>.services.ai.azure.com/openai/v1/responses',
   },
+  cursor: {
+    name: 'Cursor (Subscription)',
+    defaultModel: 'auto',
+    requiresKey: false,
+  },
   anthropic: { name: 'Anthropic', defaultModel: 'claude-haiku-4-5-20251001', requiresKey: true },
   openrouter: {
     name: 'OpenRouter',
@@ -275,13 +296,21 @@ export const PROVIDER_INFO: Record<
 export interface FeatureConfig {
   enable_cover_letter: boolean;
   enable_outreach_message: boolean;
+<<<<<<< HEAD
   enable_interview_prep: boolean;
+=======
+  enable_resume_feedback: boolean;
+>>>>>>> origin/main
 }
 
 export interface FeatureConfigUpdate {
   enable_cover_letter?: boolean;
   enable_outreach_message?: boolean;
+<<<<<<< HEAD
   enable_interview_prep?: boolean;
+=======
+  enable_resume_feedback?: boolean;
+>>>>>>> origin/main
 }
 
 // Fetch feature configuration
@@ -380,7 +409,30 @@ export async function fetchPromptConfig(): Promise<PromptConfig> {
   return res.json();
 }
 
-// Update prompt configuration
+export async function fetchTailorLengthConfig(): Promise<TailorLengthSettings> {
+  const res = await apiFetch('/config/tailor-length', { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error(`Failed to load tailor length config (status ${res.status}).`);
+  }
+  return res.json();
+}
+
+export async function updateTailorLengthConfig(
+  update: Partial<TailorLengthSettings>
+): Promise<TailorLengthSettings> {
+  const res = await apiFetch('/config/tailor-length', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(update),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `Failed to update tailor length config (status ${res.status}).`);
+  }
+  return res.json();
+}
+
 export async function updatePromptConfig(update: PromptConfigUpdate): Promise<PromptConfig> {
   const res = await apiFetch('/config/prompts', {
     method: 'PUT',
@@ -401,13 +453,16 @@ export async function updatePromptConfig(update: PromptConfigUpdate): Promise<Pr
 export interface FeaturePrompts {
   cover_letter_prompt: string;
   outreach_message_prompt: string;
+  resume_feedback_prompt: string;
   cover_letter_default: string;
   outreach_message_default: string;
+  resume_feedback_default: string;
 }
 
 export interface FeaturePromptsUpdate {
   cover_letter_prompt?: string;
   outreach_message_prompt?: string;
+  resume_feedback_prompt?: string;
 }
 
 // 422 response shape when the user submits a prompt missing required
@@ -415,7 +470,7 @@ export interface FeaturePromptsUpdate {
 // users at exactly what's absent.
 export interface FeaturePromptsValidationError {
   code: 'missing_placeholders';
-  field: 'cover_letter_prompt' | 'outreach_message_prompt';
+  field: 'cover_letter_prompt' | 'outreach_message_prompt' | 'resume_feedback_prompt';
   missing: string[];
 }
 

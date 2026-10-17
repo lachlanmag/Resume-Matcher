@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
+<<<<<<< HEAD
 from app.config import (
     clear_all_api_keys,
     delete_api_key_from_config,
@@ -28,12 +29,37 @@ from app.llm import (
     normalize_endpoint,
     resolve_api_key,
     saved_endpoint_accepts_key,
+=======
+from app.config import settings
+from app.llm import check_llm_health, LLMConfig, resolve_api_key
+from app.schemas import (
+    LLMConfigRequest,
+    LLMConfigResponse,
+    ProviderConfigSnapshot,
+    FeatureConfigRequest,
+    FeatureConfigResponse,
+    FeaturePromptsRequest,
+    FeaturePromptsResponse,
+    LanguageConfigRequest,
+    LanguageConfigResponse,
+    PromptConfigRequest,
+    PromptConfigResponse,
+    PromptOption,
+    TailorLengthConfigRequest,
+    TailorLengthConfigResponse,
+    ApiKeyProviderStatus,
+    ApiKeyStatusResponse,
+    ApiKeysUpdateRequest,
+    ApiKeysUpdateResponse,
+    ResetDatabaseRequest,
+>>>>>>> origin/main
 )
 from app.prompts import (
     DEFAULT_IMPROVE_PROMPT_ID,
     IMPROVE_PROMPT_OPTIONS,
     validate_prompt_placeholders,
 )
+<<<<<<< HEAD
 from app.prompts.templates import COVER_LETTER_PROMPT, OUTREACH_MESSAGE_PROMPT
 from app.schemas import (
     ApiKeyProviderStatus,
@@ -98,6 +124,24 @@ def _proves_key(request_key: str | None, stored_key: str) -> bool:
 
 
 logger = logging.getLogger(__name__)
+=======
+from app.prompts.templates import (
+    COVER_LETTER_PROMPT,
+    OUTREACH_MESSAGE_PROMPT,
+    TAILORED_RESUME_FEEDBACK_PROMPT,
+)
+from app.config import (
+    get_api_keys_from_config,
+    save_api_keys_to_config,
+    delete_api_key_from_config,
+    clear_all_api_keys,
+    load_config_file,
+    save_config_file,
+)
+from app.config_cache import invalidate_config_cache
+from app.database import db
+from app.services.tailor_length import tailor_length_settings_from_config
+>>>>>>> origin/main
 
 router = APIRouter(prefix="/config", tags=["Configuration"])
 
@@ -132,6 +176,82 @@ def _get_prompt_options() -> list[PromptOption]:
     return [PromptOption(**option) for option in IMPROVE_PROMPT_OPTIONS]
 
 
+
+
+def _provider_snapshot_from_stored(stored: dict) -> dict:
+    """Build a raw provider snapshot from top-level config fields."""
+    raw_re = stored.get("reasoning_effort", settings.reasoning_effort)
+    return {
+        "model": stored.get("model", settings.llm_model),
+        "api_key": stored.get("api_key", ""),
+        "api_base": stored.get("api_base", settings.llm_api_base),
+        "reasoning_effort": raw_re if raw_re else "",
+    }
+
+
+def _ensure_provider_configs(stored: dict) -> bool:
+    """Ensure provider_configs exists; seed current provider from top-level.
+
+    Returns True if stored was mutated (caller may persist).
+    """
+    mutated = False
+    if not isinstance(stored.get("provider_configs"), dict):
+        stored["provider_configs"] = {}
+        mutated = True
+
+    provider = stored.get("provider", settings.llm_provider)
+    if provider and provider not in stored["provider_configs"]:
+        if any(
+            stored.get(k)
+            for k in ("model", "api_base", "api_key")
+            if stored.get(k) not in (None, "")
+        ) or provider in stored:
+            stored["provider_configs"][provider] = _provider_snapshot_from_stored(stored)
+            mutated = True
+
+    return mutated
+
+
+def _save_provider_snapshot(stored: dict, provider: str) -> None:
+    """Persist last-saved settings for a provider."""
+    _ensure_provider_configs(stored)
+    stored["provider_configs"][provider] = _provider_snapshot_from_stored(stored)
+
+
+def _mask_provider_configs(configs: dict) -> dict[str, ProviderConfigSnapshot]:
+    """Return masked provider snapshots for API responses."""
+    masked: dict[str, ProviderConfigSnapshot] = {}
+    for provider, snap in configs.items():
+        if not isinstance(snap, dict):
+            continue
+        key = snap.get("api_key", "") or ""
+        raw_re = snap.get("reasoning_effort")
+        masked[provider] = ProviderConfigSnapshot(
+            model=snap.get("model", ""),
+            api_base=snap.get("api_base"),
+            api_key=_mask_api_key(key),
+            has_api_key=bool(key),
+            reasoning_effort=raw_re if raw_re else None,
+        )
+    return masked
+
+
+def _build_llm_config_response(stored: dict) -> LLMConfigResponse:
+    """Build LLM config response with masked keys and provider snapshots."""
+    provider = stored.get("provider", settings.llm_provider)
+    reasoning_effort = stored.get("reasoning_effort", settings.reasoning_effort)
+    provider_configs = stored.get("provider_configs", {})
+    return LLMConfigResponse(
+        provider=provider,
+        model=stored.get("model", settings.llm_model),
+        api_key=_mask_api_key(resolve_api_key(stored, provider)),
+        api_base=stored.get("api_base", settings.llm_api_base),
+        reasoning_effort=reasoning_effort or None,
+        provider_configs=_mask_provider_configs(provider_configs)
+        if isinstance(provider_configs, dict) and provider_configs
+        else None,
+    )
+
 async def _log_llm_health_check(config: LLMConfig) -> None:
     """Run a best-effort health check and log outcome without affecting API responses."""
     try:
@@ -153,6 +273,7 @@ async def get_llm_config_endpoint() -> LLMConfigResponse:
     """Get current LLM configuration (API key masked)."""
     stored = _load_config()
 
+<<<<<<< HEAD
     provider = stored.get("provider", settings.llm_provider)
     reasoning_effort = stored.get("reasoning_effort", settings.reasoning_effort)
     return LLMConfigResponse(
@@ -162,6 +283,12 @@ async def get_llm_config_endpoint() -> LLMConfigResponse:
         api_base=_effective_api_base(stored),
         reasoning_effort=reasoning_effort or None,
     )
+=======
+    if _ensure_provider_configs(stored):
+        _save_config(stored)
+
+    return _build_llm_config_response(stored)
+>>>>>>> origin/main
 
 
 @router.put("/llm-api-key", response_model=LLMConfigResponse)
@@ -269,12 +396,16 @@ async def update_llm_config(
         endpoint_confirmed=endpoint_confirmed,
     )
 
+    # Remember last-saved settings per provider for Settings UI switching.
+    _save_provider_snapshot(stored, resolved_provider)
+
     # Save config regardless of health check outcome (see docstring).
     _save_config(stored)
 
     # Best-effort health check for server-side logs/diagnostics (do not block response).
     background_tasks.add_task(_log_llm_health_check, test_config)
 
+<<<<<<< HEAD
     return LLMConfigResponse(
         provider=test_config.provider,
         model=test_config.model,
@@ -282,6 +413,9 @@ async def update_llm_config(
         api_base=test_config.api_base,
         reasoning_effort=test_config.reasoning_effort,
     )
+=======
+    return _build_llm_config_response(stored)
+>>>>>>> origin/main
 
 
 @router.post("/llm-test")
@@ -350,7 +484,11 @@ async def get_feature_config() -> FeatureConfigResponse:
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
+<<<<<<< HEAD
         enable_interview_prep=stored.get("enable_interview_prep", False),
+=======
+        enable_resume_feedback=stored.get("enable_resume_feedback", True),
+>>>>>>> origin/main
     )
 
 
@@ -364,8 +502,13 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
         stored["enable_cover_letter"] = request.enable_cover_letter
     if request.enable_outreach_message is not None:
         stored["enable_outreach_message"] = request.enable_outreach_message
+<<<<<<< HEAD
     if request.enable_interview_prep is not None:
         stored["enable_interview_prep"] = request.enable_interview_prep
+=======
+    if request.enable_resume_feedback is not None:
+        stored["enable_resume_feedback"] = request.enable_resume_feedback
+>>>>>>> origin/main
 
     # Save config
     _save_config(stored)
@@ -373,7 +516,11 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
+<<<<<<< HEAD
         enable_interview_prep=stored.get("enable_interview_prep", False),
+=======
+        enable_resume_feedback=stored.get("enable_resume_feedback", True),
+>>>>>>> origin/main
     )
 
 
@@ -482,6 +629,42 @@ async def update_prompt_config(
     )
 
 
+@router.get("/tailor-length", response_model=TailorLengthConfigResponse)
+async def get_tailor_length_config() -> TailorLengthConfigResponse:
+    """Get default tailor length settings (pages, bullets per job)."""
+    stored = _load_config()
+    return TailorLengthConfigResponse.model_validate(
+        tailor_length_settings_from_config(stored).model_dump()
+    )
+
+
+@router.put("/tailor-length", response_model=TailorLengthConfigResponse)
+async def update_tailor_length_config(
+    request: TailorLengthConfigRequest,
+) -> TailorLengthConfigResponse:
+    """Update default tailor length settings."""
+    stored = _load_config()
+    current = tailor_length_settings_from_config(stored)
+
+    if request.target_pages is not None:
+        stored["tailor_target_pages"] = request.target_pages
+        current.target_pages = request.target_pages
+    if request.bullets_per_job_min is not None:
+        stored["tailor_bullets_per_job_min"] = request.bullets_per_job_min
+        current.bullets_per_job_min = request.bullets_per_job_min
+    if request.bullets_per_job_max is not None:
+        stored["tailor_bullets_per_job_max"] = request.bullets_per_job_max
+        current.bullets_per_job_max = request.bullets_per_job_max
+
+    try:
+        validated = TailorLengthConfigResponse.model_validate(current.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    _save_config(stored)
+    return validated
+
+
 @router.get("/feature-prompts", response_model=FeaturePromptsResponse)
 async def get_feature_prompts() -> FeaturePromptsResponse:
     """Get custom feature prompts (cover letter, outreach message).
@@ -494,8 +677,10 @@ async def get_feature_prompts() -> FeaturePromptsResponse:
     return FeaturePromptsResponse(
         cover_letter_prompt=stored.get("cover_letter_prompt", "") or "",
         outreach_message_prompt=stored.get("outreach_message_prompt", "") or "",
+        resume_feedback_prompt=stored.get("resume_feedback_prompt", "") or "",
         cover_letter_default=COVER_LETTER_PROMPT,
         outreach_message_default=OUTREACH_MESSAGE_PROMPT,
+        resume_feedback_default=TAILORED_RESUME_FEEDBACK_PROMPT,
     )
 
 
@@ -544,13 +729,30 @@ async def update_feature_prompts(
                 )
         stored["outreach_message_prompt"] = prompt
 
+    if request.resume_feedback_prompt is not None:
+        prompt = request.resume_feedback_prompt.strip()
+        if prompt:
+            missing = validate_prompt_placeholders(prompt)
+            if missing:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "code": "missing_placeholders",
+                        "field": "resume_feedback_prompt",
+                        "missing": missing,
+                    },
+                )
+        stored["resume_feedback_prompt"] = prompt
+
     _save_config(stored)
 
     return FeaturePromptsResponse(
         cover_letter_prompt=stored.get("cover_letter_prompt", "") or "",
         outreach_message_prompt=stored.get("outreach_message_prompt", "") or "",
+        resume_feedback_prompt=stored.get("resume_feedback_prompt", "") or "",
         cover_letter_default=COVER_LETTER_PROMPT,
         outreach_message_default=OUTREACH_MESSAGE_PROMPT,
+        resume_feedback_default=TAILORED_RESUME_FEEDBACK_PROMPT,
     )
 
 

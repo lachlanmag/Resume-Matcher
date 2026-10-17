@@ -53,8 +53,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/srbhr/resume-matcher
-            ${{ env.HAS_DOCKERHUB != '' && 'srbhr/resume-matcher' || '' }}
+            ghcr.io/lachlanmag/resume-matcher
+            ${{ env.HAS_DOCKERHUB != '' && 'lachlanmag/resume-matcher' || '' }}
           tags: |
             type=raw,value=validation-${{ github.sha }},enable=${{ inputs.dry_run == true }}
             type=raw,value=latest,enable={{is_default_branch}}

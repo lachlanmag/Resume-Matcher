@@ -4,8 +4,10 @@ import type {
   InterviewPrepData,
 } from '@/components/common/resume_previewer_context';
 import type { ResumeData } from '@/components/dashboard/resume-component';
+import { type TailorLengthSettings } from '@/lib/types/tailor-length';
 import { type TemplateSettings } from '@/lib/types/template-settings';
 import { type Locale } from '@/i18n/config';
+<<<<<<< HEAD
 import { clearResumeWizardCompletion } from '@/lib/utils/resume-wizard-storage';
 import {
   API_BASE,
@@ -16,6 +18,10 @@ import {
   apiFetch,
   parseErrorDetail,
 } from './client';
+=======
+import type { ResumeFeedback } from './feedback';
+import { API_BASE, DEFAULT_TIMEOUT_MS, apiPost, apiPatch, apiDelete, apiFetch } from './client';
+>>>>>>> origin/main
 
 // Matches backend schemas/models.py ResumeData
 interface ProcessedResume {
@@ -32,9 +38,15 @@ interface ProcessedResume {
   summary?: string;
   workExperience?: Array<{
     id: number;
-    title?: string;
     company?: string;
     location?: string | null;
+    roles?: Array<{
+      id: number;
+      title?: string;
+      years?: string;
+    }>;
+    /** @deprecated Legacy flat shape — normalized to roles on save */
+    title?: string;
     years?: string;
     description?: string[];
     descriptionStyles?: ('bullet' | 'plain')[];
@@ -144,11 +156,24 @@ interface ResumeResponse {
     interview_prep?: InterviewPrepData | null;
     parent_id?: string | null; // For determining if resume is tailored
     title?: string | null;
+<<<<<<< HEAD
     is_master?: boolean;
     is_default_master?: boolean;
     // The resume's saved formatting; null until it is formatted in the builder.
     template_settings?: TemplateSettings | null;
+=======
+    tailor_settings?: TailorLengthSettings | null;
+    resume_feedback?: ResumeFeedback | null;
+>>>>>>> origin/main
   };
+}
+
+export type { TailorLengthSettings };
+
+export interface ResumePdfDownloadResult {
+  blob: Blob;
+  warnings: string[];
+  errors: string[];
 }
 
 /** Response from resume upload endpoint */
@@ -161,7 +186,7 @@ export interface ResumeUploadResponse {
   is_default_master?: boolean;
 }
 
-interface ImproveResumeConfirmRequest {
+export interface ImproveResumeConfirmRequest {
   resume_id: string;
   job_id: string;
   preview_id?: string | null;
@@ -170,6 +195,14 @@ interface ImproveResumeConfirmRequest {
     suggestion: string;
     lineNumber?: number | null;
   }>;
+  tailor_length_settings?: TailorLengthSettings;
+  replace_resume_id?: string | null;
+}
+
+export interface ImproveResumeOptions {
+  promptId?: string;
+  tailorLengthSettings?: TailorLengthSettings;
+  replaceResumeId?: string;
 }
 
 function normalizeResumeId(resumeId: string): string {
@@ -238,22 +271,35 @@ export async function uploadJobDescriptions(
 }
 
 /** Improves the resume and returns the full preview object */
+function buildImprovePayload(
+  resumeId: string,
+  jobId: string,
+  options?: ImproveResumeOptions
+): Record<string, unknown> {
+  return {
+    resume_id: resumeId,
+    job_id: jobId,
+    prompt_id: options?.promptId ?? null,
+    tailor_length_settings: options?.tailorLengthSettings ?? null,
+    replace_resume_id: options?.replaceResumeId ?? null,
+  };
+}
+
 export async function improveResume(
   resumeId: string,
   jobId: string,
-  promptId?: string
+  options?: ImproveResumeOptions | string
 ): Promise<ImprovedResult> {
-  return postImprove('/resumes/improve', {
-    resume_id: resumeId,
-    job_id: jobId,
-    prompt_id: promptId ?? null,
-  });
+  const opts: ImproveResumeOptions | undefined =
+    typeof options === 'string' ? { promptId: options } : options;
+  return postImprove('/resumes/improve', buildImprovePayload(resumeId, jobId, opts));
 }
 
 /** Previews the resume improvement without saving */
 export async function previewImproveResume(
   resumeId: string,
   jobId: string,
+<<<<<<< HEAD
   promptId?: string,
   options?: { maxBulletsPerEntry?: number; pageFit?: PageFitSettings; maxPages?: number }
 ): Promise<ImprovedResult> {
@@ -267,6 +313,13 @@ export async function previewImproveResume(
     ...(options?.pageFit !== undefined ? { page_fit: options.pageFit } : {}),
     ...(options?.maxPages !== undefined ? { max_pages: options.maxPages } : {}),
   });
+=======
+  options?: ImproveResumeOptions | string
+): Promise<ImprovedResult> {
+  const opts: ImproveResumeOptions | undefined =
+    typeof options === 'string' ? { promptId: options } : options;
+  return postImprove('/resumes/improve/preview', buildImprovePayload(resumeId, jobId, opts));
+>>>>>>> origin/main
 }
 
 /** Confirms and saves a tailored resume */
@@ -286,6 +339,38 @@ export async function fetchResume(resumeId: string): Promise<ResumeResponse['dat
   // Support both raw_resume content (initial) and processed_resume (if available)
   // The viewer/builder logic should prioritize processed data if present
   return payload.data;
+}
+
+export async function patchTailorSettings(
+  resumeId: string,
+  settings: Partial<TailorLengthSettings>
+): Promise<ResumeResponse['data']> {
+  const res = await apiPatch(
+    `/resumes/${encodeURIComponent(resumeId)}/tailor-settings`,
+    settings
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to update tailor settings (status ${res.status}): ${text}`);
+  }
+  const payload = (await res.json()) as ResumeResponse;
+  return payload.data;
+}
+
+export async function applyTailorLength(
+  resumeId: string,
+  settings?: Partial<TailorLengthSettings>
+): Promise<{ resume_preview: ResumeData; warnings: string[] }> {
+  const res = await apiPost(
+    `/resumes/${encodeURIComponent(resumeId)}/apply-tailor-length`,
+    settings ?? {},
+    240_000
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to apply length constraints (status ${res.status}): ${text}`);
+  }
+  return res.json();
 }
 
 export async function fetchResumeList(includeMaster = false): Promise<ResumeListItem[]> {
@@ -350,14 +435,33 @@ export async function downloadResumePdf(
   resumeId: string,
   settings?: TemplateSettings,
   locale?: Locale
-): Promise<Blob> {
+): Promise<ResumePdfDownloadResult> {
   const url = getResumePdfUrl(resumeId, settings, locale);
   const res = await apiFetch(url);
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`Failed to download resume (status ${res.status}): ${text}`);
   }
-  return await res.blob();
+
+  const parseMessageHeader = (headerName: string): string[] => {
+    const raw = res.headers.get(headerName);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
+  return {
+    blob: await res.blob(),
+    warnings: parseMessageHeader('X-Resume-Pdf-Warnings'),
+    errors: parseMessageHeader('X-Resume-Pdf-Errors'),
+  };
 }
 
 /** Deletes a resume by ID */

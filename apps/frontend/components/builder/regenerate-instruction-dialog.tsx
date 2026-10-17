@@ -12,9 +12,13 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+<<<<<<< HEAD
 import { Label } from '@/components/ui/label';
 import { Alert } from '@/components/ui/alert';
 import { ArrowLeft, SpinnerGap } from '@phosphor-icons/react';
+=======
+import { ArrowLeft, Sparkles, Briefcase, FolderKanban, Lightbulb, FileText } from 'lucide-react';
+>>>>>>> origin/main
 import { useTranslations } from '@/lib/i18n';
 import type { RegenerateItemInput } from '@/lib/api/enrichment';
 
@@ -69,6 +73,24 @@ export const RegenerateInstructionDialog: React.FC<RegenerateInstructionDialogPr
     }
   };
 
+<<<<<<< HEAD
+=======
+  const getItemIcon = (itemType: string) => {
+    switch (itemType) {
+      case 'experience':
+        return <Briefcase className="w-4 h-4" />;
+      case 'project':
+        return <FolderKanban className="w-4 h-4" />;
+      case 'skills':
+        return <Lightbulb className="w-4 h-4" />;
+      case 'summary':
+        return <FileText className="w-4 h-4" />;
+      default:
+        return null;
+    }
+  };
+
+>>>>>>> origin/main
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
