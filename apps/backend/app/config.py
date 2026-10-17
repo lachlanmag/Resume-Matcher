@@ -238,11 +238,8 @@ def migrate_legacy_keys() -> None:
 _LEGACY_PROVIDER_KEY_MAP: dict[str, str] = {
     "openai": "openai",
     "openai_compatible": "openai_compatible",
-<<<<<<< HEAD
     "azure_foundry": "azure_foundry",
-=======
     "cursor": "cursor",
->>>>>>> origin/main
     "anthropic": "anthropic",
     "gemini": "google",
     "openrouter": "openrouter",
@@ -299,11 +296,8 @@ class Settings(BaseSettings):
     llm_provider: Literal[
         "openai",
         "openai_compatible",
-<<<<<<< HEAD
         "azure_foundry",
-=======
         "cursor",
->>>>>>> origin/main
         "anthropic",
         "openrouter",
         "gemini",

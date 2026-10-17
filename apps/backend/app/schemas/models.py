@@ -192,7 +192,6 @@ class Experience(BaseModel):
     def _normalize_description(cls, value: Any) -> list[str]:
         return _coerce_string_list(value)
 
-<<<<<<< HEAD
     @field_validator("descriptionStyles", mode="before")
     @classmethod
     def _normalize_description_styles(
@@ -212,12 +211,12 @@ class Experience(BaseModel):
         self.descriptionStyles = _align_description_styles(
             self.description, self.descriptionStyles
         )
-=======
+        return self
+
     @model_validator(mode="after")
     def _ensure_roles(self) -> Self:
         if not self.roles:
             self.roles = [ExperienceRole(id=1, title="", years="")]
->>>>>>> origin/main
         return self
 
 
@@ -487,7 +486,6 @@ class RawResume(BaseModel):
     processing_status: str = "pending"  # pending, processing, ready, failed
 
 
-<<<<<<< HEAD
 class InterviewPrepQuestion(BaseModel):
     """Interview question grounded in the tailored resume and job context."""
 
@@ -512,7 +510,8 @@ class InterviewPrepData(BaseModel):
     project_follow_ups: list[InterviewPrepQuestion]
     skill_gaps: list[InterviewPrepSkillGap]
     talking_points: list[str]
-=======
+
+
 DEFAULT_TARGET_PAGES = 2
 DEFAULT_BULLETS_PER_JOB_MIN = 3
 DEFAULT_BULLETS_PER_JOB_MAX = 5
@@ -575,7 +574,6 @@ class ApplyTailorLengthResponse(BaseModel):
     resume_id: str
     resume_preview: ResumeData
     warnings: list[str] = Field(default_factory=list)
->>>>>>> origin/main
 
 
 class ResumeFetchData(BaseModel):
@@ -589,15 +587,12 @@ class ResumeFetchData(BaseModel):
     interview_prep: InterviewPrepData | None = None
     parent_id: str | None = None  # For determining if resume is tailored
     title: str | None = None
-<<<<<<< HEAD
     is_master: bool = False
     is_default_master: bool = False
     # None until the resume is formatted in the builder (= the default template).
     template_settings: "TemplateSettings | None" = None
-=======
     tailor_settings: TailorLengthSettings | None = None
     resume_feedback: ResumeFeedback | None = None
->>>>>>> origin/main
 
 
 class ResumeFetchResponse(BaseModel):
@@ -772,11 +767,15 @@ class ImproveResumeRequest(BaseModel):
     resume_id: str
     job_id: str
     prompt_id: str | None = None
-<<<<<<< HEAD
     max_bullets_per_entry: int | None = Field(None, ge=1, le=10)
     page_fit: PageFitSettings | None = None
     # Page budget for page_fit; ignored without page_fit.
     max_pages: int = Field(1, ge=1, le=5)
+    tailor_length_settings: TailorLengthSettings | None = None
+    replace_resume_id: str | None = Field(
+        default=None,
+        description="When set, confirm updates this tailored resume instead of creating a new one",
+    )
 
 
 class BulletSelectionSummary(BaseModel):
@@ -795,13 +794,6 @@ class BulletSelectionSummary(BaseModel):
     # it could not be rendered (final_pages is then the pre-rewrite measurement),
     # None = no final check applies (page fit skipped, over or unavailable).
     final_check: Literal["ok", "skipped"] | None = None
-=======
-    tailor_length_settings: TailorLengthSettings | None = None
-    replace_resume_id: str | None = Field(
-        default=None,
-        description="When set, confirm updates this tailored resume instead of creating a new one",
-    )
->>>>>>> origin/main
 
 
 class ImprovementSuggestion(BaseModel):
@@ -1022,11 +1014,8 @@ class FeatureConfigRequest(BaseModel):
 
     enable_cover_letter: bool | None = None
     enable_outreach_message: bool | None = None
-<<<<<<< HEAD
     enable_interview_prep: bool | None = None
-=======
     enable_resume_feedback: bool | None = None
->>>>>>> origin/main
 
 
 class FeatureConfigResponse(BaseModel):
@@ -1034,11 +1023,8 @@ class FeatureConfigResponse(BaseModel):
 
     enable_cover_letter: bool = False
     enable_outreach_message: bool = False
-<<<<<<< HEAD
     enable_interview_prep: bool = False
-=======
     enable_resume_feedback: bool = True
->>>>>>> origin/main
 
 
 class LanguageConfigRequest(BaseModel):

@@ -7,7 +7,6 @@ from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
-<<<<<<< HEAD
 from app.config import (
     clear_all_api_keys,
     delete_api_key_from_config,
@@ -29,38 +28,18 @@ from app.llm import (
     normalize_endpoint,
     resolve_api_key,
     saved_endpoint_accepts_key,
-=======
-from app.config import settings
-from app.llm import check_llm_health, LLMConfig, resolve_api_key
-from app.schemas import (
-    LLMConfigRequest,
-    LLMConfigResponse,
-    ProviderConfigSnapshot,
-    FeatureConfigRequest,
-    FeatureConfigResponse,
-    FeaturePromptsRequest,
-    FeaturePromptsResponse,
-    LanguageConfigRequest,
-    LanguageConfigResponse,
-    PromptConfigRequest,
-    PromptConfigResponse,
-    PromptOption,
-    TailorLengthConfigRequest,
-    TailorLengthConfigResponse,
-    ApiKeyProviderStatus,
-    ApiKeyStatusResponse,
-    ApiKeysUpdateRequest,
-    ApiKeysUpdateResponse,
-    ResetDatabaseRequest,
->>>>>>> origin/main
 )
+from app.services.tailor_length import tailor_length_settings_from_config
 from app.prompts import (
     DEFAULT_IMPROVE_PROMPT_ID,
     IMPROVE_PROMPT_OPTIONS,
     validate_prompt_placeholders,
 )
-<<<<<<< HEAD
-from app.prompts.templates import COVER_LETTER_PROMPT, OUTREACH_MESSAGE_PROMPT
+from app.prompts.templates import (
+    COVER_LETTER_PROMPT,
+    OUTREACH_MESSAGE_PROMPT,
+    TAILORED_RESUME_FEEDBACK_PROMPT,
+)
 from app.schemas import (
     ApiKeyProviderStatus,
     ApiKeyStatusResponse,
@@ -74,10 +53,13 @@ from app.schemas import (
     LanguageConfigResponse,
     LLMConfigRequest,
     LLMConfigResponse,
+    ProviderConfigSnapshot,
     PromptConfigRequest,
     PromptConfigResponse,
     PromptOption,
     ResetDatabaseRequest,
+    TailorLengthConfigRequest,
+    TailorLengthConfigResponse,
 )
 
 # Providers that cannot function without an explicit endpoint. Mirrors
@@ -124,24 +106,6 @@ def _proves_key(request_key: str | None, stored_key: str) -> bool:
 
 
 logger = logging.getLogger(__name__)
-=======
-from app.prompts.templates import (
-    COVER_LETTER_PROMPT,
-    OUTREACH_MESSAGE_PROMPT,
-    TAILORED_RESUME_FEEDBACK_PROMPT,
-)
-from app.config import (
-    get_api_keys_from_config,
-    save_api_keys_to_config,
-    delete_api_key_from_config,
-    clear_all_api_keys,
-    load_config_file,
-    save_config_file,
-)
-from app.config_cache import invalidate_config_cache
-from app.database import db
-from app.services.tailor_length import tailor_length_settings_from_config
->>>>>>> origin/main
 
 router = APIRouter(prefix="/config", tags=["Configuration"])
 
@@ -245,7 +209,7 @@ def _build_llm_config_response(stored: dict) -> LLMConfigResponse:
         provider=provider,
         model=stored.get("model", settings.llm_model),
         api_key=_mask_api_key(resolve_api_key(stored, provider)),
-        api_base=stored.get("api_base", settings.llm_api_base),
+        api_base=_effective_api_base(stored),
         reasoning_effort=reasoning_effort or None,
         provider_configs=_mask_provider_configs(provider_configs)
         if isinstance(provider_configs, dict) and provider_configs
@@ -273,22 +237,10 @@ async def get_llm_config_endpoint() -> LLMConfigResponse:
     """Get current LLM configuration (API key masked)."""
     stored = _load_config()
 
-<<<<<<< HEAD
-    provider = stored.get("provider", settings.llm_provider)
-    reasoning_effort = stored.get("reasoning_effort", settings.reasoning_effort)
-    return LLMConfigResponse(
-        provider=provider,
-        model=stored.get("model", settings.llm_model),
-        api_key=_mask_api_key(resolve_api_key(stored, provider)),
-        api_base=_effective_api_base(stored),
-        reasoning_effort=reasoning_effort or None,
-    )
-=======
     if _ensure_provider_configs(stored):
         _save_config(stored)
 
     return _build_llm_config_response(stored)
->>>>>>> origin/main
 
 
 @router.put("/llm-api-key", response_model=LLMConfigResponse)
@@ -405,17 +357,7 @@ async def update_llm_config(
     # Best-effort health check for server-side logs/diagnostics (do not block response).
     background_tasks.add_task(_log_llm_health_check, test_config)
 
-<<<<<<< HEAD
-    return LLMConfigResponse(
-        provider=test_config.provider,
-        model=test_config.model,
-        api_key=_mask_api_key(resolved_key),
-        api_base=test_config.api_base,
-        reasoning_effort=test_config.reasoning_effort,
-    )
-=======
     return _build_llm_config_response(stored)
->>>>>>> origin/main
 
 
 @router.post("/llm-test")
@@ -484,11 +426,8 @@ async def get_feature_config() -> FeatureConfigResponse:
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
-<<<<<<< HEAD
         enable_interview_prep=stored.get("enable_interview_prep", False),
-=======
         enable_resume_feedback=stored.get("enable_resume_feedback", True),
->>>>>>> origin/main
     )
 
 
@@ -502,13 +441,10 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
         stored["enable_cover_letter"] = request.enable_cover_letter
     if request.enable_outreach_message is not None:
         stored["enable_outreach_message"] = request.enable_outreach_message
-<<<<<<< HEAD
     if request.enable_interview_prep is not None:
         stored["enable_interview_prep"] = request.enable_interview_prep
-=======
     if request.enable_resume_feedback is not None:
         stored["enable_resume_feedback"] = request.enable_resume_feedback
->>>>>>> origin/main
 
     # Save config
     _save_config(stored)
@@ -516,11 +452,8 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
-<<<<<<< HEAD
         enable_interview_prep=stored.get("enable_interview_prep", False),
-=======
         enable_resume_feedback=stored.get("enable_resume_feedback", True),
->>>>>>> origin/main
     )
 
 

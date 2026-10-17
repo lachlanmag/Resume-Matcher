@@ -54,12 +54,9 @@ from app.schemas.models import (
     LanguageConfigResponse,
     LLMConfigRequest,
     LLMConfigResponse,
-<<<<<<< HEAD
     PageFitSettings,
-=======
     ProviderConfigSnapshot,
     normalize_resume_data,
->>>>>>> origin/main
     PersonalInfo,
     Project,
     PromptConfigRequest,
