@@ -99,11 +99,8 @@ type Status = 'idle' | 'loading' | 'saving' | 'saved' | 'error' | 'testing';
 const PROVIDERS: LLMProvider[] = [
   'openai',
   'openai_compatible',
-<<<<<<< HEAD
   'azure_foundry',
-=======
   'cursor',
->>>>>>> origin/main
   'anthropic',
   'openrouter',
   'gemini',
@@ -197,7 +194,6 @@ export default function SettingsPage() {
   // won't re-fire on next load). Typed tightly so invalid values can't leak
   // through the save path.
   const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort | 'auto'>('auto');
-<<<<<<< HEAD
   // Read once per mount (refs survive Strict Mode's effect replay).
   const chatGptReturnRef = useRef<ChatGptReturnOutcome | null | undefined>(undefined);
   const [chatGptReturn, setChatGptReturn] = useState<ChatGptReturnOutcome | null>(null);
@@ -207,11 +203,9 @@ export default function SettingsPage() {
     if (chatGptReturnRef.current === undefined) chatGptReturnRef.current = takeChatGptReturn();
     return chatGptReturnRef.current;
   }, []);
-=======
   const [providerConfigs, setProviderConfigs] = useState<
     Record<string, ProviderConfigSnapshot>
   >({});
->>>>>>> origin/main
 
   // Use cached system status (loaded on app start, refreshes every 30 min)
   const {
@@ -227,11 +221,8 @@ export default function SettingsPage() {
   // Feature config state
   const [enableCoverLetter, setEnableCoverLetter] = useState(false);
   const [enableOutreach, setEnableOutreach] = useState(false);
-<<<<<<< HEAD
   const [enableInterviewPrep, setEnableInterviewPrep] = useState(false);
-=======
   const [enableResumeFeedback, setEnableResumeFeedback] = useState(false);
->>>>>>> origin/main
   const [featureConfigLoading, setFeatureConfigLoading] = useState(false);
   const [promptConfigLoading, setPromptConfigLoading] = useState(false);
   const [promptOptions, setPromptOptions] = useState<PromptOption[]>([]);
@@ -432,11 +423,8 @@ export default function SettingsPage() {
         if (featureConfig) {
           setEnableCoverLetter(featureConfig.enable_cover_letter);
           setEnableOutreach(featureConfig.enable_outreach_message);
-<<<<<<< HEAD
           setEnableInterviewPrep(featureConfig.enable_interview_prep);
-=======
           setEnableResumeFeedback(featureConfig.enable_resume_feedback);
->>>>>>> origin/main
         }
 
         if (promptConfig) {
@@ -508,7 +496,6 @@ export default function SettingsPage() {
   // Handle provider change. Switching to a subscription provider waits for the
   // user to accept the risk in SubscriptionRiskDialog.
   const handleProviderChange = (newProvider: LLMProvider) => {
-<<<<<<< HEAD
     if ((newProvider === 'claude_cli' || newProvider === 'chatgpt') && newProvider !== provider) {
       setRiskProvider(newProvider);
       return;
@@ -519,6 +506,20 @@ export default function SettingsPage() {
   const switchProvider = (newProvider: LLMProvider) => {
     const nextInfo = PROVIDER_INFO[newProvider];
     setProvider(newProvider);
+
+    // Fork: restore the destination provider's own saved snapshot (model, its
+    // own base URL, reasoning effort, key status). The snapshot base URL belongs
+    // to that provider, so this does not reintroduce the H-09 leak below.
+    const snapshot = providerConfigs[newProvider];
+    if (snapshot && newProvider !== provider) {
+      setModel(snapshot.model || nextInfo.defaultModel);
+      setApiBase(snapshot.api_base || nextInfo.defaultBaseUrl || '');
+      setReasoningEffort((snapshot.reasoning_effort as ReasoningEffort | null) ?? 'auto');
+      setApiKey('');
+      setHasStoredApiKey(snapshot.has_api_key || providerHasStoredKey(newProvider));
+      return;
+    }
+
     setModel(nextInfo.defaultModel);
 
     // H-09: the Base URL field is shared across providers, so an endpoint left
@@ -533,31 +534,6 @@ export default function SettingsPage() {
       setApiBase(nextInfo.defaultBaseUrl ?? '');
     } else if (nextInfo.defaultBaseUrl && !apiBase.trim()) {
       setApiBase(nextInfo.defaultBaseUrl);
-=======
-    setProvider(newProvider);
-    const snapshot = providerConfigs[newProvider];
-
-    if (snapshot) {
-      setModel(snapshot.model || PROVIDER_INFO[newProvider].defaultModel);
-      setApiBase(snapshot.api_base || '');
-      setReasoningEffort((snapshot.reasoning_effort as ReasoningEffort | null) ?? 'auto');
-      const isMaskedKey = Boolean(snapshot.api_key) && snapshot.api_key.includes('*');
-      setHasStoredApiKey(snapshot.has_api_key || Boolean(snapshot.api_key));
-      setApiKey(isMaskedKey || snapshot.has_api_key ? '' : snapshot.api_key || '');
-      return;
-    }
-
-    setModel(PROVIDER_INFO[newProvider].defaultModel);
-
-    if (newProvider === 'ollama') {
-      setApiBase('http://localhost:11434');
-    } else if (newProvider === 'openai_compatible') {
-      setApiBase('http://localhost:8080/v1');
-    } else if (newProvider === 'cursor') {
-      setApiBase('http://127.0.0.1:8765/v1');
-    } else {
-      setApiBase('');
->>>>>>> origin/main
     }
 
     // Clear the key input on switch, but drive the "has stored key" hint from
@@ -605,18 +581,14 @@ export default function SettingsPage() {
         // and the gpt-5 auto-migration won't re-fire.
         reasoning_effort: reasoningEffort === 'auto' ? '' : (reasoningEffort as ReasoningEffort),
       };
-<<<<<<< HEAD
       // Not persisted: proves the key may follow a changed Base URL.
       if (trimmedKey) {
         update.api_key = trimmedKey;
       }
-      await updateLlmConfig(update);
-=======
       const saved = await updateLlmConfig(update);
       if (saved.provider_configs) {
         setProviderConfigs(saved.provider_configs);
       }
->>>>>>> origin/main
 
       // Refresh the per-provider key status + cached system status after save.
       const statuses = await refreshApiKeyStatus();
@@ -684,11 +656,11 @@ export default function SettingsPage() {
 
   // Update feature config
   const handleFeatureConfigChange = async (
-<<<<<<< HEAD
-    key: 'enable_cover_letter' | 'enable_outreach_message' | 'enable_interview_prep',
-=======
-    key: 'enable_cover_letter' | 'enable_outreach_message' | 'enable_resume_feedback',
->>>>>>> origin/main
+    key:
+      | 'enable_cover_letter'
+      | 'enable_outreach_message'
+      | 'enable_interview_prep'
+      | 'enable_resume_feedback',
     value: boolean
   ) => {
     setFeatureConfigLoading(true);
@@ -696,11 +668,8 @@ export default function SettingsPage() {
       const updated = await updateFeatureConfig({ [key]: value });
       setEnableCoverLetter(updated.enable_cover_letter);
       setEnableOutreach(updated.enable_outreach_message);
-<<<<<<< HEAD
       setEnableInterviewPrep(updated.enable_interview_prep);
-=======
       setEnableResumeFeedback(updated.enable_resume_feedback);
->>>>>>> origin/main
     } catch (err) {
       console.error('Failed to update feature config', err);
       // Revert on error
@@ -709,11 +678,8 @@ export default function SettingsPage() {
       } else if (key === 'enable_outreach_message') {
         setEnableOutreach(!value);
       } else {
-<<<<<<< HEAD
-        setEnableInterviewPrep(!value);
-=======
-        setEnableResumeFeedback(!value);
->>>>>>> origin/main
+        if (key === 'enable_interview_prep') setEnableInterviewPrep(!value);
+        else setEnableResumeFeedback(!value);
       }
     } finally {
       setFeatureConfigLoading(false);
@@ -1615,7 +1581,6 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
-<<<<<<< HEAD
                 <ToggleSwitch
                   checked={enableInterviewPrep}
                   onCheckedChange={(checked) => {
@@ -1626,11 +1591,6 @@ export default function SettingsPage() {
                   description={t('settings.contentGeneration.interviewPrep.description')}
                   disabled={featureConfigLoading}
                 />
-              </div>
-
-              <div className="pt-4 border-t border-paper">
-=======
-
                 <ToggleSwitch
                   checked={enableResumeFeedback}
                   onCheckedChange={(checked) => {
@@ -1646,19 +1606,29 @@ export default function SettingsPage() {
                     <Label htmlFor="feedbackPrompt">
                       {t('settings.contentGeneration.customPromptLabel')}
                     </Label>
-                    <textarea
+                    <Textarea
                       id="feedbackPrompt"
                       rows={8}
+                      aria-invalid={featurePromptError?.field === 'resume_feedback_prompt'}
+                      aria-describedby={
+                        featurePromptError?.field === 'resume_feedback_prompt'
+                          ? 'feedbackPrompt-error'
+                          : undefined
+                      }
                       value={feedbackPrompt}
                       onChange={(e) => setFeedbackPrompt(e.target.value)}
                       placeholder={feedbackDefault}
-                      className="w-full rounded-none border border-black bg-white p-3 font-mono text-xs break-words focus:outline-none focus:shadow-[4px_4px_0_0_#000]"
+                      className="font-mono text-xs break-words"
                     />
-                    <p className="text-xs text-steel-grey font-mono">
+                    <p className="text-xs text-steel font-mono">
                       {t('settings.contentGeneration.customPromptHelp')}
                     </p>
                     {featurePromptError?.field === 'resume_feedback_prompt' && (
-                      <p className="text-xs text-red-600 font-mono break-words">
+                      <p
+                        id="feedbackPrompt-error"
+                        role="alert"
+                        className="text-xs text-destructive font-mono break-words"
+                      >
                         {t('settings.contentGeneration.customPromptErrorMissing', {
                           missing: featurePromptError.missing.join(', '),
                         })}
@@ -1666,6 +1636,7 @@ export default function SettingsPage() {
                     )}
                     <div className="flex gap-2">
                       <Button
+                        type="button"
                         variant="outline"
                         onClick={() =>
                           handleFeaturePromptSave('resume_feedback_prompt', feedbackPrompt)
@@ -1673,12 +1644,16 @@ export default function SettingsPage() {
                         disabled={featurePromptSaving === 'resume_feedback_prompt'}
                       >
                         {featurePromptSaving === 'resume_feedback_prompt' ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <>
+                            <SpinnerGap aria-hidden="true" className="animate-spin" />
+                            {t('common.saving')}
+                          </>
                         ) : (
                           t('common.save')
                         )}
                       </Button>
                       <Button
+                        type="button"
                         variant="outline"
                         onClick={() => handleFeaturePromptSave('resume_feedback_prompt', '')}
                         disabled={featurePromptSaving === 'resume_feedback_prompt'}
@@ -1690,30 +1665,33 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              <div className="pt-4 border-t border-paper-tint space-y-4">
-                <div>
-                  <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-ink-soft mb-2">
-                    {t('settings.tailorLength.title')}
-                  </h3>
-                  <TailorLengthControls
-                    settings={tailorLengthSettings}
-                    onChange={setTailorLengthSettings}
-                    disabled={tailorLengthLoading}
-                  />
-                  <Button
-                    variant="outline"
-                    className="mt-3"
-                    onClick={handleTailorLengthSave}
-                    disabled={tailorLengthLoading}
-                  >
-                    {tailorLengthLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      t('common.save')
-                    )}
-                  </Button>
-                </div>
->>>>>>> origin/main
+              <div className="pt-4 border-t border-paper space-y-3">
+                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-ink-soft">
+                  {t('settings.tailorLength.title')}
+                </h3>
+                <TailorLengthControls
+                  settings={tailorLengthSettings}
+                  onChange={setTailorLengthSettings}
+                  disabled={tailorLengthLoading}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTailorLengthSave}
+                  disabled={tailorLengthLoading}
+                >
+                  {tailorLengthLoading ? (
+                    <>
+                      <SpinnerGap aria-hidden="true" className="animate-spin" />
+                      {t('common.saving')}
+                    </>
+                  ) : (
+                    t('common.save')
+                  )}
+                </Button>
+              </div>
+
+              <div className="pt-4 border-t border-paper">
                 <Dropdown
                   options={localizedPromptOptions}
                   value={defaultPromptId}

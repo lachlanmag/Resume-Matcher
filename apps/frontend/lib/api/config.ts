@@ -243,6 +243,7 @@ export const PROVIDER_INFO: Record<
     name: 'Cursor (Subscription)',
     defaultModel: 'auto',
     requiresKey: false,
+    defaultBaseUrl: 'http://127.0.0.1:8765/v1',
   },
   anthropic: { name: 'Anthropic', defaultModel: 'claude-haiku-4-5-20251001', requiresKey: true },
   openrouter: {
