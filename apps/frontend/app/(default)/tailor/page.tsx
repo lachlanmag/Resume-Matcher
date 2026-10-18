@@ -23,29 +23,14 @@ import {
   toPageFitSettings,
   type ResumeListItem,
 } from '@/lib/api/resume';
-<<<<<<< HEAD
-import {
-  DEFAULT_TAILOR_LENGTH,
-  TAILOR_BULLET_CAPS,
-  TAILOR_PAGE_LIMITS,
-  buildPreviewLengthOptions,
-  readTailorLength,
-  writeTailorLength,
-  type TailorBulletCap,
-  type TailorLengthSettings,
-  type TailorPageLimit,
-} from '@/lib/utils/tailor-length-settings';
 import { DEFAULT_TEMPLATE_SETTINGS, type TemplateType } from '@/lib/types/template-settings';
-import { fetchPromptConfig, type PromptOption } from '@/lib/api/config';
-import { getPreviewErrorMessage } from '@/lib/utils/preview-error';
-=======
 import { fetchPromptConfig, fetchTailorLengthConfig, type PromptOption } from '@/lib/api/config';
+import { getPreviewErrorMessage } from '@/lib/utils/preview-error';
 import { TailorLengthControls } from '@/components/tailor/tailor-length-controls';
 import {
   DEFAULT_TAILOR_LENGTH_SETTINGS,
   type TailorLengthSettings,
 } from '@/lib/types/tailor-length';
->>>>>>> origin/main
 import { Dropdown } from '@/components/ui/dropdown';
 import { useStatusCache } from '@/lib/context/status-cache';
 import { ListNumbers, SpinnerGap } from '@phosphor-icons/react';
@@ -95,18 +80,6 @@ export default function TailorPage() {
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
   const [showMissingDiffDialog, setShowMissingDiffDialog] = useState(false);
   const [missingDiffResult, setMissingDiffResult] = useState<ImprovedResult | null>(null);
-  // Page limit / bullet cap for tailoring; loaded from storage after mount.
-  const [tailorLength, setTailorLength] = useState<TailorLengthSettings>(DEFAULT_TAILOR_LENGTH);
-
-  useEffect(() => {
-    setTailorLength(readTailorLength());
-  }, []);
-
-  const updateTailorLength = (patch: Partial<TailorLengthSettings>) => {
-    const next = { ...tailorLength, ...patch };
-    setTailorLength(next);
-    writeTailorLength(next);
-  };
   const [missingDiffError, setMissingDiffError] = useState<string | null>(null);
 
   // Elapsed timer for long operations
@@ -246,7 +219,6 @@ export default function TailorPage() {
     };
   };
 
-<<<<<<< HEAD
   const confirmAndNavigate = async (result: ImprovedResult, token: number) => {
     let confirmed = confirmedResponses.current.get(result);
     if (!confirmed) {
@@ -257,19 +229,6 @@ export default function TailorPage() {
       confirmed = await confirmImproveResume(buildConfirmPayload(result));
       // Acknowledgement is durable even if a later client effect fails.
       confirmedResponses.current.set(result, confirmed);
-=======
-  const confirmAndNavigate = async (result: ImprovedResult) => {
-    const confirmed = await confirmImproveResume(buildConfirmPayload(result));
-    incrementImprovements();
-    incrementResumes();
-    setImprovedData(confirmed);
-
-    const newResumeId = confirmed?.data?.resume_id;
-    if (newResumeId) {
-      router.push(`/builder?id=${newResumeId}`);
-    } else {
-      router.push('/builder');
->>>>>>> origin/main
     }
     if (!isCurrent(token)) return;
     const newResumeId = confirmed?.data?.resume_id;
@@ -279,7 +238,7 @@ export default function TailorPage() {
       incrementResumes();
     }
     setImprovedData(confirmed);
-    router.push(newResumeId ? `/resumes/${newResumeId}` : '/builder');
+    router.push(newResumeId ? `/builder?id=${newResumeId}` : '/builder');
   };
 
   const offerFreshPreview = (failure: unknown): boolean => {
@@ -320,24 +279,20 @@ export default function TailorPage() {
       incrementJobs(); // Update cached counter
 
       // 2. Preview Resume
-<<<<<<< HEAD
-      // Fit pages the way the source resume is formatted.
+      // One length control drives both the LLM guidance (tailor_length_settings)
+      // and the post-generation page fit (max_pages / bullet cap), fitted the
+      // way the source resume is formatted.
       const templateSettings =
         masters.find((m) => m.resume_id === resumeId)?.template_settings ??
         DEFAULT_TEMPLATE_SETTINGS;
-      const result = await previewImproveResume(
-        resumeId,
-        jobId,
-        selectedPromptId,
-        buildPreviewLengthOptions(tailorLength, toPageFitSettings(templateSettings, locale))
-      );
-      if (!isCurrent(token)) return;
-=======
       const result = await previewImproveResume(resumeId, jobId, {
         promptId: selectedPromptId,
         tailorLengthSettings,
+        maxBulletsPerEntry: tailorLengthSettings.bullets_per_job_max,
+        pageFit: toPageFitSettings(templateSettings, locale),
+        maxPages: tailorLengthSettings.target_pages,
       });
->>>>>>> origin/main
+      if (!isCurrent(token)) return;
 
       if (!result?.data?.diff_summary || !result?.data?.detailed_changes) {
         console.warn('Diff data missing for tailor preview; requesting user confirmation.');
@@ -630,39 +585,7 @@ export default function TailorPage() {
             />
           </div>
 
-<<<<<<< HEAD
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Dropdown
-              options={TAILOR_PAGE_LIMITS.map((limit) => ({
-                id: String(limit ?? 'none'),
-                label: t(`tailor.length.pageLimitOptions.${limit ?? 'none'}`),
-              }))}
-              value={String(tailorLength.maxPages ?? 'none')}
-              onChange={(value) =>
-                updateTailorLength({
-                  maxPages: (value === 'none' ? null : Number(value)) as TailorPageLimit,
-                })
-              }
-              label={t('tailor.length.pageLimitLabel')}
-              description={t('tailor.length.pageLimitDescription')}
-              disabled={isLoading}
-            />
-            <Dropdown
-              options={TAILOR_BULLET_CAPS.map((cap) => ({
-                id: String(cap ?? 'all'),
-                label: t(`tailor.length.bulletOptions.${cap ?? 'all'}`),
-              }))}
-              value={String(tailorLength.maxBulletsPerEntry ?? 'all')}
-              onChange={(value) =>
-                updateTailorLength({
-                  maxBulletsPerEntry: (value === 'all' ? null : Number(value)) as TailorBulletCap,
-                })
-              }
-              label={t('tailor.length.bulletsLabel')}
-              description={t('tailor.length.bulletsDescription')}
-=======
-        <div className="space-y-6">
-          <div className="border-2 border-black bg-white p-4">
+          <div className="border border-ink bg-white p-4 shadow-sw-nested">
             <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-ink-soft mb-3">
               {t('settings.tailorLength.title')}
             </h3>
@@ -670,54 +593,6 @@ export default function TailorPage() {
               settings={tailorLengthSettings}
               onChange={setTailorLengthSettings}
               disabled={isLoading || promptLoading}
-            />
-          </div>
-
-          <Dropdown
-            options={
-              promptOptions.length > 0
-                ? promptOptions.map((opt) => ({
-                    id: opt.id,
-                    label: t(`tailor.promptOptions.${opt.id}.label`),
-                    description: t(`tailor.promptOptions.${opt.id}.description`),
-                  }))
-                : [
-                    {
-                      id: 'nudge',
-                      label: t('tailor.promptOptions.nudge.label'),
-                      description: t('tailor.promptOptions.nudge.description'),
-                    },
-                    {
-                      id: 'keywords',
-                      label: t('tailor.promptOptions.keywords.label'),
-                      description: t('tailor.promptOptions.keywords.description'),
-                    },
-                    {
-                      id: 'full',
-                      label: t('tailor.promptOptions.full.label'),
-                      description: t('tailor.promptOptions.full.description'),
-                    },
-                  ]
-            }
-            value={selectedPromptId}
-            onChange={(value) => {
-              hasUserSelectedPrompt.current = true;
-              setSelectedPromptId(value);
-            }}
-            label={t('tailor.promptLabel')}
-            description={t('tailor.promptDescription')}
-            disabled={isLoading || promptLoading}
-          />
-
-          <div className="relative">
-            <Textarea
-              placeholder={t('tailor.jobDescriptionPlaceholder')}
-              className="min-h-[300px] font-mono text-sm bg-background border-2 border-black focus:ring-0 focus:border-blue-700 resize-none p-4 rounded-none"
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              onKeyDown={handleTextareaKeyDown}
->>>>>>> origin/main
-              disabled={isLoading}
             />
           </div>
 

@@ -155,3 +155,19 @@ grounding. Removed the check (function + its one call site) rather than
 breaking fork's established multi-master re-tailor workflow. If upstream's
 restriction was intentional, it needs a narrower condition (e.g. only when no
 `replace_resume_id`/track context is present) — flagging for review.
+
+## Decisions (2026-10-18)
+
+1. **Tailor length: unified control.** The fork's `TailorLengthControls` (target pages 1-3,
+   bullets min/max; default from Settings, persisted per resume via `tailor_settings`) is the only
+   control on `/tailor`. It also drives upstream's post-generation page fit:
+   `max_pages = target_pages`, `max_bullets_per_entry = bullets_per_job_max`,
+   `page_fit = toPageFitSettings(source master's template_settings)`.
+   Upstream's per-browser localStorage control (`lib/utils/tailor-length-settings.ts`, page limit
+   "none" option) is no longer used by the UI; the module and its test are left in place (repo rule:
+   don't remove tests). `TailorLengthControls` restyled to Swiss primitives (SegmentedControl/Input/Label).
+   After confirm the tailor page routes to `/builder?id=` (fork behaviour) using upstream's
+   idempotent/expiry-checked confirm flow.
+2. **replace_resume_id: add an atomic `complete_preview_replacing()`** that claims the preview and
+   UPDATEs the existing tailored resume in the same transaction. (Implementation pending, tracked below.)
+3. **`_ensure_master_resume_for_tailor` removal:** awaiting user after a fuller explanation.
