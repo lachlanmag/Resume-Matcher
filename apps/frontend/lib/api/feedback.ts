@@ -43,10 +43,7 @@ async function parseFeedbackResponse(res: Response, action: string): Promise<Res
 /**
  * Generate and persist structured feedback for a tailored resume.
  */
-export async function generateFeedback(
-  resumeId: string,
-  replace = false
-): Promise<ResumeFeedback> {
+export async function generateFeedback(resumeId: string, replace = false): Promise<ResumeFeedback> {
   const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/feedback/generate`, {
     replace,
   });
@@ -70,10 +67,7 @@ export async function patchFeedbackAnswers(
  * Build a feedback-driven apply preview for a tailored resume.
  */
 export async function previewFeedbackApply(resumeId: string): Promise<FeedbackApplyPreview> {
-  const res = await apiPost(
-    `/resumes/${encodeURIComponent(resumeId)}/feedback/apply-preview`,
-    {}
-  );
+  const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/feedback/apply-preview`, {});
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.detail || `Failed to preview feedback apply (status ${res.status}).`);

@@ -28,9 +28,8 @@ const data: ResumeData = {
   workExperience: [
     {
       id: 1,
-      title: 'Staff Engineer',
+      roles: [{ id: 1, title: 'Staff Engineer', years: '2020 - 2023' }],
       company: 'Fernway',
-      years: '2020 - 2023',
       location: 'Berlin',
     },
   ],

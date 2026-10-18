@@ -6,15 +6,15 @@ from enum import Enum
 from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+from app.ai_limits import validate_source_size
+from app.config import normalize_provider
 from app.schemas.feedback import ResumeFeedback
+from app.schemas.refinement import RefinementStats
 from app.schemas.work_experience import (
     normalize_experience_entry,
     normalize_work_experience_list,
 )
-
-from app.ai_limits import validate_source_size
-from app.config import normalize_provider
-from app.schemas.refinement import RefinementStats
 
 _TEXT_VALUE_KEYS = (
     "text",
@@ -439,7 +439,9 @@ def normalize_resume_data(data: dict[str, Any]) -> dict[str, Any]:
     if "customSections" not in data:
         data["customSections"] = {}
     if "workExperience" in data:
-        data["workExperience"] = normalize_work_experience_list(data.get("workExperience"))
+        data["workExperience"] = normalize_work_experience_list(
+            data.get("workExperience")
+        )
     return data
 
 
@@ -524,12 +526,18 @@ MAX_BULLETS_PER_JOB = 10
 class TailorLengthSettings(BaseModel):
     """Length targets for resume tailoring (pages and bullets per job)."""
 
-    target_pages: int = Field(default=DEFAULT_TARGET_PAGES, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    target_pages: int = Field(
+        default=DEFAULT_TARGET_PAGES, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES
+    )
     bullets_per_job_min: int = Field(
-        default=DEFAULT_BULLETS_PER_JOB_MIN, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+        default=DEFAULT_BULLETS_PER_JOB_MIN,
+        ge=MIN_BULLETS_PER_JOB,
+        le=MAX_BULLETS_PER_JOB,
     )
     bullets_per_job_max: int = Field(
-        default=DEFAULT_BULLETS_PER_JOB_MAX, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+        default=DEFAULT_BULLETS_PER_JOB_MAX,
+        ge=MIN_BULLETS_PER_JOB,
+        le=MAX_BULLETS_PER_JOB,
     )
 
     @model_validator(mode="after")
@@ -542,7 +550,9 @@ class TailorLengthSettings(BaseModel):
 class TailorLengthConfigRequest(BaseModel):
     """Request to update global tailor length defaults."""
 
-    target_pages: int | None = Field(default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    target_pages: int | None = Field(
+        default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES
+    )
     bullets_per_job_min: int | None = Field(
         default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
     )
@@ -558,7 +568,9 @@ class TailorLengthConfigResponse(TailorLengthSettings):
 class TailorLengthSettingsPatch(BaseModel):
     """Partial update for per-resume tailor length settings."""
 
-    target_pages: int | None = Field(default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    target_pages: int | None = Field(
+        default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES
+    )
     bullets_per_job_min: int | None = Field(
         default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
     )
@@ -1223,7 +1235,10 @@ class ResumeChange(BaseModel):
         the current items). For the text actions it must stay a string/None — a
         list there would silently bypass the replace verification gate and crash
         the invented-metrics check, so reject it at parse time."""
-        if isinstance(self.original, list) and self.action not in ("reorder", "replace_list"):
+        if isinstance(self.original, list) and self.action not in (
+            "reorder",
+            "replace_list",
+        ):
             raise ValueError(
                 "'original' may be a list only for the reorder or replace_list actions"
             )

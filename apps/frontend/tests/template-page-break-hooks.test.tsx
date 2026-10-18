@@ -22,12 +22,16 @@ const data: ResumeData = {
   workExperience: [
     {
       id: 1,
-      title: 'Staff Engineer',
+      roles: [{ id: 1, title: 'Staff Engineer', years: '2020 - 2023' }],
       company: 'Fernway',
-      years: '2020 - 2023',
       description: ['Long one.', 'Two.', 'Three.', 'Four.'],
     },
-    { id: 2, title: 'Engineer', company: 'Lumen', years: '2017 - 2020', description: ['Short.'] },
+    {
+      id: 2,
+      roles: [{ id: 1, title: 'Engineer', years: '2017 - 2020' }],
+      company: 'Lumen',
+      description: ['Short.'],
+    },
   ],
   education: [{ id: 1, institution: 'Uni Berlin', degree: 'BSc Physics', years: '2012 - 2016' }],
   personalProjects: [{ id: 1, name: 'promptdiff', description: ['A prompt test runner.'] }],

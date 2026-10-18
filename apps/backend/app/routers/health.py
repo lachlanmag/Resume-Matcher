@@ -53,7 +53,8 @@ async def get_status() -> StatusResponse:
         # signed in.
         llm_configured = not agent_mode and (
             bool(config.api_key)
-            or config.provider in ("ollama", "openai_compatible", "claude_cli", "cursor")
+            or config.provider
+            in ("ollama", "openai_compatible", "claude_cli", "cursor")
             or (config.provider == "chatgpt" and chatgpt_is_connected())
         )
         llm_status = await check_llm_health(config)

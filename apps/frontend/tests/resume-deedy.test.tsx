@@ -36,10 +36,9 @@ const buildData = (): ResumeData => ({
   workExperience: [
     {
       id: 1,
-      title: 'Software Engineer',
+      roles: [{ id: 1, title: 'Software Engineer', years: '2024 - Present' }],
       company: 'Analytical Engines',
       location: 'London',
-      years: '2024 - Present',
       description: ['Wrote the first program.'],
     },
   ],

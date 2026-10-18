@@ -146,14 +146,18 @@ describe('RegenerateDialog', () => {
     };
 
     render(<Wrapper />);
-    expect(screen.getAllByText('builder.regenerate.selectDialog.summary').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('builder.regenerate.selectDialog.summary').length).toBeGreaterThan(
+      0
+    );
 
     const continueButton = screen.getByRole('button', {
       name: 'builder.regenerate.selectDialog.continueButton',
     });
     expect(continueButton).toBeDisabled();
 
-    fireEvent.click(screen.getAllByRole('button', { name: /builder\.regenerate\.selectDialog\.summary/i })[1]);
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /builder\.regenerate\.selectDialog\.summary/i })[1]
+    );
     expect(continueButton).toBeEnabled();
   });
 

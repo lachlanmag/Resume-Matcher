@@ -7,7 +7,6 @@ import logging
 import re
 from collections.abc import Callable
 from typing import Any
-from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
@@ -29,7 +28,6 @@ from app.prompts.enrichment import (
     SUMMARY_MAX_CHARACTERS,
 )
 from app.prompts.templates import get_language_name
-from app.schemas.work_experience import experience_role_titles
 from app.schemas.enrichment import (
     AnalysisResponse,
     AnswerInput,
@@ -46,6 +44,7 @@ from app.schemas.enrichment import (
     RegenerateRequest,
     RegenerateResponse,
 )
+from app.schemas.work_experience import experience_role_titles
 
 logger = logging.getLogger(__name__)
 
@@ -551,7 +550,9 @@ def _normalize_summary_paragraph(content: object) -> str:
     if content is None:
         return ""
     if isinstance(content, list):
-        parts = [str(entry).strip() for entry in content if entry and str(entry).strip()]
+        parts = [
+            str(entry).strip() for entry in content if entry and str(entry).strip()
+        ]
         text = " ".join(parts)
     else:
         text = str(content).strip()
@@ -605,7 +606,9 @@ async def _regenerate_summary(
     output_language: str,
 ) -> RegeneratedItem:
     """Regenerate the professional summary as a single paragraph."""
-    current_summary = _normalize_summary_paragraph(item.current_content) or "(No summary)"
+    current_summary = (
+        _normalize_summary_paragraph(item.current_content) or "(No summary)"
+    )
 
     prompt = REGENERATE_SUMMARY_PROMPT.format(
         output_language=output_language,
@@ -870,7 +873,9 @@ async def apply_regenerated_items(
 
             resolved_index: int | None = None
             if 0 <= index < len(experiences):
-                entry = experiences[index] if isinstance(experiences[index], dict) else {}
+                entry = (
+                    experiences[index] if isinstance(experiences[index], dict) else {}
+                )
                 entry_title = _normalize_match_value(experience_role_titles(entry))
                 entry_company = _normalize_match_value(str(entry.get("company", "")))
                 if (

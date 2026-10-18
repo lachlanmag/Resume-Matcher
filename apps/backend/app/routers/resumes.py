@@ -29,6 +29,7 @@ from app.database import (
     DatabaseBusyError,
     MasterResumeLimitError,
     ProcessingFinishOutcome,
+    ReplaceTargetError,
     ResumeNotFoundError,
     db,
 )
@@ -49,10 +50,10 @@ from app.preview import (
 )
 from app.prompts import DEFAULT_IMPROVE_PROMPT_ID, IMPROVE_PROMPT_OPTIONS
 from app.schemas import (
+    ApplyTailorLengthResponse,
     ATSScore,
     ATSScoreRecord,
     ATSSubScores,
-    ApplyTailorLengthResponse,
     DuplicateResumeResponse,
     GenerateContentResponse,
     GenerateInterviewPrepResponse,
@@ -160,6 +161,7 @@ _PROCESSING_CLEANUP_TASKS: set[asyncio.Task[Any]] = set()
 REFINEMENT_FAILED_WARNING = "REFINEMENT_FAILED: Resume refinement was unavailable; the previous result was kept."
 DIFF_UNAVAILABLE_WARNING = "DIFF_UNAVAILABLE: Resume changes could not be calculated."
 
+
 async def _auto_create_tracker_application(
     *,
     job_id: str,
@@ -189,6 +191,30 @@ async def _auto_create_tracker_application(
         )
     except Exception as e:  # noqa: BLE001 - tracker is non-critical
         logger.warning("Failed to auto-create tracker application: %s", e)
+
+
+async def _check_replace_target(replace_resume_id: str | None, source_id: str) -> None:
+    """Fail fast before LLM work when ``replace_resume_id`` cannot be replaced.
+
+    The write path re-validates inside its transaction; this only avoids
+    spending a full tailoring run on a request that is bound to be rejected.
+    """
+    if not replace_resume_id:
+        return
+    target = await db.get_resume(replace_resume_id)
+    if not target:
+        raise HTTPException(
+            status_code=404, detail="Tailored resume to replace not found"
+        )
+    if target.get("is_master") or target.get("parent_id") != source_id:
+        raise HTTPException(
+            status_code=400,
+            detail="replace_resume_id must be a tailored resume of the master resume_id",
+        )
+
+
+def _replace_target_http_error(error: ReplaceTargetError) -> HTTPException:
+    return HTTPException(status_code=404 if error.not_found else 400, detail=str(error))
 
 
 def _get_default_prompt_id() -> str:
@@ -1111,7 +1137,8 @@ def _build_resume_pdf_metadata(resume: dict[str, Any]) -> dict[str, str]:
     processed = resume.get("processed_data")
     personal_info = (
         processed.get("personalInfo", {})
-        if isinstance(processed, dict) and isinstance(processed.get("personalInfo"), dict)
+        if isinstance(processed, dict)
+        and isinstance(processed.get("personalInfo"), dict)
         else {}
     )
     additional = (
@@ -1120,7 +1147,9 @@ def _build_resume_pdf_metadata(resume: dict[str, Any]) -> dict[str, str]:
         else {}
     )
 
-    author = personal_info.get("name") if isinstance(personal_info.get("name"), str) else ""
+    author = (
+        personal_info.get("name") if isinstance(personal_info.get("name"), str) else ""
+    )
     raw_title = resume.get("title") if isinstance(resume.get("title"), str) else ""
     fallback_title = f"Resume - {author}" if author else "Resume"
     title = raw_title.strip() or fallback_title
@@ -1130,8 +1159,12 @@ def _build_resume_pdf_metadata(resume: dict[str, Any]) -> dict[str, str]:
         if isinstance(additional.get("technicalSkills"), list)
         else []
     )
-    keyword_values = [skill for skill in technical_skills if isinstance(skill, str) and skill.strip()]
-    keywords = ", ".join(keyword_values[:20]) if keyword_values else "resume, cv, skills"
+    keyword_values = [
+        skill for skill in technical_skills if isinstance(skill, str) and skill.strip()
+    ]
+    keywords = (
+        ", ".join(keyword_values[:20]) if keyword_values else "resume, cv, skills"
+    )
 
     return {
         "/Title": title,
@@ -1916,15 +1949,18 @@ async def improve_resume_confirm_endpoint(
             response_data=response.model_dump(mode="json"),
             improvements=claim.improvements or [],
             ats_score=ats_record,
+            replace_resume_id=request.replace_resume_id,
         )
         claim = None  # The transaction committed; there is no lease to release.
-        await _auto_create_tracker_application(
-            job_id=request.job_id,
-            tailored_resume_id=result["resume_id"],
-            master_resume_id=request.resume_id,
-            job=job,
-            title=title,
-        )
+        if not request.replace_resume_id:
+            # A replaced resume already has its tracker card.
+            await _auto_create_tracker_application(
+                job_id=request.job_id,
+                tailored_resume_id=result["resume_id"],
+                master_resume_id=request.resume_id,
+                job=job,
+                title=title,
+            )
         data = ImproveResumeData.model_validate(result)
         return ImproveResumeResponse(request_id=data.request_id, data=data)
     except PreviewBusyError as e:
@@ -1935,6 +1971,8 @@ async def improve_resume_confirm_endpoint(
         raise HTTPException(status_code=409, detail=str(e)) from e
     except PreviewValidationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except ReplaceTargetError as e:
+        raise _replace_target_http_error(e) from e
     except asyncio.TimeoutError as e:
         logger.error(
             "Confirmation auxiliary generation timed out for preview %s",
@@ -1964,6 +2002,7 @@ async def execute_tailoring_pipeline(
     job_id: str,
     prompt_id: str | None = None,
     tailor_length_settings: TailorLengthSettings | None = None,
+    replace_resume_id: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]], str, dict[str, Any]]:
     """Core tailoring pipeline for a single resume and job description.
 
@@ -2119,7 +2158,9 @@ async def execute_tailoring_pipeline(
                 job_keywords,
             )
 
-    improved_data = finalize_tailored_work_experience(original_resume_data, improved_data)
+    improved_data = finalize_tailored_work_experience(
+        original_resume_data, improved_data
+    )
 
     if master_for_length and improved_data:
         improved_data, length_warnings = _apply_length_safety_net(
@@ -2197,15 +2238,18 @@ async def execute_tailoring_pipeline(
         },
         improvements=improvements,
         ats_score=ats_record,
+        replace_resume_id=replace_resume_id,
     )
 
-    await _auto_create_tracker_application(
-        job_id=job_id,
-        tailored_resume_id=tailored_resume["resume_id"],
-        master_resume_id=resume_id,
-        job=job,
-        title=title,
-    )
+    if not replace_resume_id:
+        # A replaced resume already has its tracker card.
+        await _auto_create_tracker_application(
+            job_id=job_id,
+            tailored_resume_id=tailored_resume["resume_id"],
+            master_resume_id=resume_id,
+            job=job,
+            title=title,
+        )
 
     ats_score = _build_ats_score(
         improved_data,
@@ -2251,6 +2295,7 @@ async def improve_resume_endpoint(
         tailor_length_settings = _resolve_tailor_length(
             request.tailor_length_settings, resume
         )
+        await _check_replace_target(request.replace_resume_id, request.resume_id)
         (
             tailored_resume,
             improved_data,
@@ -2262,6 +2307,7 @@ async def improve_resume_endpoint(
             job_id=request.job_id,
             prompt_id=request.prompt_id,
             tailor_length_settings=tailor_length_settings,
+            replace_resume_id=request.replace_resume_id,
         )
         tailored_resume_id = tailored_resume["resume_id"]
 
@@ -2298,6 +2344,8 @@ async def improve_resume_endpoint(
         raise
     except HTTPException:
         raise
+    except ReplaceTargetError as e:
+        raise _replace_target_http_error(e) from e
     except Exception as e:
         logger.error(f"Resume improvement failed: {e}")
         raise HTTPException(
@@ -2402,7 +2450,9 @@ async def patch_tailor_settings(
     return await get_resume(resume_id=resume_id)
 
 
-@router.post("/{resume_id}/apply-tailor-length", response_model=ApplyTailorLengthResponse)
+@router.post(
+    "/{resume_id}/apply-tailor-length", response_model=ApplyTailorLengthResponse
+)
 async def apply_tailor_length_endpoint(
     resume_id: str,
     body: TailorLengthSettingsPatch | None = None,
@@ -2424,7 +2474,9 @@ async def apply_tailor_length_endpoint(
 
     improvement = await db.get_improvement_by_tailored_resume(resume_id)
     if not improvement:
-        raise HTTPException(status_code=400, detail="No job context for this tailored resume.")
+        raise HTTPException(
+            status_code=400, detail="No job context for this tailored resume."
+        )
 
     job = await db.get_job(improvement["job_id"])
     if not job:
@@ -2435,9 +2487,9 @@ async def apply_tailor_length_endpoint(
     if not master_data or not tailored_data:
         raise HTTPException(status_code=400, detail="Resume missing processed data.")
 
-    current_settings = tailor_length_settings_from_resume_doc(tailored) or _resolve_tailor_length(
-        None, tailored
-    )
+    current_settings = tailor_length_settings_from_resume_doc(
+        tailored
+    ) or _resolve_tailor_length(None, tailored)
     if body is not None:
         updates = body.model_dump(exclude_unset=True)
         settings = TailorLengthSettings.model_validate(
@@ -2590,7 +2642,9 @@ async def download_resume_pdf(
         pdf_warnings.extend(ats_warnings)
         pdf_errors.extend(ats_errors)
     except Exception as e:
-        logger.warning("ATS extractability checks failed for resume %s: %s", resume_id, e)
+        logger.warning(
+            "ATS extractability checks failed for resume %s: %s", resume_id, e
+        )
         pdf_warnings.append("ATS extractability checks could not be completed.")
 
     headers = {"Content-Disposition": f'attachment; filename="resume_{resume_id}.pdf"'}
@@ -3311,7 +3365,9 @@ async def feedback_apply_preview_endpoint(resume_id: str) -> dict[str, Any]:
             language=get_content_language(),
         )
     except Exception as e:
-        logger.error("Feedback apply preview generation failed for %s: %s", resume_id, e)
+        logger.error(
+            "Feedback apply preview generation failed for %s: %s", resume_id, e
+        )
         raise HTTPException(
             status_code=500,
             detail="Failed to build feedback preview. Please try again.",

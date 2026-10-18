@@ -29,7 +29,6 @@ from app.llm import (
     resolve_api_key,
     saved_endpoint_accepts_key,
 )
-from app.services.tailor_length import tailor_length_settings_from_config
 from app.prompts import (
     DEFAULT_IMPROVE_PROMPT_ID,
     IMPROVE_PROMPT_OPTIONS,
@@ -53,14 +52,15 @@ from app.schemas import (
     LanguageConfigResponse,
     LLMConfigRequest,
     LLMConfigResponse,
-    ProviderConfigSnapshot,
     PromptConfigRequest,
     PromptConfigResponse,
     PromptOption,
+    ProviderConfigSnapshot,
     ResetDatabaseRequest,
     TailorLengthConfigRequest,
     TailorLengthConfigResponse,
 )
+from app.services.tailor_length import tailor_length_settings_from_config
 
 # Providers that cannot function without an explicit endpoint. Mirrors
 # `requiresBaseUrl` in apps/frontend/lib/api/config.ts (M-05) — the UI guard
@@ -140,8 +140,6 @@ def _get_prompt_options() -> list[PromptOption]:
     return [PromptOption(**option) for option in IMPROVE_PROMPT_OPTIONS]
 
 
-
-
 def _provider_snapshot_from_stored(stored: dict) -> dict:
     """Build a raw provider snapshot from top-level config fields."""
     raw_re = stored.get("reasoning_effort", settings.reasoning_effort)
@@ -165,12 +163,17 @@ def _ensure_provider_configs(stored: dict) -> bool:
 
     provider = stored.get("provider", settings.llm_provider)
     if provider and provider not in stored["provider_configs"]:
-        if any(
-            stored.get(k)
-            for k in ("model", "api_base", "api_key")
-            if stored.get(k) not in (None, "")
-        ) or provider in stored:
-            stored["provider_configs"][provider] = _provider_snapshot_from_stored(stored)
+        if (
+            any(
+                stored.get(k)
+                for k in ("model", "api_base", "api_key")
+                if stored.get(k) not in (None, "")
+            )
+            or provider in stored
+        ):
+            stored["provider_configs"][provider] = _provider_snapshot_from_stored(
+                stored
+            )
             mutated = True
 
     return mutated
@@ -215,6 +218,7 @@ def _build_llm_config_response(stored: dict) -> LLMConfigResponse:
         if isinstance(provider_configs, dict) and provider_configs
         else None,
     )
+
 
 async def _log_llm_health_check(config: LLMConfig) -> None:
     """Run a best-effort health check and log outcome without affecting API responses."""

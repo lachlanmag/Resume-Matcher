@@ -73,10 +73,7 @@ export function HighlightedResumeView({ resumeData, keywords }: HighlightedResum
                 ))}
                 {!exp.roles?.length && getExperienceRoleTitles(exp) && (
                   <div className="text-sm text-ink-soft mb-1">
-                    <HighlightedText
-                      text={getExperienceRoleTitles(exp)}
-                      keywords={keywords}
-                    />
+                    <HighlightedText text={getExperienceRoleTitles(exp)} keywords={keywords} />
                   </div>
                 )}
                 {exp.description && (

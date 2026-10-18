@@ -203,9 +203,9 @@ export default function SettingsPage() {
     if (chatGptReturnRef.current === undefined) chatGptReturnRef.current = takeChatGptReturn();
     return chatGptReturnRef.current;
   }, []);
-  const [providerConfigs, setProviderConfigs] = useState<
-    Record<string, ProviderConfigSnapshot>
-  >({});
+  const [providerConfigs, setProviderConfigs] = useState<Record<string, ProviderConfigSnapshot>>(
+    {}
+  );
 
   // Use cached system status (loaded on app start, refreshes every 30 min)
   const {
@@ -1677,6 +1677,7 @@ export default function SettingsPage() {
                 <Button
                   type="button"
                   variant="outline"
+                  aria-label={`${t('common.save')}: ${t('settings.tailorLength.title')}`}
                   onClick={handleTailorLengthSave}
                   disabled={tailorLengthLoading}
                 >

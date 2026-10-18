@@ -20,7 +20,7 @@ import type { RegenerateItemInput } from '@/lib/api/enrichment';
 interface RegenerateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  summaryItem: RegenerateItemInput | null;
+  summaryItem?: RegenerateItemInput | null;
   experienceItems: RegenerateItemInput[];
   projectItems: RegenerateItemInput[];
   skillsItem: RegenerateItemInput | null;
@@ -39,7 +39,7 @@ interface RegenerateDialogProps {
 export const RegenerateDialog: React.FC<RegenerateDialogProps> = ({
   open,
   onOpenChange,
-  summaryItem,
+  summaryItem = null,
   experienceItems,
   projectItems,
   skillsItem,
@@ -75,7 +75,10 @@ export const RegenerateDialog: React.FC<RegenerateDialogProps> = ({
   };
 
   const hasItems =
-    summaryItem !== null || experienceItems.length > 0 || projectItems.length > 0 || skillsItem !== null;
+    summaryItem !== null ||
+    experienceItems.length > 0 ||
+    projectItems.length > 0 ||
+    skillsItem !== null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

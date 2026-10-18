@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import type { FeedbackQuestion } from '@/lib/api/feedback';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,7 +18,10 @@ interface FeedbackQuestionStepProps {
   onContinue: () => void;
 }
 
-function resolveCategoryLabel(category: FeedbackQuestion['category'], t: (key: string) => string): string {
+function resolveCategoryLabel(
+  category: FeedbackQuestion['category'],
+  t: (key: string) => string
+): string {
   const key = `feedback.category.${category}`;
   const translated = t(key);
   return translated === key ? category.toUpperCase() : translated;
@@ -71,7 +74,7 @@ export function FeedbackQuestionStep({
   return (
     <div className="flex h-full min-h-[500px] flex-col">
       <div className="mb-8 flex items-center justify-between">
-        <span className="font-mono text-sm text-steel-grey">
+        <span className="font-mono text-sm text-steel">
           {t('feedback.question.progress', { current: questionNumber, total: totalQuestions })}
         </span>
         <div className="flex gap-1">
@@ -79,7 +82,7 @@ export function FeedbackQuestionStep({
             <div
               key={index}
               className={`h-1.5 w-6 ${
-                index <= questionNumber - 1 ? 'bg-black' : 'bg-paper-tint'
+                index <= questionNumber - 1 ? 'bg-ink' : 'bg-panel'
               } transition-colors`}
             />
           ))}
@@ -87,14 +90,14 @@ export function FeedbackQuestionStep({
       </div>
 
       <div className="mb-4">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-steel-grey">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-steel">
           {resolveCategoryLabel(question.category, t)}
         </p>
       </div>
 
       <div className="flex-1">
         <h2 className="mb-3 font-serif text-2xl font-bold leading-tight">{question.prompt}</h2>
-        <p className="mb-6 font-mono text-xs text-steel-grey">{question.context}</p>
+        <p className="mb-6 font-mono text-xs text-steel">{question.context}</p>
 
         <Textarea
           ref={textareaRef}
@@ -115,12 +118,12 @@ export function FeedbackQuestionStep({
           className="min-h-[180px] resize-none font-mono text-base"
         />
 
-        <p className="mt-2 font-mono text-xs text-steel-grey">{t('feedback.question.shortcutHint')}</p>
+        <p className="mt-2 font-mono text-xs text-steel">{t('feedback.question.shortcutHint')}</p>
       </div>
 
       <div className="mt-6 flex items-center justify-between border-t-2 border-black pt-6">
         <Button variant="outline" onClick={onBack} className="gap-2">
-          <ChevronLeft className="h-4 w-4" />
+          <CaretLeft aria-hidden="true" className="size-4" />
           {t('common.back')}
         </Button>
 
@@ -132,7 +135,7 @@ export function FeedbackQuestionStep({
           )}
           <Button onClick={handleContinue} className="gap-2">
             {returnToReview ? t('feedback.saveAndReturnToReview') : t('common.continue')}
-            <ChevronRight className="h-4 w-4" />
+            <CaretRight aria-hidden="true" className="size-4" />
           </Button>
         </div>
       </div>

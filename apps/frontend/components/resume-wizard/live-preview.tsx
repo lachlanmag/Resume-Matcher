@@ -4,10 +4,7 @@ import { Check } from '@phosphor-icons/react';
 import type { ResumeData } from '@/components/dashboard/resume-component';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useTranslations } from '@/lib/i18n';
-import {
-  getExperienceRoleTitles,
-  normalizeWorkExperience,
-} from '@/lib/utils/work-experience';
+import { getExperienceRoleTitles, normalizeWorkExperience } from '@/lib/utils/work-experience';
 
 interface LivePreviewProps {
   resumeData: ResumeData;

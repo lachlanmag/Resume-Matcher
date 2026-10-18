@@ -14,7 +14,6 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Awaitable, NoReturn, Optional, TypeVar
 
-from pypdf import PdfReader, PdfWriter
 from playwright.async_api import (
     Browser,
     Page,
@@ -27,6 +26,7 @@ from playwright.async_api import (
 from playwright.async_api import (
     TimeoutError as PlaywrightTimeoutError,
 )
+from pypdf import PdfReader, PdfWriter
 
 logger = logging.getLogger(__name__)
 

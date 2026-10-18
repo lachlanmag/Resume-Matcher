@@ -13,7 +13,7 @@ const forms: Record<string, () => HTMLElement> = {
   experience: () =>
     render(
       <ExperienceForm
-        data={[{ id: 1, title: 'Dev', description: ['Did a thing'] }]}
+        data={[{ id: 1, roles: [{ id: 1, title: 'Dev' }], description: ['Did a thing'] }]}
         onChange={vi.fn()}
       />
     ).container,

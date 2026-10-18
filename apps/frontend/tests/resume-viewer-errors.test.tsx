@@ -86,7 +86,7 @@ describe('resume viewer operation errors', () => {
           : 'resumeViewer.errors.failedToDownload'
       )
     ).toBeInTheDocument();
-    mockedDownload.mockResolvedValue(new Blob(['pdf']));
+    mockedDownload.mockResolvedValue({ blob: new Blob(['pdf']), warnings: [], errors: [] });
     await act(async () => screen.getByRole('button', { name: 'common.retry' }).click());
     expect(mockedDownload).toHaveBeenCalledTimes(2);
     expect(await screen.findByText('common.success')).toBeInTheDocument();

@@ -98,12 +98,20 @@ function integerInRange(
 function normalizeExperience(value: unknown, index: number): Experience | null {
   if (!isRecord(value)) return null;
   const descriptions = descriptionRows(value.description, value.descriptionStyles);
+  // Multi-role shape; drafts saved before roles[] existed carry flat title/years.
+  const rawRoles = Array.isArray(value.roles) ? value.roles.filter(isRecord) : [];
+  const roles = rawRoles.length
+    ? rawRoles.map((role, roleIndex) => ({
+        id: roleIndex + 1,
+        title: stringValue(role.title),
+        years: yearsValue(role.years),
+      }))
+    : [{ id: 1, title: stringValue(value.title), years: yearsValue(value.years) }];
   return {
     id: index + 1,
-    title: stringValue(value.title),
     company: stringValue(value.company),
     location: optionalString(value.location),
-    years: yearsValue(value.years),
+    roles,
     ...descriptions,
   };
 }

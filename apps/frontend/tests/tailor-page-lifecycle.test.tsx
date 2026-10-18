@@ -28,6 +28,11 @@ vi.mock('@/lib/api/resume', () => ({
 }));
 vi.mock('@/lib/api/config', () => ({
   fetchPromptConfig: async () => ({ prompt_options: [], default_prompt_id: 'keywords' }),
+  fetchTailorLengthConfig: async () => ({
+    target_pages: 2,
+    bullets_per_job_min: 3,
+    bullets_per_job_max: 5,
+  }),
 }));
 vi.mock('@/components/common/resume_previewer_context', () => ({
   useResumePreview: () => ({ setImprovedData: api.setPreview }),
@@ -130,7 +135,7 @@ describe('actual tailor page transaction boundaries', () => {
       screen.getByRole('button', { name: 'tailor.missingDiffDialog.confirmLabel' }).click()
     );
     expect(api.confirm).toHaveBeenCalledTimes(1);
-    expect(api.push).toHaveBeenLastCalledWith('/resumes/tailored');
+    expect(api.push).toHaveBeenLastCalledWith('/builder?id=tailored');
     expect(screen.queryByText('tailor.missingDiffDialog.description')).toBeNull();
     expect(screen.getByRole('button', { name: 'tailor.generateTailored' })).toBeEnabled();
   });
@@ -161,7 +166,7 @@ describe('actual tailor page transaction boundaries', () => {
     expect(api.confirm.mock.calls[0]).toEqual(api.confirm.mock.calls[1]);
     expect(api.confirm.mock.calls[0][0].preview_id).toBe('preview');
     expect(api.resumes).toHaveBeenCalledTimes(1);
-    expect(api.push).toHaveBeenLastCalledWith('/resumes/tailored');
+    expect(api.push).toHaveBeenLastCalledWith('/builder?id=tailored');
   });
 
   it('requires explicit regeneration after rejecting a preview', async () => {
@@ -213,7 +218,7 @@ describe('actual tailor page transaction boundaries', () => {
     expect(api.confirm).toHaveBeenCalledTimes(1);
     expect(api.resumes).toHaveBeenCalledTimes(1);
     expect(api.improvements).toHaveBeenCalledTimes(1);
-    expect(api.push).toHaveBeenLastCalledWith('/resumes/tailored');
+    expect(api.push).toHaveBeenLastCalledWith('/builder?id=tailored');
   });
 });
 
@@ -288,7 +293,7 @@ it('keeps missing-diff confirmation open while its durable request is pending', 
   fireEvent.click(cancel);
   await act(async () => pending.resolve(confirmed));
   expect(api.resumes).toHaveBeenCalledTimes(1);
-  expect(api.push).toHaveBeenLastCalledWith('/resumes/tailored');
+  expect(api.push).toHaveBeenLastCalledWith('/builder?id=tailored');
 });
 
 it.each(['expired locally', 'rejected by server'])(

@@ -2,18 +2,14 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { SpinnerGap } from '@phosphor-icons/react';
 import { TailorLengthControls } from './tailor-length-controls';
 import {
   type TailorLengthSettings,
   DEFAULT_TAILOR_LENGTH_SETTINGS,
   validateTailorLengthSettings,
 } from '@/lib/types/tailor-length';
-import {
-  applyTailorLength,
-  improveResume,
-  patchTailorSettings,
-} from '@/lib/api/resume';
+import { applyTailorLength, improveResume, patchTailorSettings } from '@/lib/api/resume';
 import type { ResumeData } from '@/components/dashboard/resume-component';
 import { useTranslations } from '@/lib/i18n';
 
@@ -111,7 +107,11 @@ export function TailorSettingsPanel({
           onClick={handleSave}
           disabled={Boolean(validationError) || isSaving || isApplying || isRetailoring}
         >
-          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.save')}
+          {isSaving ? (
+            <SpinnerGap aria-hidden="true" className="size-4 animate-spin" />
+          ) : (
+            t('common.save')
+          )}
         </Button>
         <Button
           variant="outline"
@@ -120,7 +120,7 @@ export function TailorSettingsPanel({
           disabled={Boolean(validationError) || isSaving || isApplying || isRetailoring}
         >
           {isApplying ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <SpinnerGap aria-hidden="true" className="size-4 animate-spin" />
           ) : (
             t('builder.tailorLength.applyConstraints')
           )}
@@ -132,7 +132,7 @@ export function TailorSettingsPanel({
           disabled={Boolean(validationError) || isSaving || isApplying || isRetailoring}
         >
           {isRetailoring ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <SpinnerGap aria-hidden="true" className="size-4 animate-spin" />
           ) : (
             t('builder.tailorLength.reTailor')
           )}

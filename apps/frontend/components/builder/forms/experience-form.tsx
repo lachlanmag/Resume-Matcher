@@ -112,7 +112,10 @@ export const ExperienceForm: React.FC<ExperienceFormProps> = ({ data, onChange }
     updateJob(jobId, (job) => ({
       ...job,
       description: [...(job.description || []), ''],
-      descriptionStyles: [...alignDescriptionStyles(job.description, job.descriptionStyles), 'bullet'],
+      descriptionStyles: [
+        ...alignDescriptionStyles(job.description, job.descriptionStyles),
+        'bullet',
+      ],
     }));
   };
 

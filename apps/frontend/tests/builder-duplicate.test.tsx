@@ -41,8 +41,8 @@ describe('entry duplicate button', () => {
     render(
       <ExperienceForm
         data={[
-          { id: 1, title: 'Backend Developer', description: ['Built APIs'] },
-          { id: 2, title: 'Intern', description: [] },
+          { id: 1, roles: [{ id: 1, title: 'Backend Developer' }], description: ['Built APIs'] },
+          { id: 2, roles: [{ id: 1, title: 'Intern' }], description: [] },
         ]}
         onChange={onChange}
       />
@@ -52,9 +52,9 @@ describe('entry duplicate button', () => {
 
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith([
-      { id: 1, title: 'Backend Developer', description: ['Built APIs'] },
-      { id: 3, title: 'Backend Developer', description: ['Built APIs'] },
-      { id: 2, title: 'Intern', description: [] },
+      { id: 1, roles: [{ id: 1, title: 'Backend Developer' }], description: ['Built APIs'] },
+      { id: 3, roles: [{ id: 1, title: 'Backend Developer' }], description: ['Built APIs'] },
+      { id: 2, roles: [{ id: 1, title: 'Intern' }], description: [] },
     ]);
   });
 
@@ -164,7 +164,11 @@ describe('entry action buttons clear each other and the form fields', () => {
   const cases: Array<[string, React.ReactElement]> = [
     [
       'ExperienceForm',
-      <ExperienceForm key="e" data={[{ id: 1, title: 'T', description: [] }]} onChange={vi.fn()} />,
+      <ExperienceForm
+        key="e"
+        data={[{ id: 1, roles: [{ id: 1, title: 'T' }], description: [] }]}
+        onChange={vi.fn()}
+      />,
     ],
     [
       'EducationForm',

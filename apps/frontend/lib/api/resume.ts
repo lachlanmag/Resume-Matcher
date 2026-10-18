@@ -330,10 +330,7 @@ export async function patchTailorSettings(
   resumeId: string,
   settings: Partial<TailorLengthSettings>
 ): Promise<ResumeResponse['data']> {
-  const res = await apiPatch(
-    `/resumes/${encodeURIComponent(resumeId)}/tailor-settings`,
-    settings
-  );
+  const res = await apiPatch(`/resumes/${encodeURIComponent(resumeId)}/tailor-settings`, settings);
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`Failed to update tailor settings (status ${res.status}): ${text}`);
@@ -434,7 +431,9 @@ export async function downloadResumePdf(
     try {
       const parsed = JSON.parse(raw) as unknown;
       if (Array.isArray(parsed)) {
-        return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+        return parsed.filter(
+          (item): item is string => typeof item === 'string' && item.trim().length > 0
+        );
       }
       return [];
     } catch {

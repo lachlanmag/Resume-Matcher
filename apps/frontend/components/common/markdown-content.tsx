@@ -20,9 +20,9 @@ const markdownComponents: Components = {
     <h3 className="mb-2 mt-4 font-serif text-base font-semibold leading-tight">{children}</h3>
   ),
   p: ({ children }) => <p className="mb-3 text-ink-soft last:mb-0">{children}</p>,
-  ul: ({ children }) => <ul className="mb-3 list-disc space-y-1 pl-5 text-ink-soft">{children}</ul>,
+  ul: ({ children }) => <ul className="mb-3 list-disc space-y-1 pl-4 text-ink-soft">{children}</ul>,
   ol: ({ children }) => (
-    <ol className="mb-3 list-decimal space-y-1 pl-5 text-ink-soft">{children}</ol>
+    <ol className="mb-3 list-decimal space-y-1 pl-4 text-ink-soft">{children}</ol>
   ),
   li: ({ children }) => <li className="leading-relaxed">{children}</li>,
   strong: ({ children }) => <strong className="font-bold text-ink">{children}</strong>,
@@ -43,7 +43,7 @@ const markdownComponents: Components = {
       <table className="w-full min-w-[32rem] border-collapse text-sm">{children}</table>
     </div>
   ),
-  thead: ({ children }) => <thead className="bg-paper-tint">{children}</thead>,
+  thead: ({ children }) => <thead className="bg-paper">{children}</thead>,
   tbody: ({ children }) => <tbody>{children}</tbody>,
   tr: ({ children }) => <tr className="border-b border-black last:border-b-0">{children}</tr>,
   th: ({ children }) => (

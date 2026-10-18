@@ -79,7 +79,7 @@ describe('builder item-level drag handles', () => {
   it('renders one handle per experience entry', () => {
     render(
       <ExperienceForm
-        data={[{ id: 1, title: 'Backend Developer', description: [] }]}
+        data={[{ id: 1, roles: [{ id: 1, title: 'Backend Developer' }], description: [] }]}
         onChange={vi.fn()}
       />
     );

@@ -1898,7 +1898,9 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
                         <SpinnerGap aria-hidden="true" className="animate-spin" />
                         {t('common.processing')}
                         {feedbackGenElapsed > 0 && (
-                          <span className="font-mono text-xs tabular-nums">{feedbackGenElapsed}s</span>
+                          <span className="font-mono text-xs tabular-nums">
+                            {feedbackGenElapsed}s
+                          </span>
                         )}
                       </>
                     ) : (

@@ -134,6 +134,32 @@ class ResumeNotFoundError(ValueError):
         super().__init__(f"Resume not found: {resume_id}")
 
 
+class ReplaceTargetError(ValueError):
+    """``replace_resume_id`` does not name a tailored child of the source master."""
+
+    def __init__(self, message: str, *, not_found: bool = False) -> None:
+        self.not_found = not_found
+        super().__init__(message)
+
+
+# Fields a re-tailor rewrites in place. Identity, filename, created_at and the
+# resume's own formatting (template_settings) stay, so links, PDF layout and the
+# tracker card keep pointing at the same resume.
+_REPLACEABLE_TAILORED_FIELDS = frozenset(
+    {
+        "content",
+        "content_type",
+        "processed_data",
+        "processing_status",
+        "cover_letter",
+        "outreach_message",
+        "interview_prep",
+        "title",
+        "tailor_settings",
+    }
+)
+
+
 def _now() -> str:
     """Current UTC time as an ISO-8601 string (TinyDB-era format)."""
     return datetime.now(timezone.utc).isoformat()
@@ -946,6 +972,38 @@ class Database:
                 row.claim_expires_at = None
                 await session.commit()
 
+    @staticmethod
+    async def _replace_tailored_row(
+        session: AsyncSession,
+        *,
+        replace_resume_id: str,
+        source_id: str,
+        resume_fields: dict[str, Any],
+    ) -> Resume:
+        """Rewrite a tailored resume in place inside the caller's transaction.
+
+        Validates the target in the same transaction that writes it, so a
+        concurrent delete or re-parent cannot slip between check and update.
+        The tailored resume's previous improvement record is replaced too.
+        """
+        row = await session.get(Resume, replace_resume_id)
+        if row is None:
+            raise ReplaceTargetError(
+                "Tailored resume to replace not found", not_found=True
+            )
+        if row.is_master or row.parent_id != source_id:
+            raise ReplaceTargetError(
+                "replace_resume_id must be a tailored resume of the master resume_id"
+            )
+        for key, value in resume_fields.items():
+            if key in _REPLACEABLE_TAILORED_FIELDS:
+                setattr(row, key, copy.deepcopy(value))
+        row.updated_at = _now()
+        await session.execute(
+            delete(Improvement).where(Improvement.tailored_resume_id == row.resume_id)
+        )
+        return row
+
     async def complete_preview(
         self,
         *,
@@ -954,8 +1012,13 @@ class Database:
         response_data: dict[str, Any],
         improvements: list[dict[str, Any]],
         ats_score: dict[str, Any] | None = None,
+        replace_resume_id: str | None = None,
     ) -> dict[str, Any]:
-        """Commit resume, required relation and replay snapshot atomically."""
+        """Commit resume, required relation and replay snapshot atomically.
+
+        With ``replace_resume_id`` the existing tailored resume is updated in
+        place instead of inserting a new one (same transaction, same guarantees).
+        """
         async with self._write_session() as session:
             preview = await session.get(TailoringPreview, claim.preview_id)
             now = _now()
@@ -970,14 +1033,22 @@ class Database:
                     "Confirmation ownership expired. Please retry preview."
                 )
             await self._validate_preview_inputs(session, preview)
-            row = self._new_resume(**resume_fields)
+            if replace_resume_id:
+                row = await self._replace_tailored_row(
+                    session,
+                    replace_resume_id=replace_resume_id,
+                    source_id=preview.source_id,
+                    resume_fields=resume_fields,
+                )
+            else:
+                row = self._new_resume(**resume_fields)
+                session.add(row)
             result = copy.deepcopy(response_data)
             result.update(
                 resume_id=row.resume_id,
                 preview_id=preview.preview_id,
                 preview_expires_at=preview.expires_at,
             )
-            session.add(row)
             await session.flush()
             session.add(
                 Improvement(
@@ -1010,11 +1081,24 @@ class Database:
         resume_fields: dict[str, Any],
         improvements: list[dict[str, Any]],
         ats_score: dict[str, Any] | None = None,
+        replace_resume_id: str | None = None,
     ) -> dict[str, Any]:
-        """Commit a direct tailoring result and its required relation together."""
-        row = self._new_resume(**resume_fields)
+        """Commit a direct tailoring result and its required relation together.
+
+        With ``replace_resume_id`` the existing tailored resume is rewritten in
+        place (validated and updated in this one transaction).
+        """
         async with self._write_session() as session:
-            session.add(row)
+            if replace_resume_id:
+                row = await self._replace_tailored_row(
+                    session,
+                    replace_resume_id=replace_resume_id,
+                    source_id=original_resume_id,
+                    resume_fields=resume_fields,
+                )
+            else:
+                row = self._new_resume(**resume_fields)
+                session.add(row)
             await session.flush()
             session.add(
                 Improvement(

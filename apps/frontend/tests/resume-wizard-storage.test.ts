@@ -37,7 +37,7 @@ it('retains numeric dates and pairs description styles with their source rows', 
   const restored = readResumeWizardDraft();
   expect(restored?.progress.current).toBe(2);
   expect(restored?.resume_data.workExperience?.[0]).toMatchObject({
-    years: '2024',
+    roles: [{ years: '2024' }],
     description: ['Plain row', 'Bullet row'],
     descriptionStyles: ['plain', 'bullet'],
   });

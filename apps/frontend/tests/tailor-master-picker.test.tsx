@@ -34,6 +34,11 @@ vi.mock('@/lib/api/resume', () => ({
 }));
 vi.mock('@/lib/api/config', () => ({
   fetchPromptConfig: async () => ({ prompt_options: [], default_prompt_id: 'keywords' }),
+  fetchTailorLengthConfig: async () => ({
+    target_pages: 2,
+    bullets_per_job_min: 3,
+    bullets_per_job_max: 5,
+  }),
 }));
 vi.mock('@/components/common/resume_previewer_context', () => ({
   useResumePreview: () => ({ setImprovedData: api.setPreview }),
@@ -129,11 +134,11 @@ async function confirmDiff() {
 }
 
 describe('tailor page master picker', () => {
-  it('preselects the default master and sends the stored bullet cap', async () => {
-    localStorage.setItem(
-      'tailor_length_settings',
-      JSON.stringify({ maxPages: 2, maxBulletsPerEntry: 3 })
-    );
+  // One length control (fork TailorLengthControls, default from Settings) drives
+  // both the LLM guidance and upstream's post-generation page fit.
+  const DEFAULT_LENGTH = { target_pages: 2, bullets_per_job_min: 3, bullets_per_job_max: 5 };
+
+  it('preselects the default master and sends the Settings default length', async () => {
     api.list.mockResolvedValue([
       master('m1', false, 'DevRel'),
       master('m2', true, 'Solutions Eng'),
@@ -144,8 +149,12 @@ describe('tailor page master picker', () => {
     expect(api.preview).toHaveBeenCalledWith(
       'm2',
       'job',
-      PROMPT_ID,
-      expect.objectContaining({ maxBulletsPerEntry: 3 })
+      expect.objectContaining({
+        promptId: PROMPT_ID,
+        tailorLengthSettings: DEFAULT_LENGTH,
+        maxPages: 2,
+        maxBulletsPerEntry: 5,
+      })
     );
   });
 
@@ -157,11 +166,11 @@ describe('tailor page master picker', () => {
     api.list.mockResolvedValue([formatted, master('m2', false, 'Solutions Eng')]);
     await renderPage();
     await fillJobDescriptionAndGenerate();
-    // Default length settings: two-page limit, no per-role bullet cap.
-    expect(api.preview).toHaveBeenCalledWith('m1', 'job', PROMPT_ID, {
-      pageFit: { template: 'modern', lang: 'es' },
-      maxPages: 2,
-    });
+    expect(api.preview).toHaveBeenCalledWith(
+      'm1',
+      'job',
+      expect.objectContaining({ pageFit: { template: 'modern', lang: 'es' }, maxPages: 2 })
+    );
   });
 
   it('fits a never-formatted source resume to the default template', async () => {
@@ -170,25 +179,36 @@ describe('tailor page master picker', () => {
     api.list.mockResolvedValue([master('m1', true, 'DevRel')]);
     await renderPage();
     await fillJobDescriptionAndGenerate();
-    expect(api.preview).toHaveBeenCalledWith('m1', 'job', PROMPT_ID, {
-      pageFit: { template: 'swiss-single', lang: 'es' },
-      maxPages: 2,
-    });
+    expect(api.preview).toHaveBeenCalledWith(
+      'm1',
+      'job',
+      expect.objectContaining({ pageFit: { template: 'swiss-single', lang: 'es' }, maxPages: 2 })
+    );
   });
 
-  it('sends and remembers the chosen page limit and bullet cap', async () => {
+  it('sends the chosen length to both the LLM guidance and the page fit', async () => {
     api.list.mockResolvedValue([master('m1', true, 'DevRel')]);
     await renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /tailor\.length\.pageLimitLabel/ }));
-    fireEvent.click(screen.getByRole('option', { name: /tailor\.length\.pageLimitOptions\.none/ }));
-    fireEvent.click(screen.getByRole('button', { name: /tailor\.length\.bulletsLabel/ }));
-    fireEvent.click(screen.getByRole('option', { name: /tailor\.length\.bulletOptions\.5/ }));
+    fireEvent.click(screen.getByRole('radio', { name: '1' }));
+    fireEvent.change(screen.getByLabelText('settings.tailorLength.bulletsMax'), {
+      target: { value: '4' },
+    });
     await fillJobDescriptionAndGenerate();
-    // No page limit: no page fit is requested, only the per-role cap.
-    expect(api.preview).toHaveBeenCalledWith('m1', 'job', PROMPT_ID, { maxBulletsPerEntry: 5 });
-    expect(JSON.parse(localStorage.getItem('tailor_length_settings') ?? '{}')).toEqual({
-      maxPages: null,
-      maxBulletsPerEntry: 5,
+    expect(api.preview).toHaveBeenCalledWith(
+      'm1',
+      'job',
+      expect.objectContaining({
+        tailorLengthSettings: { ...DEFAULT_LENGTH, target_pages: 1, bullets_per_job_max: 4 },
+        maxPages: 1,
+        maxBulletsPerEntry: 4,
+      })
+    );
+    // Confirm persists the same settings onto the tailored resume.
+    await confirmDiff();
+    expect(api.confirm.mock.calls[0][0].tailor_length_settings).toEqual({
+      ...DEFAULT_LENGTH,
+      target_pages: 1,
+      bullets_per_job_max: 4,
     });
   });
 
@@ -227,7 +247,11 @@ describe('tailor page master picker', () => {
     api.list.mockResolvedValue([master('m1', false, 'DevRel'), master('m2', false, 'SWE')]);
     await renderPage();
     await fillJobDescriptionAndGenerate();
-    expect(api.preview).toHaveBeenCalledWith('m2', 'job', PROMPT_ID, expect.anything());
+    expect(api.preview).toHaveBeenCalledWith(
+      'm2',
+      'job',
+      expect.objectContaining({ promptId: PROMPT_ID })
+    );
   });
 
   it('uses the stored master id when the list request fails', async () => {
@@ -235,7 +259,11 @@ describe('tailor page master picker', () => {
     api.list.mockRejectedValue(new Error('offline'));
     await renderPage();
     await fillJobDescriptionAndGenerate();
-    expect(api.preview).toHaveBeenCalledWith('stored', 'job', PROMPT_ID, expect.anything());
+    expect(api.preview).toHaveBeenCalledWith(
+      'stored',
+      'job',
+      expect.objectContaining({ promptId: PROMPT_ID })
+    );
     expect(api.push).not.toHaveBeenCalled();
   });
 
@@ -260,7 +288,11 @@ describe('tailor page pinned preview source', () => {
     api.preview.mockReturnValue(new Promise((resolve) => (resolvePreview = resolve)));
     await renderPage();
     await fillJobDescriptionAndGenerate();
-    expect(api.preview).toHaveBeenCalledWith('m1', 'job', PROMPT_ID, expect.anything());
+    expect(api.preview).toHaveBeenCalledWith(
+      'm1',
+      'job',
+      expect.objectContaining({ promptId: PROMPT_ID })
+    );
     const picker = screen.getByRole('button', { name: PICKER_NAME });
     expect(picker).toBeDisabled();
     await act(async () => resolvePreview(PREVIEW_RESULT));
@@ -275,7 +307,11 @@ describe('tailor page pinned preview source', () => {
     chooseMaster('SWE');
     await fillJobDescriptionAndGenerate();
     await confirmDiff();
-    expect(api.preview).toHaveBeenCalledWith('m2', 'job', PROMPT_ID, expect.anything());
+    expect(api.preview).toHaveBeenCalledWith(
+      'm2',
+      'job',
+      expect.objectContaining({ promptId: PROMPT_ID })
+    );
     expect(api.confirm).toHaveBeenCalledWith(expect.objectContaining({ resume_id: 'm2' }));
   });
 
@@ -334,9 +370,7 @@ describe('tailor page in agent mode', () => {
       fireEvent.change(screen.getByRole('textbox'), { target: { value: job } });
       await act(async () => screen.getByRole('button', { name: 'agentPrompt.getPrompt' }).click());
 
-      expect(
-        screen.getByRole('dialog', { name: 'agentPrompt.tailor.title' })
-      ).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'agentPrompt.tailor.title' })).toBeInTheDocument();
       // The test t() returns keys only, so the prompt is the with-job variant's key.
       expect(screen.getByText('agentPrompt.tailor.promptWithJob')).toBeInTheDocument();
       expect(api.upload).not.toHaveBeenCalled();

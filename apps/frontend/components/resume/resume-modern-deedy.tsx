@@ -14,6 +14,7 @@ import type {
 } from '@/components/dashboard/resume-component';
 import { getSortedSections } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
+import { getExperienceRoleTitles, getExperienceYearsLine } from '@/lib/utils/work-experience';
 import { DescriptionList } from './description-list';
 import { EarlierExperience, splitCondensed } from './earlier-experience';
 import { RESUME_SECTION, RESUME_SECTION_TITLE, resumeItem } from './page-break-attrs';
@@ -172,7 +173,12 @@ export const ResumeModernDeedy: React.FC<ResumeModernDeedyProps> = ({
                   {...resumeItem(exp.description)}
                   className={baseStyles['resume-item']}
                 >
-                  {renderEntryHeader(exp.company, exp.title, exp.location, exp.years)}
+                  {renderEntryHeader(
+                    exp.company,
+                    getExperienceRoleTitles(exp),
+                    exp.location,
+                    getExperienceYearsLine(exp)
+                  )}
                   {renderBullets(exp.description, exp.descriptionStyles)}
                 </div>
               ))}

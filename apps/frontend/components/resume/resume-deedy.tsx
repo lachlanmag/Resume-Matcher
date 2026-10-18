@@ -15,6 +15,7 @@ import type {
 } from '@/components/dashboard/resume-component';
 import { getSortedSections } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
+import { getExperienceRoleTitles, getExperienceYearsLine } from '@/lib/utils/work-experience';
 import { DescriptionList } from './description-list';
 import { SafeHtml } from './safe-html';
 import { EarlierExperience, splitCondensed } from './earlier-experience';
@@ -374,8 +375,16 @@ export const ResumeDeedy: React.FC<ResumeDeedyProps> = ({
               {...resumeItem(exp.description)}
               className={baseStyles['resume-item']}
             >
-              {entryHeading(exp.company || exp.title, exp.company ? exp.title : undefined)}
-              {entryMeta(joinPresent([formatDateRange(exp.years), exp.location]))}
+              {entryHeading(
+                exp.company || getExperienceRoleTitles(exp),
+                exp.company ? getExperienceRoleTitles(exp) : undefined
+              )}
+              {entryMeta(
+                joinPresent([
+                  getExperienceYearsLine(exp) ? formatDateRange(getExperienceYearsLine(exp)) : '',
+                  exp.location,
+                ])
+              )}
               {bullets(exp.description, exp.descriptionStyles)}
             </div>
           ))}

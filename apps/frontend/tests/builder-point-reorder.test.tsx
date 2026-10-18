@@ -63,11 +63,11 @@ describe('description point reordering', () => {
   const jobs = [
     {
       id: 1,
-      title: 'Backend Developer',
+      roles: [{ id: 1, title: 'Backend Developer' }],
       description: ['A', 'B', 'C'],
       descriptionStyles: ['bullet', 'bullet', 'plain'] as ('bullet' | 'plain')[],
     },
-    { id: 2, title: 'Intern', description: ['X', 'Y'] },
+    { id: 2, roles: [{ id: 1, title: 'Intern' }], description: ['X', 'Y'] },
   ];
 
   it('moves a point within its job and carries its style along', () => {
@@ -80,7 +80,7 @@ describe('description point reordering', () => {
     const [next] = onChange.mock.calls[0];
     expect(next[0]).toMatchObject({
       id: 1,
-      title: 'Backend Developer',
+      roles: [{ id: 1, title: 'Backend Developer' }],
       description: ['C', 'A', 'B'],
       descriptionStyles: ['plain', 'bullet', 'bullet'],
     });
@@ -122,7 +122,10 @@ describe('description point reordering', () => {
 
   it('renders no points context for an entry without points', () => {
     render(
-      <ExperienceForm data={[{ id: 1, title: 'Empty', description: [] }]} onChange={vi.fn()} />
+      <ExperienceForm
+        data={[{ id: 1, roles: [{ id: 1, title: 'Empty' }], description: [] }]}
+        onChange={vi.fn()}
+      />
     );
 
     expect(contexts.has('experience-1-points')).toBe(false);

@@ -526,9 +526,7 @@ def apply_diffs(
                     continue
                 expected_original = parsed
             if not _verify_original_matches(actual_value, expected_original):
-                logger.info(
-                    "Diff rejected (replace_list original mismatch): %s", path
-                )
+                logger.info("Diff rejected (replace_list original mismatch): %s", path)
                 rejected.append(change)
                 continue
             if not isinstance(change.value, list):

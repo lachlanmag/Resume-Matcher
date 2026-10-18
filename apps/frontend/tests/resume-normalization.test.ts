@@ -23,9 +23,8 @@ describe('resume normalization', () => {
       workExperience: [
         {
           id: 1,
-          title: 'Engineer',
+          roles: [{ id: 1, title: 'Engineer', years: '2024 - Present' }],
           company: 'Analytical Engines Inc',
-          years: '2024 - Present',
           description: ['', 'Built reliable systems', '   '],
         },
       ],
@@ -47,10 +46,9 @@ describe('resume normalization', () => {
       workExperience: [
         {
           id: 1,
-          title: '',
+          roles: [{ id: 1, title: '', years: '' }],
           company: '',
           location: '',
-          years: '',
           description: [''],
         },
       ],
@@ -89,9 +87,8 @@ describe('resume normalization', () => {
       workExperience: [
         {
           id: 1,
-          title: 'Engineer',
+          roles: [{ id: 1, title: 'Engineer', years: '2024 - Present' }],
           company: 'Analytical Engines Inc',
-          years: '2024 - Present',
           description: 'not-an-array',
         },
       ],
@@ -114,9 +111,8 @@ describe('resume normalization', () => {
       workExperience: [
         {
           id: 1,
-          title: 'Engineer',
+          roles: [{ id: 1, title: 'Engineer', years: '2024 - Present' }],
           company: 'Analytical Engines Inc',
-          years: '2024 - Present',
           description: ['', 'Led the migration', 'Cut costs 40%'],
           descriptionStyles: ['bullet', 'plain', 'bullet'],
         },
@@ -139,9 +135,8 @@ describe('resume normalization', () => {
       workExperience: [
         {
           id: 1,
-          title: 'Engineer',
+          roles: [{ id: 1, title: 'Engineer', years: '2024 - Present' }],
           company: 'Analytical Engines Inc',
-          years: '2024 - Present',
           description: ['', 'Shipped it'],
         },
       ],
@@ -174,7 +169,9 @@ describe('normalization robustness against malformed persisted data', () => {
   it('does not throw on non-string scalar fields', () => {
     expect(() =>
       normalizeResumeForSave(
-        malformed({ workExperience: [{ id: 1, title: 5, description: ['ok'] }] })
+        malformed({
+          workExperience: [{ id: 1, roles: [{ id: 1, title: 5 }], description: ['ok'] }],
+        })
       )
     ).not.toThrow();
   });
@@ -213,13 +210,13 @@ describe('normalization robustness — element level', () => {
     // access inside normalizeDescriptionFields.
     const out = normalizeResumeForSave(
       malformed({
-        workExperience: [null, { id: 1, title: 'Engineer' }, 'nope', undefined],
+        workExperience: [null, { id: 1, roles: [{ id: 1, title: 'Engineer' }] }, 'nope', undefined],
         personalProjects: [null, { id: 2, name: 'Proj' }],
       })
     );
 
     expect(out.workExperience).toHaveLength(1);
-    expect(out.workExperience?.[0].title).toBe('Engineer');
+    expect(out.workExperience?.[0].roles[0].title).toBe('Engineer');
     expect(out.personalProjects).toHaveLength(1);
   });
 

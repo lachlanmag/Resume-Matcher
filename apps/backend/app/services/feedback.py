@@ -110,9 +110,7 @@ async def generate_structured_feedback(
         validated = ResumeFeedback.model_validate(payload)
     except ValidationError as e:
         logger.error("Feedback generation returned invalid questions: %s", e)
-        raise ValueError(
-            "Invalid feedback output: malformed 'questions'."
-        ) from e
+        raise ValueError("Invalid feedback output: malformed 'questions'.") from e
 
     return validated.model_dump()
 
@@ -180,7 +178,9 @@ async def build_apply_preview(
             f"Invalid feedback apply output: {malformed_changes} malformed change(s)."
         )
 
-    improved_data, _applied, _rejected = apply_diffs(copy.deepcopy(resume_data), changes)
+    improved_data, _applied, _rejected = apply_diffs(
+        copy.deepcopy(resume_data), changes
+    )
     improved_data = finalize_tailored_work_experience(
         original_resume_data, improved_data
     )
@@ -231,6 +231,5 @@ def _validate_report_headings(report_markdown: str) -> None:
 
     if missing:
         raise ValueError(
-            "Feedback report is missing required heading(s): "
-            + ", ".join(missing)
+            "Feedback report is missing required heading(s): " + ", ".join(missing)
         )

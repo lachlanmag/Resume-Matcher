@@ -28,15 +28,11 @@ export function WorkExperienceBlock({
   textClassName = baseStyles['resume-text-sm'],
 }: WorkExperienceBlockProps) {
   const roles =
-    job.roles?.length && job.roles.length > 0
-      ? job.roles
-      : [{ id: 1, title: '', years: '' }];
+    job.roles?.length && job.roles.length > 0 ? job.roles : [{ id: 1, title: '', years: '' }];
 
   return (
     <div {...resumeItem(job.description)} className={baseStyles['resume-item']}>
-      <div
-        className={`flex justify-between items-baseline ${baseStyles['resume-row-tight']}`}
-      >
+      <div className={`flex justify-between items-baseline ${baseStyles['resume-row-tight']}`}>
         <h4 className={titleClassName}>{job.company}</h4>
         {job.location ? <span className={roleTitleClassName}>{job.location}</span> : null}
       </div>

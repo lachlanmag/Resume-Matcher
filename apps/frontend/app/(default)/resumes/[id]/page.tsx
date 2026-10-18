@@ -162,9 +162,7 @@ export default function ResumeViewerPage() {
 
         // Prioritize processed_resume if available (structured JSON)
         if (data.processed_resume) {
-          setResumeData(
-            withNormalizedWorkExperience(data.processed_resume as ResumeData)
-          );
+          setResumeData(withNormalizedWorkExperience(data.processed_resume as ResumeData));
           setError(null);
         } else if (status === 'failed') {
           setError(translationsRef.current('resumeViewer.errors.processingFailed'));

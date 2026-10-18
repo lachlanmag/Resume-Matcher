@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MessageSquare, RefreshCw, XIcon, Loader2 } from 'lucide-react';
+import { ChatText, ArrowsClockwise, X, SpinnerGap } from '@phosphor-icons/react';
 import type { RegeneratedItem } from '@/lib/api/enrichment';
 import type { ResumeFeedback, FeedbackApplyPreview } from '@/lib/api/feedback';
 import { useFeedbackWizard } from '@/hooks/use-feedback-wizard';
@@ -270,17 +270,17 @@ export function FeedbackModal({
       onClick={handleBackdropClick}
       onCancel={handleCancel}
     >
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-overlay" />
 
-      <div className="absolute inset-0 flex items-center justify-center p-5 sm:p-10">
+      <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-8">
         <div className="relative flex h-full w-full max-w-[1200px] flex-col overflow-hidden border-2 border-black bg-white shadow-sw-lg">
           {isRegenerateConfirmOpen && (
             <div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-4"
+              className="absolute inset-0 z-20 flex items-center justify-center bg-overlay p-4"
               onClick={() => setIsRegenerateConfirmOpen(false)}
             >
               <div
-                className="w-full max-w-md border-2 border-black bg-background shadow-sw-lg"
+                className="w-full max-w-md border border-ink bg-white shadow-sw-lg"
                 role="alertdialog"
                 aria-modal="true"
                 aria-labelledby="feedback-regenerate-title"
@@ -288,8 +288,8 @@ export function FeedbackModal({
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="flex items-start gap-4 border-b border-black p-6">
-                  <div className="flex h-12 w-12 items-center justify-center border-2 border-orange-500 bg-orange-50">
-                    <span className="text-2xl font-bold text-orange-500">!</span>
+                  <div className="flex h-12 w-12 items-center justify-center border-2 border-warning bg-warning-tint">
+                    <span className="text-2xl font-bold text-warning-text">!</span>
                   </div>
                   <div className="flex-1">
                     <h2
@@ -306,7 +306,7 @@ export function FeedbackModal({
                     </p>
                   </div>
                 </div>
-                <div className="flex justify-end gap-3 border-t border-black bg-secondary p-4">
+                <div className="flex justify-end gap-3 border-t border-ink bg-paper p-4">
                   <Button
                     type="button"
                     variant="outline"
@@ -328,9 +328,9 @@ export function FeedbackModal({
             </div>
           )}
 
-          <div className="flex items-center justify-between border-b-2 border-black bg-paper-tint px-6 py-4">
+          <div className="flex items-center justify-between border-b border-ink bg-paper px-6 py-4">
             <div className="flex items-center gap-3">
-              <MessageSquare className="h-5 w-5" />
+              <ChatText aria-hidden="true" className="size-5" />
               <h1 className="font-serif text-xl font-bold uppercase tracking-tight">
                 {t('feedback.modal.title')}
               </h1>
@@ -347,9 +347,9 @@ export function FeedbackModal({
                   onClick={() => setIsRegenerateConfirmOpen(true)}
                 >
                   {isBackgroundGenerating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <SpinnerGap aria-hidden="true" className="size-4 animate-spin" />
                   ) : (
-                    <RefreshCw className="h-4 w-4" />
+                    <ArrowsClockwise aria-hidden="true" className="size-4" />
                   )}
                   {t('feedback.regenerate')}
                   {isBackgroundGenerating && feedbackGenElapsed > 0 && (
@@ -358,8 +358,12 @@ export function FeedbackModal({
                 </Button>
               )}
               {(!isLocked || isBackgroundGenerating) && !isRegenerateConfirmOpen && (
-                <button type="button" onClick={handleClose} className="p-1 hover:bg-background">
-                  <XIcon className="h-5 w-5" />
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="p-1 hover:bg-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <X aria-hidden="true" className="size-5" />
                   <span className="sr-only">{t('common.close')}</span>
                 </button>
               )}

@@ -204,7 +204,9 @@ export const RegenerateDiffPreview: React.FC<RegenerateDiffPreviewProps> = ({
       <div className="shrink-0 space-y-2 border-t border-ink px-6 py-3">
         {error ? (
           <Alert tone={needsRefresh ? 'warning' : 'error'} className="px-4 py-3">
-            {needsRefresh ? t('builder.regenerate.errors.refreshFailed') : resolveErrorMessage(error)}
+            {needsRefresh
+              ? t('builder.regenerate.errors.refreshFailed')
+              : resolveErrorMessage(error)}
           </Alert>
         ) : null}
 
@@ -300,9 +302,7 @@ export const RegenerateDiffPreview: React.FC<RegenerateDiffPreviewProps> = ({
 
         {statusBlock}
 
-        <DialogFooter className="justify-between">
-          {footerButtons}
-        </DialogFooter>
+        <DialogFooter className="justify-between">{footerButtons}</DialogFooter>
       </DialogContent>
     </Dialog>
   );

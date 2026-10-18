@@ -88,7 +88,9 @@ async def measure_page_count(data: dict[str, Any], fit: PageFitSettings) -> int:
     token = render_drafts.put(data)
     try:
         query = urlencode(fit.to_query())
-        url = f"{settings.pdf_render_base_url}/print/resumes/draft?draft={token}&{query}"
+        url = (
+            f"{settings.pdf_render_base_url}/print/resumes/draft?draft={token}&{query}"
+        )
         margins = print_margins(fit)
         # Also wait for the print route's error marker so a missing draft fails fast.
         pdf_bytes = await render_resume_pdf(

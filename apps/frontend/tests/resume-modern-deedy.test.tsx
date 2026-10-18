@@ -19,10 +19,9 @@ const data: ResumeData = {
   workExperience: [
     {
       id: 1,
-      title: 'Senior Software Engineer',
+      roles: [{ id: 1, title: 'Senior Software Engineer', years: 'Jul 2024 - Present' }],
       company: 'Fernway Payments',
       location: 'San Francisco, CA',
-      years: 'Jul 2024 - Present',
       description: ['Shipped a <strong>RAG</strong> assistant.'],
       descriptionStyles: ['bullet'],
     },
@@ -201,7 +200,7 @@ describe('ResumeModernDeedy', () => {
   it('does not render empty sections or an orphaned pipe when a header part is missing', () => {
     const sparse: ResumeData = {
       personalInfo: { name: 'Sarah Chen' },
-      workExperience: [{ id: 1, company: 'Fernway', location: 'Remote' }],
+      workExperience: [{ id: 1, company: 'Fernway', location: 'Remote', roles: [] }],
       education: [],
       additional: { technicalSkills: [] },
     } as ResumeData;

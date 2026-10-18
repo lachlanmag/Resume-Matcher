@@ -32,10 +32,9 @@ const buildData = (): ResumeData =>
     workExperience: [
       {
         id: 1,
-        title: 'Engineer',
+        roles: [{ id: 1, title: 'Engineer', years: '2024-Present' }],
         company: 'Analytical Engines',
         location: 'London',
-        years: '2024-Present',
         description: ['PLAIN ROW should have no marker', 'BULLET ROW should have one'],
         descriptionStyles: ['plain', 'bullet'],
       },

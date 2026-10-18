@@ -121,7 +121,7 @@ export const ResumeModern: React.FC<ResumeModernProps> = ({
               {section.displayName}
             </h3>
             <div className={baseStyles['resume-items']}>
-              {workExperience.map((exp) => (
+              {splitCondensed(workExperience).full.map((exp) => (
                 <WorkExperienceBlock key={exp.id} job={exp} />
               ))}
               {splitCondensed(workExperience).condensed.length > 0 && (

@@ -65,9 +65,7 @@ export function TailorLengthControls({
             max={MAX_BULLETS_PER_JOB}
             disabled={disabled}
             value={settings.bullets_per_job_min}
-            onChange={(e) =>
-              onChange({ ...settings, bullets_per_job_min: Number(e.target.value) })
-            }
+            onChange={(e) => onChange({ ...settings, bullets_per_job_min: Number(e.target.value) })}
           />
         </div>
         <div className="space-y-2">
@@ -79,9 +77,7 @@ export function TailorLengthControls({
             max={MAX_BULLETS_PER_JOB}
             disabled={disabled}
             value={settings.bullets_per_job_max}
-            onChange={(e) =>
-              onChange({ ...settings, bullets_per_job_max: Number(e.target.value) })
-            }
+            onChange={(e) => onChange({ ...settings, bullets_per_job_max: Number(e.target.value) })}
           />
         </div>
       </div>

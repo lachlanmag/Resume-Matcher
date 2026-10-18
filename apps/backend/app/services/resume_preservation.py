@@ -64,7 +64,11 @@ def _entry_field(entry: dict[str, Any], field: str, section: str) -> Any:
     support); entries without a flat title/years key still need these checks
     to see the first role's values instead of silently treating them as blank.
     """
-    if section == "workExperience" and field in ("title", "years") and field not in entry:
+    if (
+        section == "workExperience"
+        and field in ("title", "years")
+        and field not in entry
+    ):
         roles = entry.get("roles")
         if isinstance(roles, list) and roles and isinstance(roles[0], dict):
             return roles[0].get(field)
@@ -77,12 +81,18 @@ def _identity(entry: dict[str, Any], section: str) -> tuple[str, ...]:
         return ("id", str(entry_id))
     return (
         "fields",
-        *(_normalized(_entry_field(entry, field, section)) for field in _ENTRY_FIELDS[section]),
+        *(
+            _normalized(_entry_field(entry, field, section))
+            for field in _ENTRY_FIELDS[section]
+        ),
     )
 
 
 def _field_identity(entry: dict[str, Any], section: str) -> tuple[str, ...] | None:
-    identity = tuple(_normalized(_entry_field(entry, field, section)) for field in _ENTRY_FIELDS[section])
+    identity = tuple(
+        _normalized(_entry_field(entry, field, section))
+        for field in _ENTRY_FIELDS[section]
+    )
     return identity if any(identity) else None
 
 
@@ -592,7 +602,10 @@ def _entry_map(
 
 
 def _protected_field_changed(
-    field: str, source_entry: dict[str, Any], candidate_entry: dict[str, Any], section: str
+    field: str,
+    source_entry: dict[str, Any],
+    candidate_entry: dict[str, Any],
+    section: str,
 ) -> bool:
     if field in _FLAG_FIELDS:
         return bool(source_entry.get(field)) != bool(candidate_entry.get(field))

@@ -17,16 +17,14 @@ vi.mock('@/lib/i18n', () => ({
 const jobs = [
   {
     id: 1,
-    title: 'Staff Engineer',
+    roles: [{ id: 1, title: 'Staff Engineer', years: '2018 - Present' }],
     company: 'Northwind',
-    years: '2018 - Present',
     description: ['Led the platform team'],
   },
   {
     id: 2,
-    title: 'Junior Developer',
+    roles: [{ id: 1, title: 'Junior Developer', years: '2004 - 2006' }],
     company: 'Contoso',
-    years: '2004 - 2006',
     description: ['Hidden bullet for a condensed role'],
     condensed: true,
   },
@@ -42,7 +40,7 @@ describe('splitCondensed / condensedLine', () => {
 
   it('renders title, company, years in that order (the ATS round-trip order)', () => {
     expect(condensedLine(jobs[1])).toMatch(/^Junior Developer, Contoso, 2004/);
-    expect(condensedLine({ id: 3, title: 'Intern' })).toBe('Intern');
+    expect(condensedLine({ id: 3, roles: [{ id: 1, title: 'Intern' }] })).toBe('Intern');
   });
 });
 

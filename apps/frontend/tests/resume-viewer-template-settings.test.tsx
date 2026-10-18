@@ -70,7 +70,11 @@ beforeEach(() => {
 describe('resume viewer template settings', () => {
   it('previews and downloads with the formatting saved for this resume', async () => {
     mockResume(saved);
-    vi.mocked(downloadResumePdf).mockResolvedValue(new Blob(['pdf']));
+    vi.mocked(downloadResumePdf).mockResolvedValue({
+      blob: new Blob(['pdf']),
+      warnings: [],
+      errors: [],
+    });
     render(<ResumeViewerPage />);
 
     const download = await screen.findByRole('button', { name: 'resumeViewer.downloadResume' });
@@ -86,7 +90,11 @@ describe('resume viewer template settings', () => {
     // A browser-wide setting from older versions must not leak into this resume.
     localStorage.setItem('resume_builder_settings', JSON.stringify({ template: 'modern' }));
     mockResume(null);
-    vi.mocked(downloadResumePdf).mockResolvedValue(new Blob(['pdf']));
+    vi.mocked(downloadResumePdf).mockResolvedValue({
+      blob: new Blob(['pdf']),
+      warnings: [],
+      errors: [],
+    });
     render(<ResumeViewerPage />);
 
     const download = await screen.findByRole('button', { name: 'resumeViewer.downloadResume' });

@@ -10,10 +10,7 @@ import { formatDateRange } from '@/lib/utils';
 import { DescriptionList } from './description-list';
 import { EarlierExperience, splitCondensed } from './earlier-experience';
 import { RESUME_SECTION, RESUME_SECTION_TITLE, resumeItem } from './page-break-attrs';
-import {
-  getExperienceRoleTitles,
-  getExperienceYearsLine,
-} from '@/lib/utils/work-experience';
+import { getExperienceRoleTitles, getExperienceYearsLine } from '@/lib/utils/work-experience';
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/clean.module.css';
 

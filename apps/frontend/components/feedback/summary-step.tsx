@@ -24,14 +24,14 @@ export function SummaryStep({
     <div className="flex h-full min-h-[500px] flex-col">
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-steel-grey">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-steel">
             {t('feedback.summary.kicker')}
           </p>
           <h2 className="font-serif text-2xl font-bold uppercase tracking-tight">
             {t('feedback.summary.title')}
           </h2>
         </div>
-        <p className="font-mono text-xs text-steel-grey">
+        <p className="font-mono text-xs text-steel">
           {t('feedback.summary.questionsCount', { count: questionCount })}
         </p>
       </div>
@@ -41,7 +41,7 @@ export function SummaryStep({
           {reportMarkdown ? (
             <MarkdownContent markdown={reportMarkdown} />
           ) : (
-            <p className="text-sm italic text-steel-grey">{t('feedback.summary.empty')}</p>
+            <p className="text-sm italic text-steel">{t('feedback.summary.empty')}</p>
           )}
         </div>
       </div>
