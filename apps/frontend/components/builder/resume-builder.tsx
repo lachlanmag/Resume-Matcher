@@ -1,10 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, Suspense, useCallback, useMemo, useRef } from 'react';
-<<<<<<< HEAD
-=======
-import Image from 'next/image';
->>>>>>> origin/main
 import { useSearchParams, useRouter } from 'next/navigation';
 import { type ResumeData } from '@/components/dashboard/resume-component';
 import { ResumeForm } from './resume-form';
@@ -29,24 +25,14 @@ import {
   DownloadSimple,
   FloppyDisk,
   ArrowLeft,
-<<<<<<< HEAD
   ArrowCounterClockwise,
   SpinnerGap,
+  ChatText,
 } from '@phosphor-icons/react';
 import {
   useResumePreview,
   type InterviewPrepData,
 } from '@/components/common/resume_previewer_context';
-=======
-  RotateCcw,
-  Copy,
-  Check,
-  Sparkles,
-  Loader2,
-  MessageSquare,
-} from 'lucide-react';
-import { useResumePreview } from '@/components/common/resume_previewer_context';
->>>>>>> origin/main
 import { PaginatedPreview } from '@/components/preview';
 import {
   downloadResumePdf,
@@ -366,10 +352,8 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
   const [tailorSettings, setTailorSettings] = useState<TailorLengthSettings | null>(null);
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
   const [isGeneratingOutreach, setIsGeneratingOutreach] = useState(false);
-<<<<<<< HEAD
   const [isGeneratingInterviewPrep, setIsGeneratingInterviewPrep] = useState(false);
   const [interviewPrepError, setInterviewPrepError] = useState<string | null>(null);
-=======
   const [enableResumeFeedback, setEnableResumeFeedback] = useState(false);
   const [feedbackGenStatus, setFeedbackGenStatus] = useState<
     'idle' | 'loading' | 'ready' | 'error'
@@ -381,7 +365,6 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
     inFlight: false,
   });
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
->>>>>>> origin/main
   const [showRegenerateDialog, setShowRegenerateDialog] = useState<
     'cover-letter' | 'outreach' | 'interview-prep' | null
   >(null);
@@ -491,13 +474,10 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
       };
     }
     return null;
-<<<<<<< HEAD
   }, [canonicalResumeDataForPreview.additional?.technicalSkills, t]);
-=======
-  }, [resumeData.additional?.technicalSkills, t]);
 
   const summaryItemForRegenerate: RegenerateItemInput | null = useMemo(() => {
-    const summary = resumeData.summary?.trim();
+    const summary = canonicalResumeDataForPreview.summary?.trim();
     if (!summary) {
       return null;
     }
@@ -508,9 +488,8 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
       title: t('builder.regenerate.selectDialog.summary'),
       current_content: [summary],
     };
-  }, [resumeData.summary, t]);
+  }, [canonicalResumeDataForPreview.summary, t]);
 
->>>>>>> origin/main
   const localizedResumeDataForPreview = useMemo(
     () => withLocalizedDefaultSections(canonicalResumeDataForPreview, t),
     [canonicalResumeDataForPreview, t]
@@ -604,7 +583,10 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
           } else {
             clearAttachmentDraft(resumeId);
           }
-<<<<<<< HEAD
+          serverData = withNormalizedWorkExperience(serverData);
+          setResumeFeedback(data.resume_feedback ?? null);
+          setFeedbackGenStatus(data.resume_feedback ? 'ready' : 'idle');
+          setFeedbackGenError(null);
           setInterviewPrep(data.interview_prep ?? null);
           setInterviewPrepError(null);
           const localDraft = readStoredResumeDraft(resumeId);
@@ -619,40 +601,6 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
             setPendingDraftRestore(localDraft);
           } else {
             clearStoredResumeDraft(resumeId);
-=======
-          if (data.outreach_message) {
-            setOutreachMessage(data.outreach_message);
-          }
-          setResumeFeedback(data.resume_feedback ?? null);
-          if (data.resume_feedback) {
-            setFeedbackGenStatus('ready');
-            setFeedbackGenError(null);
-          } else {
-            setFeedbackGenStatus('idle');
-            setFeedbackGenError(null);
-          }
-          // Prefer processed_resume if available
-          if (data.processed_resume) {
-            const normalized = withNormalizedWorkExperience(data.processed_resume as ResumeData);
-            setResumeData(normalized);
-            setLastSavedData(normalized);
-            setLoadingState('loaded');
-            return;
-          }
-          // Fallback to parsing raw content
-          if (data.raw_resume?.content) {
-            try {
-              const parsed = withNormalizedWorkExperience(
-                JSON.parse(data.raw_resume.content) as ResumeData
-              );
-              setResumeData(parsed);
-              setLastSavedData(parsed);
-              setLoadingState('loaded');
-              return;
-            } catch {
-              // Raw content is markdown, not JSON
-            }
->>>>>>> origin/main
           }
           setLoadingState('loaded');
           return;
@@ -670,10 +618,10 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
 
       // Priority 2: Improved Data from Context (Tailor Flow)
       if (improvedPreview) {
-<<<<<<< HEAD
         setIsTailoredResume(Boolean(improvedData?.data?.resume_id && improvedData.data.job_id));
-        setResumeData(improvedPreview);
-        setLastSavedData(improvedPreview);
+        const normalizedPreview = withNormalizedWorkExperience(improvedPreview);
+        setResumeData(normalizedPreview);
+        setLastSavedData(normalizedPreview);
         const contextCoverLetter = improvedCoverLetter ?? '';
         const contextOutreach = improvedOutreach ?? '';
         setCoverLetter(contextCoverLetter);
@@ -688,25 +636,11 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
         setInterviewPrep(improvedInterviewPrep);
         setInterviewPrepError(null);
         // Persist to localStorage as backup
-        setHasCurrentLocalDraft(writeStoredResumeDraft(resumeId, improvedPreview));
-=======
-        const normalized = withNormalizedWorkExperience(improvedPreview);
-        setResumeData(normalized);
-        setLastSavedData(normalized);
+        setHasCurrentLocalDraft(writeStoredResumeDraft(resumeId, normalizedPreview));
         setResumeFeedback(null);
         setFeedbackGenStatus('idle');
         setFeedbackGenError(null);
         feedbackGenerationRef.current = { resumeId: null, inFlight: false };
-        // Also load cover letter and outreach if present
-        if (improvedCoverLetter) {
-          setCoverLetter(improvedCoverLetter);
-        }
-        if (improvedOutreach) {
-          setOutreachMessage(improvedOutreach);
-        }
-        // Persist to localStorage as backup
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
->>>>>>> origin/main
         setLoadingState('loaded');
         return;
       }
@@ -714,26 +648,13 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
       // Priority 3: Restore from localStorage (browser refresh recovery)
       const savedDraft = readStoredResumeDraft(resumeId);
       if (savedDraft) {
-<<<<<<< HEAD
+        setResumeFeedback(null);
+        setFeedbackGenStatus('idle');
+        setFeedbackGenError(null);
+        feedbackGenerationRef.current = { resumeId: null, inFlight: false };
         setPendingDraftRestore(savedDraft);
         setLoadingState('loaded');
         return;
-=======
-        try {
-          const parsed = withNormalizedWorkExperience(JSON.parse(savedDraft) as ResumeData);
-          setResumeData(parsed);
-          setLastSavedData(parsed);
-          setHasUnsavedChanges(true); // Mark as unsaved since it's a draft
-          setResumeFeedback(null);
-          setFeedbackGenStatus('idle');
-          setFeedbackGenError(null);
-          feedbackGenerationRef.current = { resumeId: null, inFlight: false };
-          setLoadingState('loaded');
-          return;
-        } catch {
-          localStorage.removeItem(STORAGE_KEY);
-        }
->>>>>>> origin/main
       }
 
       // Fallback: Use initial data
@@ -778,11 +699,8 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
           const data = await fetchJobDescription(resumeId);
           if (!cancelled) {
             setJobDescription(data.content);
-<<<<<<< HEAD
             setJobContextStatus('available');
-=======
             setTailorJobId(data.job_id);
->>>>>>> origin/main
           }
         } catch (err) {
           // JD might not be available for older resumes
@@ -795,11 +713,8 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
       } else {
         // Clear job description when switching to non-tailored resume
         setJobDescription(null);
-<<<<<<< HEAD
         setJobContextStatus('idle');
-=======
         setTailorJobId(null);
->>>>>>> origin/main
       }
     };
 
@@ -809,37 +724,6 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
     };
   }, [isTailoredResume, resumeId]);
 
-<<<<<<< HEAD
-  const handleUpdate = useCallback(
-    (newData: ResumeData) => {
-      editVersionRef.current += 1;
-      unsyncedSinceRef.current ??= Date.now();
-      setResumeData(newData);
-      setHasUnsavedChanges(true);
-      setAutoSaveError(null);
-      // Auto-save draft to localStorage
-      setHasCurrentLocalDraft(writeStoredResumeDraft(resumeId, newData));
-    },
-    [resumeId]
-  );
-
-  // Sends right away, also while the page unloads (the request is keepalive). Each save
-  // carries the next number in this session, so one that arrives late cannot undo a
-  // newer choice from this tab.
-  const flushFormattingSave = useCallback(() => {
-    if (formattingTimerRef.current) clearTimeout(formattingTimerRef.current);
-    formattingTimerRef.current = null;
-    const pending = pendingFormattingRef.current;
-    pendingFormattingRef.current = null;
-    if (!pending) return;
-    updateResumeTemplateSettings(pending.resumeId, pending.settings, pending.order).then(
-      () => setFormattingSaveFailed(false),
-      (error) => {
-        console.error('Failed to save resume formatting:', error);
-        setFormattingSaveFailed(true);
-      }
-    );
-=======
   useEffect(() => {
     let cancelled = false;
 
@@ -931,6 +815,8 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
         setResumeData(normalized);
         setLastSavedData(normalized);
         setHasUnsavedChanges(false);
+        syncedVersionRef.current = editVersionRef.current;
+        unsyncedSinceRef.current = null;
       }
     } catch (error) {
       console.error('Failed to reload resume after feedback completion:', error);
@@ -940,11 +826,35 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
     }
   }, [resumeId, showNotification, t]);
 
-  const handleUpdate = useCallback((newData: ResumeData) => {
-    setResumeData(newData);
-    setHasUnsavedChanges(true);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
->>>>>>> origin/main
+  const handleUpdate = useCallback(
+    (newData: ResumeData) => {
+      editVersionRef.current += 1;
+      unsyncedSinceRef.current ??= Date.now();
+      setResumeData(newData);
+      setHasUnsavedChanges(true);
+      setAutoSaveError(null);
+      // Auto-save draft to localStorage
+      setHasCurrentLocalDraft(writeStoredResumeDraft(resumeId, newData));
+    },
+    [resumeId]
+  );
+
+  // Sends right away, also while the page unloads (the request is keepalive). Each save
+  // carries the next number in this session, so one that arrives late cannot undo a
+  // newer choice from this tab.
+  const flushFormattingSave = useCallback(() => {
+    if (formattingTimerRef.current) clearTimeout(formattingTimerRef.current);
+    formattingTimerRef.current = null;
+    const pending = pendingFormattingRef.current;
+    pendingFormattingRef.current = null;
+    if (!pending) return;
+    updateResumeTemplateSettings(pending.resumeId, pending.settings, pending.order).then(
+      () => setFormattingSaveFailed(false),
+      (error) => {
+        console.error('Failed to save resume formatting:', error);
+        setFormattingSaveFailed(true);
+      }
+    );
   }, []);
 
   // Formatting is saved with the resume, so its view page and PDF match the builder.
@@ -1218,27 +1128,7 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
       showNotification(t('builder.alerts.saveNotAvailable'), 'warning');
       return;
     }
-<<<<<<< HEAD
     await flushResumeChanges(true);
-=======
-    try {
-      setIsSaving(true);
-      const payload = withNormalizedWorkExperience(resumeData);
-      const updated = await updateResume(resumeId, payload);
-      const nextData = withNormalizedWorkExperience(
-        (updated.processed_resume || resumeData) as ResumeData
-      );
-      setResumeData(nextData);
-      setLastSavedData(nextData);
-      setHasUnsavedChanges(false);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextData));
-    } catch (error) {
-      console.error('Failed to save resume:', error);
-      showNotification(t('builder.alerts.saveFailed'), 'danger');
-    } finally {
-      setIsSaving(false);
-    }
->>>>>>> origin/main
   };
 
   const handleReset = () => {
@@ -1272,7 +1162,7 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
     if (!pendingDraftRestore) return;
     editVersionRef.current += 1;
     unsyncedSinceRef.current = Date.now();
-    setResumeData(pendingDraftRestore.data);
+    setResumeData(withNormalizedWorkExperience(pendingDraftRestore.data));
     setHasUnsavedChanges(true);
     setAutoSaveError(null);
     const didWriteScopedDraft = writeStoredResumeDraft(resumeId, pendingDraftRestore.data);
@@ -1962,7 +1852,6 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
   return (
     <div className="h-screen w-full bg-canvas flex justify-center items-center p-2 md:p-4">
       {/* Main Container */}
-<<<<<<< HEAD
       <div className="w-full h-full border border-ink bg-canvas shadow-sw-lg flex flex-col">
         {/* Header: one compact toolbar row (owner F2, builder only) */}
         <PageHeader className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 py-3 md:px-6 md:py-3 no-print">
@@ -1983,95 +1872,6 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
                 <StatusIndicator tone={resumeSaveStatus.tone} live={false}>
                   {resumeSaveStatus.label}
                 </StatusIndicator>
-=======
-      <div className="w-full h-full max-w-[90%] md:max-w-[95%] xl:max-w-[1800px] border border-black bg-background shadow-sw-lg flex flex-col">
-        {/* Header Section */}
-        <div className="border-b border-black p-6 md:p-8 bg-background no-print">
-          {/* Top Row: Back button and Actions */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-            <div>
-              <Button
-                variant="link"
-                onClick={() => router.push('/dashboard')}
-                className="mb-2 -ml-1"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                {t('nav.backToDashboard')}
-              </Button>
-              <h1 className="font-serif text-3xl md:text-5xl text-black tracking-tight leading-[0.95] uppercase">
-                {t('nav.builder')}
-              </h1>
-              <div className="mt-3 flex items-center gap-3">
-                <p className="text-sm font-mono text-blue-700 uppercase tracking-wide font-bold">
-                  {'// '}
-                  {resumeId ? t('builder.editMode') : t('builder.createAndPreview')}
-                </p>
-                {hasUnsavedChanges && (
-                  <span className="flex items-center gap-1 text-xs font-mono text-amber-600 bg-amber-50 px-2 py-1 border border-amber-200">
-                    <AlertTriangle className="w-3 h-3" />
-                    {t('builder.unsavedDraft')}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-4 md:mt-0">
-              {/* Resume tab actions */}
-              {activeTab === 'resume' && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => regenerateWizard.startRegenerate()}
-                    disabled={!resumeId}
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    {t('builder.regenerate.buttonLabel')}
-                  </Button>
-                  {isTailoredResume && enableResumeFeedback && (
-                    <Button variant="outline" size="sm" onClick={() => setShowFeedbackModal(true)}>
-                      {feedbackGenStatus === 'loading' ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          {t('common.processing')}
-                          {feedbackGenElapsed > 0 && (
-                            <span className="font-mono text-xs opacity-70">
-                              {feedbackGenElapsed}s
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <MessageSquare className="w-4 h-4" />
-                          {t('feedback.buttonLabel')}
-                        </>
-                      )}
-                    </Button>
-                  )}
-                  <Button
-                    variant="warning"
-                    size="sm"
-                    onClick={handleReset}
-                    disabled={!hasUnsavedChanges}
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    {t('common.reset')}
-                  </Button>
-                  <Button size="sm" onClick={handleSave} disabled={!resumeId || isSaving}>
-                    <Save className="w-4 h-4" />
-                    {isSaving ? t('common.saving') : t('common.save')}
-                  </Button>
-                  <Button
-                    variant="success"
-                    size="sm"
-                    onClick={handleDownload}
-                    disabled={!resumeId || isDownloading}
-                  >
-                    <Download className="w-4 h-4" />
-                    {isDownloading ? t('common.generating') : t('common.download')}
-                  </Button>
-                </>
->>>>>>> origin/main
               )}
             </span>
           </div>
@@ -2091,6 +1891,24 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
                 >
                   {t('builder.regenerate.buttonLabel')}
                 </Button>
+                {isTailoredResume && enableResumeFeedback && (
+                  <Button variant="outline" size="sm" onClick={() => setShowFeedbackModal(true)}>
+                    {feedbackGenStatus === 'loading' ? (
+                      <>
+                        <SpinnerGap aria-hidden="true" className="animate-spin" />
+                        {t('common.processing')}
+                        {feedbackGenElapsed > 0 && (
+                          <span className="font-mono text-xs tabular-nums">{feedbackGenElapsed}s</span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <ChatText aria-hidden="true" />
+                        {t('feedback.buttonLabel')}
+                      </>
+                    )}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -2222,7 +2040,6 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
               />
 
               {/* Resume Editor */}
-<<<<<<< HEAD
               {activeTab === 'resume' &&
                 (loadingState === 'error' ? (
                   <Alert tone="error">{t('builder.alerts.loadFailed')}</Alert>
@@ -2232,6 +2049,25 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
                       settings={templateSettings}
                       onChange={handleSettingsChange}
                     />
+                    {isTailoredResume && resumeId && parentResumeId && tailorJobId && (
+                      <TailorSettingsPanel
+                        resumeId={resumeId}
+                        masterResumeId={parentResumeId}
+                        jobId={tailorJobId}
+                        initialSettings={tailorSettings ?? DEFAULT_TAILOR_LENGTH_SETTINGS}
+                        onResumeUpdated={(data) => {
+                          const normalized = withNormalizedWorkExperience(data);
+                          setResumeData(normalized);
+                          setLastSavedData(normalized);
+                          setHasUnsavedChanges(false);
+                          syncedVersionRef.current = editVersionRef.current;
+                          unsyncedSinceRef.current = null;
+                          clearStoredResumeDraft(resumeId);
+                          setHasCurrentLocalDraft(false);
+                        }}
+                        onError={(msg) => showNotification(msg, 'warning')}
+                      />
+                    )}
                     <ResumeForm
                       key={resumeFormKey}
                       resumeData={resumeData}
@@ -2239,30 +2075,6 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
                     />
                   </>
                 ))}
-=======
-              {activeTab === 'resume' && (
-                <>
-                  <FormattingControls settings={templateSettings} onChange={handleSettingsChange} />
-                  {isTailoredResume && resumeId && parentResumeId && tailorJobId && (
-                    <TailorSettingsPanel
-                      resumeId={resumeId}
-                      masterResumeId={parentResumeId}
-                      jobId={tailorJobId}
-                      initialSettings={tailorSettings ?? DEFAULT_TAILOR_LENGTH_SETTINGS}
-                      onResumeUpdated={(data) => {
-                        const normalized = withNormalizedWorkExperience(data);
-                        setResumeData(normalized);
-                        setLastSavedData(normalized);
-                        setHasUnsavedChanges(false);
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-                      }}
-                      onError={(msg) => showNotification(msg, 'warning')}
-                    />
-                  )}
-                  <ResumeForm resumeData={resumeData} onUpdate={handleUpdate} />
-                </>
-              )}
->>>>>>> origin/main
 
               {/* Cover Letter Editor */}
               {activeTab === 'cover-letter' &&
@@ -2529,13 +2341,6 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
         </div>
       </div>
 
-<<<<<<< HEAD
-      {agentMode && (
-        <AgentPromptDialog
-          task={agentTask}
-          resumeId={resumeId ?? ''}
-          onClose={() => setAgentTask(null)}
-=======
       {resumeId && (
         <FeedbackModal
           resumeId={resumeId}
@@ -2547,7 +2352,13 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
           backgroundGenStatus={feedbackGenStatus}
           backgroundGenError={feedbackGenError}
           onRequestGeneration={startFeedbackGeneration}
->>>>>>> origin/main
+        />
+      )}
+      {agentMode && (
+        <AgentPromptDialog
+          task={agentTask}
+          resumeId={resumeId ?? ''}
+          onClose={() => setAgentTask(null)}
         />
       )}
 

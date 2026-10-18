@@ -6,6 +6,7 @@ import type {
   ResumeData,
   SectionType,
 } from '@/components/dashboard/resume-component';
+import { withNormalizedWorkExperience } from '@/lib/utils/work-experience';
 
 type DescribedItem = {
   description?: unknown;
@@ -87,11 +88,11 @@ const normalizeDescriptionFields = <T extends DescribedItem>(item: T): T => {
 // `title` from malformed persisted data makes `.trim` undefined and throws
 // "item.title?.trim is not a function". isMeaningfulText type-checks first.
 const hasExperienceContent = (item: Experience): boolean => {
+  const roles = Array.isArray(item.roles) ? item.roles : [];
   return Boolean(
-    isMeaningfulText(item.title) ||
+    roles.some((role) => isMeaningfulText(role?.title) || isMeaningfulText(role?.years)) ||
     isMeaningfulText(item.company) ||
     isMeaningfulText(item.location) ||
-    isMeaningfulText(item.years) ||
     (Array.isArray(item.description) && item.description.length)
   );
 };
@@ -173,9 +174,13 @@ export const normalizeResumeForSave = (resume: ResumeData): ResumeData => {
 
   return {
     ...resume,
-    workExperience: (Array.isArray(resume.workExperience) ? resume.workExperience : [])
-      .filter(isObjectRecord)
-      .map(normalizeDescriptionFields)
+    // Multi-role shape first (also upgrades legacy flat title/years entries).
+    workExperience: withNormalizedWorkExperience({
+      workExperience: (Array.isArray(resume.workExperience) ? resume.workExperience : []).filter(
+        isObjectRecord
+      ),
+    })
+      .workExperience.map(normalizeDescriptionFields)
       .filter(hasExperienceContent),
     personalProjects: (Array.isArray(resume.personalProjects) ? resume.personalProjects : [])
       .filter(isObjectRecord)
