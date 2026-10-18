@@ -13,11 +13,8 @@ import { API_BASE } from '@/lib/api/client';
 import { translate } from '@/lib/i18n/server';
 import { resolveLocale } from '@/lib/i18n/locale';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
-<<<<<<< HEAD
 import { runningHeaderCss } from '@/lib/print/running-header';
-=======
 import { withNormalizedWorkExperience } from '@/lib/utils/work-experience';
->>>>>>> origin/main
 
 type PageProps = {
   params: Promise<{ id: string }>;

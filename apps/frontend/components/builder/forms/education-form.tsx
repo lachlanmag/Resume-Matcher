@@ -71,7 +71,6 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
           }
         />
       ) : (
-<<<<<<< HEAD
         <SortableItemList id="education-items" items={data} onReorder={onChange} animateItems>
           {(item) => (
             <div className="p-6 border border-ink bg-paper relative group">
@@ -85,27 +84,6 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
               >
                 <Copy aria-hidden="true" />
               </Button>
-=======
-        <DndContext id="education-entries" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext
-            items={data.map((item) => item.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="space-y-8">
-              {data.map((item) => (
-                <DraggableListItem key={item.id} id={item.id}>
-                  <div className="p-6 border border-black bg-paper-tint relative group">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleRemove(item.id)}
-                      aria-label={t('a11y.removeItem')}
-                      title={t('a11y.removeItem')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
->>>>>>> origin/main
 
               <Button
                 variant="ghost"

@@ -12,19 +12,8 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-<<<<<<< HEAD
 import { EmptyState } from '@/components/ui/empty-state';
 import { Check, CaretDown, CaretRight } from '@phosphor-icons/react';
-=======
-import {
-  Briefcase,
-  FolderKanban,
-  Lightbulb,
-  FileText,
-  ChevronDown,
-  ChevronRight,
-} from 'lucide-react';
->>>>>>> origin/main
 import { useTranslations } from '@/lib/i18n';
 import type { RegenerateItemInput } from '@/lib/api/enrichment';
 
@@ -105,27 +94,26 @@ export const RegenerateDialog: React.FC<RegenerateDialogProps> = ({
 
           {/* Summary Section */}
           {summaryItem && (
-            <div className="border border-black">
+            <div className="border border-ink">
               <button
                 type="button"
                 onClick={() => toggleSection('summary')}
                 aria-expanded={expandedSections.has('summary')}
-                className="w-full p-4 flex items-center justify-between bg-background hover:bg-secondary transition-colors"
+                className="w-full p-4 flex items-center justify-between bg-canvas hover:bg-panel transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
               >
                 <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5" />
                   <span className="font-mono text-sm uppercase tracking-wider font-medium">
                     {t('builder.regenerate.selectDialog.summary')}
                   </span>
                 </div>
                 {expandedSections.has('summary') ? (
-                  <ChevronDown className="w-4 h-4" />
+                  <CaretDown aria-hidden="true" className="size-4" />
                 ) : (
-                  <ChevronRight className="w-4 h-4" />
+                  <CaretRight aria-hidden="true" className="size-4" />
                 )}
               </button>
               {expandedSections.has('summary') && (
-                <div className="border-t border-black">
+                <div className="border-t border-ink">
                   <ItemRow
                     item={summaryItem}
                     isSelected={isSelected(summaryItem)}

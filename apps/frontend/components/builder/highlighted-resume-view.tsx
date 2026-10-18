@@ -63,15 +63,11 @@ export function HighlightedResumeView({ resumeData, keywords }: HighlightedResum
                 <div className="font-semibold text-ink-soft">
                   <HighlightedText text={exp.company || ''} keywords={keywords} />
                 </div>
-<<<<<<< HEAD
-                {exp.years && (
-                  <div className="text-xs text-steel mb-1 tabular-nums">{exp.years}</div>
-=======
                 {(exp.roles || []).map((role) => (
                   <div key={`${exp.id}-${role.id}`} className="text-sm text-ink-soft mb-1">
                     <HighlightedText text={role.title || ''} keywords={keywords} />
                     {role.years ? (
-                      <span className="text-xs text-steel-grey ml-2">{role.years}</span>
+                      <span className="text-xs tabular-nums text-steel ml-2">{role.years}</span>
                     ) : null}
                   </div>
                 ))}
@@ -82,7 +78,6 @@ export function HighlightedResumeView({ resumeData, keywords }: HighlightedResum
                       keywords={keywords}
                     />
                   </div>
->>>>>>> origin/main
                 )}
                 {exp.description && (
                   <ul className="space-y-1 text-sm">

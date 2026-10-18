@@ -24,14 +24,9 @@ export interface ExperienceEntry {
   id: number;
   company?: string;
   location?: string;
-<<<<<<< HEAD
-  years?: string;
-  description: string[];
-  descriptionStyles?: ('bullet' | 'plain')[];
-=======
   roles: ExperienceRoleEntry[];
   description?: string[];
->>>>>>> origin/main
+  descriptionStyles?: ('bullet' | 'plain')[];
 }
 
 export interface EducationEntry {

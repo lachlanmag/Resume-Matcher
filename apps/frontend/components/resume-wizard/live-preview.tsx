@@ -73,25 +73,6 @@ export function LivePreview({ resumeData, inferredSkills }: LivePreviewProps) {
               <p className="border-b border-ink pb-1 font-mono text-xs font-bold uppercase tracking-wider">
                 {t('resumeWizard.preview.experience')}
               </p>
-<<<<<<< HEAD
-              {experience.map((item) => (
-                <div key={item.id} className="mt-2">
-                  <p className="font-sans text-sm font-bold">
-                    {[item.title, item.company].filter(Boolean).join(' · ')}
-                  </p>
-                  {item.years?.trim() && (
-                    <p className="font-mono text-xs tabular-nums text-steel">{item.years}</p>
-                  )}
-                  <ul className="mt-1 list-none space-y-1">
-                    {(item.description ?? []).map((line, index) => (
-                      <li key={index} className="font-sans text-xs leading-snug">
-                        {line}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-=======
               {experience.map((item) => {
                 const yearsLine = (item.roles ?? [])
                   .map((role) => role.years?.trim())
@@ -103,7 +84,7 @@ export function LivePreview({ resumeData, inferredSkills }: LivePreviewProps) {
                       {[getExperienceRoleTitles(item), item.company].filter(Boolean).join(' · ')}
                     </p>
                     {yearsLine && (
-                      <p className="font-mono text-xs text-steel-grey">{yearsLine}</p>
+                      <p className="font-mono text-xs tabular-nums text-steel">{yearsLine}</p>
                     )}
                     <ul className="mt-1 list-none space-y-1">
                       {(item.description ?? []).map((line, index) => (
@@ -115,7 +96,6 @@ export function LivePreview({ resumeData, inferredSkills }: LivePreviewProps) {
                   </div>
                 );
               })}
->>>>>>> origin/main
             </section>
           )}
 

@@ -389,16 +389,12 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({ resumeData, onUpdate }) 
   };
 
   return (
-<<<<<<< HEAD
     <DndContext
       id="resume-sections"
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-=======
-    <DndContext id="resume-sections" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
->>>>>>> origin/main
       <SortableContext
         items={sortedAllSections.map((s) => s.id)}
         strategy={verticalListSortingStrategy}
