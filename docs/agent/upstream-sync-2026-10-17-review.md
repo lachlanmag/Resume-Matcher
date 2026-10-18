@@ -171,3 +171,23 @@ restriction was intentional, it needs a narrower condition (e.g. only when no
 2. **replace_resume_id: add an atomic `complete_preview_replacing()`** that claims the preview and
    UPDATEs the existing tailored resume in the same transaction. (Implementation pending, tracked below.)
 3. **`_ensure_master_resume_for_tailor` removal:** awaiting user after a fuller explanation.
+
+## Status (2026-10-18): all batches resolved
+
+- No conflict markers remain. `origin/main` (fork) and `upstream/main` are both ancestors of the branch.
+- Frontend: `tsc` clean, vitest 160 files / 1587 tests, oxlint + oxfmt clean, Swiss guard ratchet unchanged.
+- Backend: 1933 passed / 7 skipped, ruff check + format clean.
+  `test_pdf_lifecycle::test_simultaneous_recovery_callers_install_one_browser` is an intermittent
+  real-Chromium timing flake on upstream-only render code (fork PDF helpers are not on that path).
+- **replace_resume_id implemented** (decision 2): `Database._replace_tailored_row` validates and
+  updates in the same transaction as the improvement record, for both `complete_preview` (confirm)
+  and `create_tailored_resume` (`/improve`, used by the builder's Re-tailor). Keeps the resume's id,
+  filename, created_at and template_settings; no second tracker card. Tests:
+  `tests/integration/test_replace_tailored_resume.py`.
+- Fixed in non-conflicted code during the sync (field relocation fallout): frontend
+  `normalizeExperienceEntry` dropped `descriptionStyles`/`condensed`; upstream
+  `resume-normalization.ts` filtered experience on flat `title`/`years`; deedy + modern-deedy
+  templates and resume-wizard storage read flat fields.
+- Fork-only UI (feedback modal/steps, markdown content, tailor panels) migrated to Swiss tokens and Phosphor icons.
+
+Still open: decision 3 (`_ensure_master_resume_for_tailor`), awaiting the user.
