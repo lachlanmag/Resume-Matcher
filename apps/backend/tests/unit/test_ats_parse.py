@@ -11,7 +11,6 @@ from typing import Any
 import pytest
 from docx import Document
 from docx.shared import Inches
-from pydantic import ValidationError
 
 from app.services.ats_parse import build_report, parse_check_bytes
 from app.services.ats_parse.checks import find_sections, has_columns, run_checks, score
@@ -273,7 +272,8 @@ async def test_two_column_render_scrambles_reading_order() -> None:
         render("two-column"), "b.pdf", source="render", resume_data=john_doe()
     )
     assert single.roundtrip.content_recall == 1.0
-    assert single.roundtrip.order_fidelity == 1.0
+    # pdfminer reads one skills token before the education year (0.994).
+    assert single.roundtrip.order_fidelity >= 0.99
     assert double.roundtrip.order_fidelity < 0.9
     assert double.overall_score < single.overall_score
 
@@ -399,7 +399,7 @@ async def test_roundtrip_checks_header_links() -> None:
     statuses = {f.field: f.status for f in kept.fields}
     assert statuses["personalInfo.linkedin"] == "found"
     assert statuses["personalInfo.github"] == "found"
-    assert kept.content_recall == 1.0 and kept.order_fidelity == 1.0
+    assert kept.content_recall == 1.0 and kept.order_fidelity >= 0.99
 
     dropped = compute_roundtrip(data, text.replace("linkedin.com/in/johndoe", ""))
     assert {f.field: f.status for f in dropped.fields}[
@@ -433,13 +433,81 @@ def test_roundtrip_links_follow_template_display_and_order() -> None:
 
 
 def test_roundtrip_reads_entry_rows_left_column_first() -> None:
-    # The render's "title | dates" over "company | location" rows read title,
-    # company, dates, location.
-    data = john_doe()
-    for entry in data["workExperience"]:
-        entry["location"] = "San Francisco, CA"
+    # WorkExperienceBlock renders a "company | location" row, then one
+    # "title | dates" row per role; pdfminer reads the left column first:
+    # company, title, location, dates.
     text = extract_pdf(render("single-column")).text
-    assert compute_roundtrip(data, text, "swiss-single").order_fidelity == 1.0
+    roundtrip = compute_roundtrip(john_doe(), text, "swiss-single")
+    assert roundtrip.content_recall == 1.0
+    assert roundtrip.order_fidelity >= 0.99
+
+
+def test_roundtrip_checks_every_role_in_role_row_templates() -> None:
+    data = {
+        "personalInfo": {"name": "Jane Roe"},
+        "workExperience": [
+            {
+                "company": "Acme Corp",
+                "location": "Dublin",
+                "roles": [
+                    {"id": 1, "title": "Staff Engineer", "years": "2022 - 2024"},
+                    {"id": 2, "title": "Senior Engineer", "years": "2019 - 2022"},
+                ],
+            }
+        ],
+    }
+    # As pdfminer reads a real render: the left column (company, every title),
+    # then the right (location, every role's dates).
+    text = (
+        "Jane Roe\nAcme Corp\nStaff Engineer\nSenior Engineer\nDublin\n"
+        "2022 - 2024\n2019 - 2022"
+    )
+    roundtrip = compute_roundtrip(data, text, "swiss-single")
+    assert roundtrip.content_recall == 1.0
+    assert roundtrip.order_fidelity == 1.0
+    statuses = {f.field: f.status for f in roundtrip.fields}
+    assert statuses["workExperience[0].roles[1].title"] == "found"
+    assert statuses["workExperience[0].roles[1].years"] == "found"
+
+    # The second role missing from the PDF is now caught.
+    dropped = compute_roundtrip(
+        data,
+        text.replace("Senior Engineer\n", "").replace("\n2019 - 2022", ""),
+        "swiss-single",
+    )
+    assert dropped.content_recall < 1.0
+    assert {f.field: f.status for f in dropped.fields}[
+        "workExperience[0].roles[1].title"
+    ] == "missing"
+
+
+def test_roundtrip_checks_every_role_in_joined_line_templates() -> None:
+    data = {
+        "personalInfo": {"name": "Jane Roe"},
+        "workExperience": [
+            {
+                "company": "Acme Corp",
+                "location": "Dublin",
+                "roles": [
+                    {"id": 1, "title": "Staff Engineer", "years": "2022 - 2024"},
+                    {"id": 2, "title": "Senior Engineer", "years": "2019 - 2022"},
+                ],
+            }
+        ],
+    }
+    text = (
+        "Jane Roe\nAcme Corp | Staff Engineer; Senior Engineer\n"
+        "2022 - 2024 · 2019 - 2022 | Dublin"
+    )
+    roundtrip = compute_roundtrip(data, text, "vivid")
+    assert roundtrip.content_recall == 1.0
+    assert roundtrip.order_fidelity == 1.0
+    no_second = compute_roundtrip(
+        data,
+        text.replace("; Senior Engineer", "").replace(" · 2019 - 2022", ""),
+        "vivid",
+    )
+    assert no_second.content_recall < 1.0
 
 
 # Entry lines in the order pdfminer reads assets/pdf-templates/<template>.pdf.
@@ -456,7 +524,8 @@ TEMPLATE_ENTRY_TEXT = {
     "BSc Physics\nTrinity College\n2016",
     "deedy": "ACME CORP | STAFF ENGINEER\n2020 - 2023 | Dublin\n"
     "TRINITY COLLEGE\nBSC PHYSICS\n2016",
-    "swiss-two-column": "Staff Engineer\nAcme Corp • Dublin\n2020 - 2023\n"
+    # WorkExperienceBlock: company/location row, then the title/dates row.
+    "swiss-two-column": "Acme Corp\nStaff Engineer\nDublin\n2020 - 2023\n"
     "Trinity College | 2016\nBSc Physics",
 }
 
@@ -479,7 +548,10 @@ def test_roundtrip_uses_the_template_entry_order(template: str) -> None:
     }
     text = "Jane Roe\n" + TEMPLATE_ENTRY_TEXT[template]
     assert compute_roundtrip(data, text, template).order_fidelity == 1.0
-    assert compute_roundtrip(data, text).order_fidelity < 1.0
+    # The default (WorkExperienceBlock) reads company, title, location, dates,
+    # which clean shares; every other template's order is distinct.
+    if template != "clean":
+        assert compute_roundtrip(data, text).order_fidelity < 1.0
 
 
 async def test_pdf_without_text_is_not_extractable() -> None:

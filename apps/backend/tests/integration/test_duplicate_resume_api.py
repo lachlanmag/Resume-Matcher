@@ -102,6 +102,11 @@ async def test_duplicate_tailored_keeps_parent(
         cover_letter="Dear Acme",
         outreach_message="Hi there",
         interview_prep='{"questions": []}',
+        tailor_settings={
+            "target_pages": 1,
+            "bullets_per_job_min": 2,
+            "bullets_per_job_max": 4,
+        },
     )
 
     res = await client.post(f"/api/v1/resumes/{tailored['resume_id']}/duplicate")
@@ -119,6 +124,7 @@ async def test_duplicate_tailored_keeps_parent(
     assert copy_row["cover_letter"] == "Dear Acme"
     assert copy_row["outreach_message"] == "Hi there"
     assert copy_row["interview_prep"] == '{"questions": []}'
+    assert copy_row["tailor_settings"] == tailored["tailor_settings"]
     assert len(await isolated_db.list_master_resumes()) == 1
 
 

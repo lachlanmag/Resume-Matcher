@@ -9,6 +9,7 @@ from app.ai_budget import AIOperationDeadlineExceeded
 from app.ai_limits import PromptSizeError
 from app.llm import complete_json
 from app.prompts import BULLET_RELEVANCE_PROMPT
+from app.schemas.work_experience import experience_role_titles
 from app.services.bullet_selector import BulletKey, bullet_path, iter_bullet_rows
 from app.services.improver import _sanitize_user_input
 from app.services.refiner import _keyword_in_text
@@ -27,7 +28,7 @@ _JOB_TERM_KEYS = (
 def _entry_label(section: str, entry: dict[str, Any]) -> str:
     """Generate a human-readable label for a bullet's entry (role context)."""
     if section == "workExperience":
-        return f"{entry.get('title', '')} @ {entry.get('company', '')}".strip()
+        return f"{experience_role_titles(entry)} @ {entry.get('company', '')}".strip()
     return str(entry.get("name", "")).strip()
 
 

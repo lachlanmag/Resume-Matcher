@@ -1550,6 +1550,12 @@ async def _improve_preview_flow(
             max_per_entry=request.max_bullets_per_entry,
             page_fit=request.page_fit,
             max_pages=request.max_pages,
+            # Page fitting never cuts a job below the user's tailoring minimum.
+            min_work_bullets=(
+                tailor_length_settings.bullets_per_job_min
+                if tailor_length_settings
+                else 1
+            ),
         )
         # The condensed, fitted source replaces the full master for every
         # downstream step so preservation contracts hold at confirm time.
@@ -2878,7 +2884,12 @@ async def duplicate_resume(resume_id: str) -> DuplicateResumeResponse:
                 **fields, take_over_stuck_default=False
             )
         else:
-            fields.update(is_master=False, parent_id=source.get("parent_id"))
+            fields.update(
+                is_master=False,
+                parent_id=source.get("parent_id"),
+                # A tailored copy keeps its tailoring length settings.
+                tailor_settings=copy.deepcopy(source.get("tailor_settings")),
+            )
             # A tailored copy keeps the original's job link so JD features work on it.
             link = await db.get_improvement_by_tailored_resume(resume_id)
             if link is None:

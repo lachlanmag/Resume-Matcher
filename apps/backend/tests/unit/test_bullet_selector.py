@@ -251,3 +251,33 @@ async def test_fit_trims_only_down_to_the_page_limit() -> None:
     one = await fit_to_page_limit(sel.data, sel.scores, measure, max_pages=1)
     assert (one.status, one.trimmed, one.pages) == ("trimmed", 7, 1)
     assert count_bullets(one.data) == 5
+
+
+def test_trim_order_keeps_the_tailoring_minimum_for_work_entries() -> None:
+    # Tailoring length says at least 2 bullets per job: page fitting may cut
+    # projects to 1, but never a job below 2 (a job that already has fewer stays).
+    sel = select_bullets(_resume(), SCORES, 3)
+    remaining = drop_bullets(sel.data, trim_order(sel.data, sel.scores, 2))
+    assert [len(e["description"]) for e in remaining["workExperience"]] == [2, 2]
+    assert len(remaining["personalProjects"][0]["description"]) == 1
+
+    short = _resume()
+    short["workExperience"][1]["description"] = ["y0"]
+    short["workExperience"][1]["descriptionStyles"] = ["bullet"]
+    order = trim_order(short, {}, 3)
+    assert not [key for key in order if key[:2] == ("workExperience", 1)]
+
+
+async def test_fit_respects_the_work_minimum_and_reports_over() -> None:
+    sel = select_bullets(_resume(), SCORES, 3)
+
+    async def measure(d: dict) -> int:
+        return 1 if count_bullets(d) <= 3 else 2  # only the 1-per-entry trim fits
+
+    floored = await fit_to_page_limit(sel.data, sel.scores, measure, min_work_bullets=2)
+    # Honouring 2 per job cannot reach the page limit: keep the selection, flag it.
+    assert floored.status == "over"
+    assert count_bullets(floored.data) == count_bullets(sel.data)
+
+    default = await fit_to_page_limit(sel.data, sel.scores, measure)
+    assert default.status == "trimmed" and count_bullets(default.data) == 3

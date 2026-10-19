@@ -116,8 +116,18 @@ def select_bullets(
     return BulletSelection(result, new_scores, before, after)
 
 
-def trim_order(data: dict[str, Any], scores: dict[BulletKey, float]) -> list[BulletKey]:
-    """Deterministic drop sequence: least relevant entry first, never below 1 per entry."""
+def trim_order(
+    data: dict[str, Any],
+    scores: dict[BulletKey, float],
+    min_work_bullets: int = 1,
+) -> list[BulletKey]:
+    """Deterministic drop sequence: least relevant entry first.
+
+    Never trims an entry below 1 bullet, and a work-experience entry below
+    ``min_work_bullets`` (the user's tailoring minimum; an entry that already
+    has fewer is left as is).
+    """
+    floors: dict[tuple[str, int], int] = {}
     counts: dict[tuple[str, int], int] = {}
     entry_scores: dict[tuple[str, int], list[float]] = {}
     candidates: list[tuple[int, str, int, int]] = []
@@ -127,6 +137,9 @@ def trim_order(data: dict[str, Any], scores: dict[BulletKey, float]) -> list[Bul
             if not description or entry.get("condensed"):
                 continue
             counts[(section, entry_index)] = len(description)
+            floors[(section, entry_index)] = (
+                max(1, min_work_bullets) if section == "workExperience" else 1
+            )
             entry_scores[(section, entry_index)] = [
                 scores.get((section, entry_index, i), 0.0)
                 for i in range(len(description))
@@ -149,7 +162,7 @@ def trim_order(data: dict[str, Any], scores: dict[BulletKey, float]) -> list[Bul
 
     order: list[BulletKey] = []
     for _rank, section, entry_index, bullet_index in sorted(candidates, key=key):
-        if counts[(section, entry_index)] > 1:
+        if counts[(section, entry_index)] > floors[(section, entry_index)]:
             counts[(section, entry_index)] -= 1
             order.append((section, entry_index, bullet_index))
     return order
@@ -174,6 +187,7 @@ async def fit_to_page_limit(
     measure: Callable[[dict[str, Any]], Awaitable[int]],
     max_pages: int | None = 1,
     max_renders: int = MAX_FIT_RENDERS,
+    min_work_bullets: int = 1,
 ) -> FitResult:
     """Drop the fewest ranked bullets so the rendered draft fits ``max_pages``.
 
@@ -182,8 +196,9 @@ async def fit_to_page_limit(
     Page count is monotonic in the number of drops, so binary search over k.
     When even the maximum trim (one bullet per entry) spills over the limit,
     the draft is returned untrimmed: gutting every entry gains nothing.
+    Work-experience entries keep at least ``min_work_bullets``.
     """
-    order = trim_order(data, scores)
+    order = trim_order(data, scores, min_work_bullets)
     renders = 0
 
     async def pages_for(k: int) -> int:

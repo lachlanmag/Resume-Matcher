@@ -225,10 +225,10 @@ def test_condensed_entry_expects_title_company_and_years_after_full_entries() ->
     data["workExperience"][0]["id"] = 3  # an old role listed first, condensed
     names = [n for n in _names(data) if n.startswith("workExperience")]
     assert names == [
-        "workExperience[1].title",
         "workExperience[1].company",
-        "workExperience[1].years",
+        "workExperience[1].title",
         "workExperience[1].location",
+        "workExperience[1].years",
         "workExperience[1].description[0]",
         "workExperience[1].description[1]",
         "workExperience[0].title",
@@ -260,10 +260,10 @@ def test_roundtrip_counts_a_condensed_line_as_fully_found() -> None:
             "Ada Lovelace",
             "ada@example.com",
             "Backend engineer building Python services.",
-            "Staff Engineer",
             "Alpha",
-            "2020 - Present",
+            "Staff Engineer",
             "London",
+            "2020 - Present",
             "Built Python APIs",
             "Documented releases",
             "Earlier experience",

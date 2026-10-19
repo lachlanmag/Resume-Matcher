@@ -208,3 +208,31 @@ async def test_job_description_is_sanitized_before_prompting(
     assert "<system>" not in prompt
     assert "[REDACTED]" in prompt
     assert "Python role." in prompt  # benign JD text still reaches the model
+
+
+@patch("app.services.bullet_scoring.complete_json", new_callable=AsyncMock)
+async def test_multi_role_entries_are_labelled_with_their_role_titles(
+    mock_llm: AsyncMock,
+) -> None:
+    data = {
+        "workExperience": [
+            {
+                "company": "X",
+                "roles": [
+                    {"id": 1, "title": "Staff Eng", "years": "2022 - Present"},
+                    {"id": 2, "title": "Eng", "years": "2019 - 2022"},
+                ],
+                "description": ["Built Python APIs"],
+            }
+        ]
+    }
+
+    async def run(**kwargs: Any) -> Any:
+        return kwargs["response_validator"](
+            {"scores": [{"path": "workExperience[0].description[0]", "score": 50}]}
+        )
+
+    mock_llm.side_effect = run
+    await score_bullets(data, "JD", KEYWORDS)
+    prompt = mock_llm.call_args.kwargs["prompt"]
+    assert "Staff Eng; Eng @ X | Built Python APIs" in prompt

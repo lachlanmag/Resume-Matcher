@@ -54,6 +54,7 @@ async def run_bullet_selection(
     max_per_entry: int | None,
     page_fit: PageFitSettings | None,
     max_pages: int = 1,
+    min_work_bullets: int = 1,
 ) -> SelectionOutcome:
     scores, scoring = await score_bullets(source_data, job_description, job_keywords)
     selection = select_bullets(source_data, scores, max_per_entry)
@@ -74,7 +75,11 @@ async def run_bullet_selection(
             )
 
         fit = await fit_to_page_limit(
-            selection.data, selection.scores, measure, max_pages=limit
+            selection.data,
+            selection.scores,
+            measure,
+            max_pages=limit,
+            min_work_bullets=min_work_bullets,
         )
         data, status, trimmed, pages = fit.data, fit.status, fit.trimmed, fit.pages
         if status == "over":

@@ -193,11 +193,21 @@ def _collect_date_strings(resume: dict[str, Any]) -> list[str]:
     for key, section in (resume.get("customSections") or {}).items():
         if isinstance(section, dict) and _is_section_visible(resume, key):
             entries.extend(section.get("items") or [])
-    return [
-        entry["years"]
-        for entry in entries
-        if isinstance(entry, dict) and isinstance(entry.get("years"), str)
-    ]
+    dates: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        # Multi-role work entries keep their dates per role.
+        roles = entry.get("roles")
+        if isinstance(roles, list) and roles:
+            dates.extend(
+                role["years"]
+                for role in roles
+                if isinstance(role, dict) and isinstance(role.get("years"), str)
+            )
+        elif isinstance(entry.get("years"), str):
+            dates.append(entry["years"])
+    return dates
 
 
 def compute_date_consistency(resume: dict[str, Any]) -> float | None:

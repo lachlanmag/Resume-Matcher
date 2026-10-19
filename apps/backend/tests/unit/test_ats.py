@@ -314,3 +314,25 @@ def test_keyword_lists_follow_job_posting_order() -> None:
         _resume(), job, 50.0, ["gRPC", "Go", "Terraform"], ["Kubernetes"]
     )
     assert result["missing_keywords"] == ["Terraform", "Go", "gRPC"]
+
+
+class TestDateConsistencyMultiRole:
+    """Multi-role work entries keep dates under ``roles``; they must be counted."""
+
+    def test_role_dates_are_collected(self) -> None:
+        resume = _resume(
+            workExperience=[
+                {
+                    "company": "Acme",
+                    "roles": [
+                        {"id": 1, "title": "Lead PM", "years": "Jan 2022 - Present"},
+                        {"id": 2, "title": "PM", "years": "2019-03 - 2021-12"},
+                    ],
+                },
+            ],
+            education=[{"degree": "BSc", "years": "Sep 2012 - Jun 2016"}],
+        )
+        score = compute_date_consistency(resume)
+        # Jan 2022, Sep 2012, Jun 2016 (month name) | 2019-03, 2021-12 (ISO):
+        # 3 of 5. Ignoring role dates would see only the education dates (100).
+        assert score == pytest.approx(60.0)

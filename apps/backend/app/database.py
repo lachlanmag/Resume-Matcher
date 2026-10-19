@@ -379,6 +379,7 @@ class Database:
         interview_prep: str | None = None,
         is_default_master: bool = False,
         template_settings: dict[str, Any] | None = None,
+        tailor_settings: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Create a new resume entry.
 
@@ -399,6 +400,7 @@ class Database:
             title=title,
             original_markdown=original_markdown,
             template_settings=template_settings,
+            tailor_settings=tailor_settings,
         )
         async with self._write_session() as session:
             session.add(row)

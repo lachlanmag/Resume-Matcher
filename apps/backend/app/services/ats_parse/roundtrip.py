@@ -33,6 +33,19 @@ ENTRY_ORDER: dict[str, tuple[str, ...]] = {
     "education": ("institution", "degree", "years"),
     "personalProjects": ("name", "role", "years"),
 }
+# Templates that render work entries with the shared WorkExperienceBlock
+# (apps/frontend/components/resume/work-experience-block.tsx): a "company |
+# location" row, then one "title | dates" row per role. pdfminer reads the
+# block's left column first: company, every role title, then location and every
+# role's dates. ``None`` is the default template (swiss-single).
+ROLE_ROW_TEMPLATES = frozenset(
+    {"swiss-single", "swiss-two-column", "modern", "modern-two-column"}
+)
+# The other templates put every role on one line: titles joined with "; " and
+# dates with " · " (getExperienceRoleTitles / getExperienceYearsLine).
+JOINED_ROLE_TITLES = "; "
+JOINED_ROLE_YEARS = " · "
+
 # A condensed entry is one line, "Title, Company, years", in every template.
 CONDENSED_ORDER = ("title", "company", "years")
 _TWO_COLUMN_ENTRY_ORDER = {
@@ -98,23 +111,48 @@ def _condensed_fields(prefix: str, entry: dict[str, Any]) -> list[Field]:
     return [(f"{prefix}.{k}", _join(entry.get(k))) for k in CONDENSED_ORDER]
 
 
-def _flatten_work_experience_roles(entry: dict[str, Any]) -> dict[str, Any]:
-    """Project a multi-role employer entry's first role's title/years onto it.
-
-    ``workExperience`` entries hold title/years per role in ``roles`` (multi-role
-    support); this round trip's field model is one-title-per-entry. Using the
-    first role matches the common single-role case exactly; an entry with
-    several roles under one employer is only checked against its first role's
-    title/years here (a known simplification — see upstream-sync review doc).
-    """
+def _work_roles(entry: dict[str, Any]) -> list[tuple[str, str]]:
+    """(title, years) per role; a legacy flat entry is one role."""
     roles = entry.get("roles")
-    if not isinstance(roles, list) or not roles or not isinstance(roles[0], dict):
-        return entry
-    first_role = roles[0]
-    flattened = dict(entry)
-    flattened.setdefault("title", first_role.get("title", ""))
-    flattened.setdefault("years", first_role.get("years", ""))
-    return flattened
+    if isinstance(roles, list) and roles:
+        return [
+            (str(role.get("title") or ""), str(role.get("years") or ""))
+            for role in roles
+            if isinstance(role, dict)
+        ]
+    return [(str(entry.get("title") or ""), str(entry.get("years") or ""))]
+
+
+def _first_role_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    """The entry with its first role's title/years (condensed lines show only that)."""
+    title, years = (_work_roles(entry) or [("", "")])[0]
+    return {**entry, "title": title, "years": years}
+
+
+def _work_entry_fields(
+    prefix: str, entry: dict[str, Any], template: str | None, order: tuple[str, ...]
+) -> list[Field]:
+    """Fields of one employer entry in the order its template renders them.
+
+    Every role is checked: the first role keeps the ``title``/``years`` field
+    names, further roles are ``roles[j].title``/``roles[j].years``.
+    """
+    roles = _work_roles(entry)
+    if (template or "swiss-single") in ROLE_ROW_TEMPLATES:
+        prefixes = [
+            prefix if j == 0 else f"{prefix}.roles[{j}]" for j in range(len(roles))
+        ]
+        out: list[Field] = [(f"{prefix}.company", _join(entry.get("company")))]
+        out.extend((f"{p}.title", title) for p, (title, _) in zip(prefixes, roles))
+        out.append((f"{prefix}.location", _join(entry.get("location"))))
+        out.extend((f"{p}.years", years) for p, (_, years) in zip(prefixes, roles))
+        return out + _entry_fields(prefix, entry, ())
+    joined = {
+        **entry,
+        "title": JOINED_ROLE_TITLES.join(t for t, _ in roles if t),
+        "years": JOINED_ROLE_YEARS.join(y for _, y in roles if y),
+    }
+    return _entry_fields(prefix, joined, order)
 
 
 def _section_fields(
@@ -127,17 +165,19 @@ def _section_fields(
             key, ENTRY_ORDER[key]
         )
         entries = list(enumerate(data.get(key) or []))
-        if key == "workExperience":
-            entries = [(i, _flatten_work_experience_roles(e)) for i, e in entries]
-            # Condensed entries follow the full ones, under "Earlier experience".
-            entries.sort(key=lambda pair: bool(pair[1].get("condensed")))
+        if key != "workExperience":
+            return [
+                f for i, e in entries for f in _entry_fields(f"{key}[{i}]", e, order)
+            ]
+        # Condensed entries follow the full ones, under "Earlier experience".
+        entries.sort(key=lambda pair: bool(pair[1].get("condensed")))
         return [
             f
             for i, e in entries
             for f in (
-                _condensed_fields(f"{key}[{i}]", e)
-                if key == "workExperience" and e.get("condensed")
-                else _entry_fields(f"{key}[{i}]", e, order)
+                _condensed_fields(f"{key}[{i}]", _first_role_entry(e))
+                if e.get("condensed")
+                else _work_entry_fields(f"{key}[{i}]", e, template, order)
             )
         ]
     if key == "additional":
