@@ -170,7 +170,7 @@ restriction was intentional, it needs a narrower condition (e.g. only when no
    idempotent/expiry-checked confirm flow.
 2. **replace_resume_id: add an atomic `complete_preview_replacing()`** that claims the preview and
    UPDATEs the existing tailored resume in the same transaction. (Implementation pending, tracked below.)
-3. **`_ensure_master_resume_for_tailor` removal:** awaiting user after a fuller explanation.
+3. **`_ensure_master_resume_for_tailor` stays removed** (user confirmed 2026-10-18). UI only ever starts tailoring from a master (picker lists masters; Re-tailor uses the master id), so this only affects direct API/agent calls, which may now tailor from a tailored resume; grounding still resolves to that resume's master track.
 
 ## Status (2026-10-18): all batches resolved
 
@@ -190,4 +190,4 @@ restriction was intentional, it needs a narrower condition (e.g. only when no
   templates and resume-wizard storage read flat fields.
 - Fork-only UI (feedback modal/steps, markdown content, tailor panels) migrated to Swiss tokens and Phosphor icons.
 
-Still open: decision 3 (`_ensure_master_resume_for_tailor`), awaiting the user.
+All decisions closed.
