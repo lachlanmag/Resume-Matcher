@@ -1575,7 +1575,8 @@
       "title": "Adapta tu currículum",
       "prompt": "Usa Resume Matcher para adaptar mi currículum principal a este empleo:\n\n<pega aquí la descripción del empleo>",
       "promptWithJob": "Usa Resume Matcher para adaptar el currículum {resumeId} a este empleo:\n\n{job}",
-      "note": "¿Varios empleos? Guarda cada descripción como archivo .md o .txt en la carpeta jobs/ y pide a tu agente que adapte tu currículum a cada empleo de esa carpeta. Cada uno aparece en el panel."
+      "note": "¿Varios empleos? Guarda cada descripción como archivo .md o .txt en la carpeta jobs/ y pide a tu agente que adapte tu currículum a cada empleo de esa carpeta. Cada uno aparece en el panel.",
+      "length": "Extensión para este empleo: un límite de {targetPages} página(s) y de {min} a {max} viñetas por empleo."
     },
     "enhance": {
       "title": "Mejora tu currículum",
@@ -1583,7 +1584,7 @@
     },
     "regenerate": {
       "title": "Reescribe con tu agente",
-      "prompt": "Usa Resume Matcher para reescribir <qué experiencia, proyectos o habilidades> en el currículum {resumeId}: <qué mejorar>. Mantén todos los datos verídicos y muéstrame los cambios antes de guardarlos."
+      "prompt": "Usa Resume Matcher para reescribir <el resumen, o qué experiencia, proyectos o habilidades> en el currículum {resumeId}: <qué mejorar>. Mantén todos los datos verídicos y muéstrame los cambios antes de guardarlos."
     },
     "coverLetter": {
       "title": "Escribe una carta de presentación",
@@ -1597,6 +1598,22 @@
       "title": "Prepárate para la entrevista",
       "prompt": "Usa Resume Matcher para leer el currículum {resumeId} y el empleo al que se adaptó, y ayúdame a preparar la entrevista: preguntas probables, las historias que contar y preguntas para hacerles.",
       "note": "Tu agente responde en su propio chat. En modo agente, la preparación de la entrevista no se guarda en el currículum."
+    },
+    "feedback": {
+      "title": "Obtén una valoración de selección",
+      "prompt": "Usa Resume Matcher para revisar el currículum {resumeId} como lo haría un responsable de contratación, frente al empleo para el que se adaptó, y guarda en ese currículum la valoración y tus preguntas para mí."
+    },
+    "applyFeedback": {
+      "title": "Aplica tus respuestas a la valoración",
+      "prompt": "Usa Resume Matcher para revisar el currículum {resumeId} a partir de su valoración guardada y de mis respuestas a sus preguntas. Añade datos solo de mis respuestas, muéstrame los cambios y luego guárdalos en ese currículum."
+    },
+    "applyLength": {
+      "title": "Ajusta a la extensión",
+      "prompt": "Usa Resume Matcher para ajustar el currículum {resumeId} a un límite de {targetPages} página(s) y de {min} a {max} viñetas por empleo. Elige las viñetas más relevantes de cada empleo a partir de su currículum principal para el empleo al que se adaptó, no inventes nada y guarda el resultado en ese currículum."
+    },
+    "retailor": {
+      "title": "Vuelve a adaptar este currículum",
+      "prompt": "Usa Resume Matcher para volver a adaptar el currículum {resumeId} desde su currículum principal, para el empleo al que se adaptó, con un límite de {targetPages} página(s) y de {min} a {max} viñetas por empleo. Sustituye ese currículum en lugar de añadir uno nuevo."
     }
   }
 }

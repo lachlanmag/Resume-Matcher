@@ -18,6 +18,7 @@ from app.schemas.models import PageFitSettings
 from app.services import ats_parse
 from app.services.ats_parse.models import ParseCheckReport
 from app.services.page_fit import count_pdf_pages, page_limit
+from app.services.tailor_length import tailor_length_settings_from_resume_doc
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +26,51 @@ MIN_ORDER_FIDELITY = 0.9
 MaxPages = Annotated[int | None, Field(ge=1, le=10)]
 
 
+def bullet_count_problems(
+    data: dict[str, Any],
+    master: dict[str, Any] | None,
+    bullets_min: int,
+    bullets_max: int,
+) -> list[dict[str, Any]]:
+    """Jobs whose bullet count is outside the tailoring length.
+
+    Too few only counts when the master has more bullets for that job to draw on,
+    as the app's own tailoring never invents bullets to reach the minimum.
+    """
+    master_work = (master or {}).get("workExperience") or []
+    problems: list[dict[str, Any]] = []
+    for index, entry in enumerate(data.get("workExperience") or []):
+        if not isinstance(entry, dict):
+            continue
+        count = len(entry.get("description") or [])
+        source = master_work[index] if index < len(master_work) else None
+        available = (
+            len(source.get("description") or []) if isinstance(source, dict) else count
+        )
+        if count > bullets_max or (count < bullets_min and available > count):
+            problems.append(
+                {
+                    "index": index,
+                    "company": entry.get("company", ""),
+                    "bullets": count,
+                    "min": bullets_min,
+                    "max": bullets_max,
+                    "available_in_master": available,
+                }
+            )
+    return problems
+
+
 def _issues(
     report: ParseCheckReport | None,
     page_count: int | None,
     max_pages: int | None,
     score: dict[str, Any] | None,
+    bullet_problems: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     issues: list[str] = []
+    if bullet_problems:
+        issues.append("bullets_per_job")
     if report is None:
         issues.append("render_failed")
     else:
@@ -64,8 +103,12 @@ async def verify(
     max_pages: int | None,
 ) -> dict[str, Any]:
     resume_id = resume["resume_id"]
+    length = tailor_length_settings_from_resume_doc(resume)
+    if max_pages is None and length is not None:
+        max_pages = length.target_pages
     max_pages = page_limit(fit, max_pages)
     data = require_valid_structured(resume)
+    master = await _grounding_master_data(resume) if resume.get("parent_id") else None
     if job_id is None:
         improvement = await db.get_improvement_by_tailored_resume(resume_id)
         job_id = improvement["job_id"] if improvement else None
@@ -74,8 +117,7 @@ async def verify(
     if job_id is not None:
         job_keywords = (await require_job(job_id)).get("job_keywords")
         if job_keywords:
-            master = await _grounding_master_data(resume) or data
-            score = keyword_score(data, job_keywords, master)
+            score = keyword_score(data, job_keywords, master or data)
 
     result: dict[str, Any] = {
         "resume_id": resume_id,
@@ -86,6 +128,13 @@ async def verify(
         "score": score,
         "parse_check": None,
     }
+    bullet_problems: list[dict[str, Any]] = []
+    if length is not None:
+        bullet_problems = bullet_count_problems(
+            data, master, length.bullets_per_job_min, length.bullets_per_job_max
+        )
+        result["tailor_length_settings"] = length.model_dump()
+        result["bullet_count_problems"] = bullet_problems
     report = None
     try:
         pdf_bytes = await render_pdf(resume_id, fit)
@@ -96,7 +145,9 @@ async def verify(
         result["page_count"] = count_pdf_pages(pdf_bytes)
         report = await ats_parse.parse_check_pdf(pdf_bytes, data, fit)
         result["parse_check"] = report.model_dump()
-    result["issues"] = _issues(report, result["page_count"], max_pages, score)
+    result["issues"] = _issues(
+        report, result["page_count"], max_pages, score, bullet_problems
+    )
     return result
 
 
@@ -108,11 +159,13 @@ async def verify_resume(
 ) -> dict[str, Any]:
     """Render a saved resume once and report page count, ATS parse-check, keyword score and issues. Writes nothing.
 
-    job_id defaults to the job a tailored resume was saved for. With print_settings.cv_mode
+    job_id defaults to the job a tailored resume was saved for. max_pages defaults to the
+    resume's tailoring length target_pages, if it has one. With print_settings.cv_mode
     true (an academic CV) there is no page cap: max_pages is ignored and over_page_limit is
     never raised; page_count is still reported. Issue codes: over_page_limit,
     text_layer (the PDF has too little extractable text), multi_column, garbled_glyphs,
-    low_order_fidelity, fields_missing, roundtrip_truncated, injectable_keywords, render_failed.
+    low_order_fidelity, fields_missing, roundtrip_truncated, injectable_keywords, render_failed,
+    bullets_per_job (bullet_count_problems lists jobs outside the tailoring length).
     """
     resume = await require_resume(resume_id)
     return await verify(resume, job_id, print_settings or PageFitSettings(), max_pages)

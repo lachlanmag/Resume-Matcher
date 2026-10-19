@@ -7,12 +7,13 @@ from app.mcp_server.tools._shared import (
     require_job,
     require_resume,
     require_structured,
+    resolve_tailor_length,
     store_tailored_resume,
     tailoring_report,
 )
 from app.mcp_server.tools.verify_resume import MaxPages, verify
 from app.schemas import ResumeData
-from app.schemas.models import PageFitSettings
+from app.schemas.models import PageFitSettings, TailorLengthSettings
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,8 @@ async def tailor_and_verify(
     print_settings: PageFitSettings | None = None,
     max_pages: MaxPages = None,
     track_application: bool = True,
+    tailor_length_settings: TailorLengthSettings | None = None,
+    replace_resume_id: str | None = None,
 ) -> dict[str, Any]:
     """Validate, save and verify a tailored resume you wrote, in one call.
 
@@ -33,6 +36,12 @@ async def tailor_and_verify(
     and the result includes the same report as verify_resume. If verification itself fails
     after the save, the result has saved true and verify_error instead of the report: do not
     save again, call verify_resume. Fix issues with update_resume, then call verify_resume.
+
+    tailor_length_settings (target_pages, bullets_per_job_min/max) defaults to the source's,
+    else the user's Settings; it is stored on the resume, max_pages defaults to its
+    target_pages, and bullets_per_job flags jobs outside the range. replace_resume_id
+    rewrites that tailored resume of the same source in place (Re-tailor): same id and
+    tracker card, no new card.
     """
     source = await require_resume(source_resume_id)
     job = await require_job(job_id)
@@ -42,7 +51,13 @@ async def tailor_and_verify(
     if not validation["valid"]:
         return {"saved": False, "validation": validation}
     saved = await store_tailored_resume(
-        source, job, candidate, title, track_application
+        source,
+        job,
+        candidate,
+        title,
+        track_application,
+        tailor_length=resolve_tailor_length(source, tailor_length_settings),
+        replace_resume_id=replace_resume_id,
     )
     try:
         tailored = await require_resume(saved["resume_id"])

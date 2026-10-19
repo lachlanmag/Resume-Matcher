@@ -20,6 +20,11 @@ export interface TailorSettingsPanelProps {
   initialSettings?: TailorLengthSettings | null;
   onResumeUpdated: (data: ResumeData) => void;
   onError?: (message: string) => void;
+  /**
+   * Agent mode: the app makes no AI calls. Apply and Re-tailor save the settings,
+   * then hand the work to the user's coding agent through this callback.
+   */
+  onAgentTask?: (task: 'applyLength' | 'retailor', settings: TailorLengthSettings) => void;
 }
 
 export function TailorSettingsPanel({
@@ -29,6 +34,7 @@ export function TailorSettingsPanel({
   initialSettings,
   onResumeUpdated,
   onError,
+  onAgentTask,
 }: TailorSettingsPanelProps) {
   const { t } = useTranslations();
   const [settings, setSettings] = useState<TailorLengthSettings>(
@@ -52,8 +58,22 @@ export function TailorSettingsPanel({
     }
   };
 
+  /** Agent mode: save the settings, then give the user the prompt for their agent. */
+  const handOff = async (task: 'applyLength' | 'retailor') => {
+    setIsSaving(true);
+    try {
+      await patchTailorSettings(resumeId, settings);
+      onAgentTask?.(task, settings);
+    } catch (e) {
+      onError?.(e instanceof Error ? e.message : t('builder.tailorLength.errors.saveFailed'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleApply = async () => {
     if (validationError) return;
+    if (onAgentTask) return handOff('applyLength');
     setIsApplying(true);
     try {
       await patchTailorSettings(resumeId, settings);
@@ -71,6 +91,7 @@ export function TailorSettingsPanel({
 
   const handleReTailor = async () => {
     if (validationError) return;
+    if (onAgentTask) return handOff('retailor');
     if (!window.confirm(t('builder.tailorLength.reTailorConfirm'))) return;
     setIsRetailoring(true);
     try {

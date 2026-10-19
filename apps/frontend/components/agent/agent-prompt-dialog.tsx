@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useTranslations } from '@/lib/i18n';
+import type { TailorLengthSettings } from '@/lib/types/tailor-length';
 
 /** Work the app hands to the user's coding agent when agent mode is on. */
 export type AgentTask =
@@ -22,7 +23,14 @@ export type AgentTask =
   | 'regenerate'
   | 'coverLetter'
   | 'outreach'
-  | 'interviewPrep';
+  | 'interviewPrep'
+  | 'feedback'
+  | 'applyFeedback'
+  | 'applyLength'
+  | 'retailor';
+
+/** Tasks whose prompt states the tailoring length. */
+const USES_LENGTH: ReadonlySet<AgentTask> = new Set(['tailor', 'applyLength', 'retailor']);
 
 /** Tasks with an extra line under the prompt (agentPrompt.<task>.note). */
 const HAS_NOTE: ReadonlySet<AgentTask> = new Set(['tailor', 'interviewPrep']);
@@ -36,6 +44,8 @@ export interface AgentPromptDialogProps {
   resumeId?: string;
   /** A job description already pasted in the app; puts it in the tailor prompt. */
   jobDescription?: string;
+  /** The tailoring length to ask for (tailor, applyLength and retailor prompts). */
+  tailorLength?: TailorLengthSettings | null;
   onClose: () => void;
 }
 
@@ -48,6 +58,7 @@ export function AgentPromptDialog({
   task,
   resumeId = '',
   jobDescription = '',
+  tailorLength = null,
   onClose,
 }: AgentPromptDialogProps) {
   const { t } = useTranslations();
@@ -62,10 +73,23 @@ export function AgentPromptDialog({
   const current = task ?? shown;
   const key = `agentPrompt.${current}`;
   const job = jobDescription.trim();
-  const prompt =
+  const length =
+    tailorLength && USES_LENGTH.has(current)
+      ? {
+          targetPages: tailorLength.target_pages,
+          min: tailorLength.bullets_per_job_min,
+          max: tailorLength.bullets_per_job_max,
+        }
+      : null;
+  const basePrompt =
     current === 'tailor' && job
       ? t('agentPrompt.tailor.promptWithJob', { resumeId, job })
-      : t(`${key}.prompt`, { resumeId });
+      : t(`${key}.prompt`, { resumeId, ...length });
+  // The tailor prompt ends with the job description, so the length follows it.
+  const prompt =
+    current === 'tailor' && length
+      ? `${basePrompt}\n\n${t('agentPrompt.tailor.length', length)}`
+      : basePrompt;
 
   const handleCopy = async () => {
     try {

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 from app.services.feedback import (
     _format_answers_block,
-    _validate_report_headings,
+    validate_report_headings,
     build_apply_preview,
     generate_structured_feedback,
 )
@@ -61,7 +61,7 @@ class TestValidateReportHeadings:
 ## Resume improvement suggestions
 ## Gaps and questions for the candidate
 """
-        _validate_report_headings(report)
+        validate_report_headings(report)
 
     def test_raises_when_required_heading_is_missing(self) -> None:
         report = """
@@ -70,7 +70,7 @@ class TestValidateReportHeadings:
 ## Tailoring quality
 """
         with pytest.raises(ValueError, match="Concerns or gaps"):
-            _validate_report_headings(report)
+            validate_report_headings(report)
 
 
 class TestFormatAnswersBlock:

@@ -212,6 +212,14 @@ diverged 2026-06-22, so no fork feature was built for them.
   breaking it, the selection is kept and flagged `over`.
 
 ### Deferred to the agent-mode branch
+
+**Done on `feat/agent-mode-fork-features` (2026-10-19):** all six below. Notes:
+- MCP saves condense the source to the bullets the agent kept before preservation checks
+  (`_shared.condensed_source`), as in-app tailoring does; kept bullets must still match a
+  source bullet, so invented bullets are rejected.
+- Item 5 was real for legacy-shaped server data (test fails without the fix); the
+  production data (21 resumes) was already normalized.
+
 1. Background feedback generation ignores agent mode: every tailored resume shows an
    "Agent mode is on" error toast (`resume-builder.tsx` auto-generate effect).
 2. Apply length / Re-tailor / feedback apply call the in-app LLM; the tailor page's

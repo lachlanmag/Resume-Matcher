@@ -30,6 +30,11 @@ interface FeedbackModalProps {
   backgroundGenStatus?: 'idle' | 'loading' | 'ready' | 'error';
   backgroundGenError?: string | null;
   onRequestGeneration?: (replace: boolean) => void;
+  /**
+   * Agent mode: the app makes no AI calls. Writing and applying feedback go to
+   * the user's coding agent; answers are saved first so the agent can read them.
+   */
+  onAgentTask?: (task: 'feedback' | 'applyFeedback') => void;
 }
 
 function mapPreviewToRegeneratedItems(preview: FeedbackApplyPreview | null): RegeneratedItem[] {
@@ -67,6 +72,7 @@ export function FeedbackModal({
   backgroundGenStatus = 'idle',
   backgroundGenError = null,
   onRequestGeneration,
+  onAgentTask,
 }: FeedbackModalProps) {
   const { t } = useTranslations();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -137,8 +143,16 @@ export function FeedbackModal({
       return;
     }
 
+    if (onAgentTask) {
+      onClose();
+      onAgentTask('feedback');
+      return;
+    }
+
     showGeneratingStep();
   }, [
+    onAgentTask,
+    onClose,
     isOpen,
     initialFeedback,
     backgroundGenStatus,
@@ -248,13 +262,23 @@ export function FeedbackModal({
     void nextQuestion();
   };
 
+  const handOffToAgent = (task: 'feedback' | 'applyFeedback') => {
+    void flushAnswers().finally(() => {
+      reset();
+      onClose();
+      onAgentTask?.(task);
+    });
+  };
+
   const handleRegenerate = () => {
     setIsRegenerateConfirmOpen(false);
+    if (onAgentTask) return handOffToAgent('feedback');
     showGeneratingStep();
     onRequestGeneration?.(true);
   };
 
   const handleGenerationRetry = () => {
+    if (onAgentTask) return handOffToAgent('feedback');
     showGeneratingStep();
     onRequestGeneration?.(Boolean(initialFeedback));
   };
@@ -420,6 +444,7 @@ export function FeedbackModal({
             onBack={backFromReview}
             onEdit={editFromReview}
             onApplyFeedback={() => {
+              if (onAgentTask) return handOffToAgent('applyFeedback');
               void startApplyPreview();
             }}
           />
