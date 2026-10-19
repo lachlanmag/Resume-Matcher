@@ -18,6 +18,7 @@ import {
   parseErrorDetail,
 } from './client';
 import type { ResumeFeedback } from './feedback';
+import type { ParseCheck } from './ats';
 
 // Matches backend schemas/models.py ResumeData
 interface ProcessedResume {
@@ -165,8 +166,29 @@ export type { TailorLengthSettings };
 
 export interface ResumePdfDownloadResult {
   blob: Blob;
-  warnings: string[];
-  errors: string[];
+  /** Failed checks from the ATS parse-check of this PDF (same as the builder's ATS check). */
+  atsFailures: ParseCheck[];
+}
+
+const ATS_FAILURES_HEADER = 'X-Resume-Pdf-Ats-Failures';
+
+function parseAtsFailures(raw: string | null): ParseCheck[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is ParseCheck =>
+        typeof item === 'object' &&
+        item !== null &&
+        typeof (item as ParseCheck).id === 'string' &&
+        typeof (item as ParseCheck).status === 'string' &&
+        typeof (item as ParseCheck).params === 'object' &&
+        (item as ParseCheck).params !== null
+    );
+  } catch {
+    return [];
+  }
 }
 
 /** Response from resume upload endpoint */
@@ -425,26 +447,9 @@ export async function downloadResumePdf(
     throw new Error(`Failed to download resume (status ${res.status}): ${text}`);
   }
 
-  const parseMessageHeader = (headerName: string): string[] => {
-    const raw = res.headers.get(headerName);
-    if (!raw) return [];
-    try {
-      const parsed = JSON.parse(raw) as unknown;
-      if (Array.isArray(parsed)) {
-        return parsed.filter(
-          (item): item is string => typeof item === 'string' && item.trim().length > 0
-        );
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  };
-
   return {
     blob: await res.blob(),
-    warnings: parseMessageHeader('X-Resume-Pdf-Warnings'),
-    errors: parseMessageHeader('X-Resume-Pdf-Errors'),
+    atsFailures: parseAtsFailures(res.headers.get(ATS_FAILURES_HEADER)),
   };
 }
 

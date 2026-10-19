@@ -38,6 +38,7 @@ import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
 import { isSameResumeData } from '@/lib/utils/resume-draft-storage';
 import { useAgentRefresh } from '@/hooks/use-agent-refresh';
 import { withNormalizedWorkExperience } from '@/lib/utils/work-experience';
+import { describeAtsCheck } from '@/lib/utils/ats-check-messages';
 import { useLanguage } from '@/lib/context/language-context';
 import { downloadBlobAsFile, openUrlInNewTab, sanitizeFilename } from '@/lib/utils/download';
 import { useOperationOwner } from '@/hooks/use-operation-owner';
@@ -382,26 +383,17 @@ export default function ResumeViewerPage() {
     setIsDownloading(true);
     try {
       setDownloadError(null);
-      const { blob, warnings, errors } = await downloadResumePdf(
-        resumeId,
-        templateSettings,
-        uiLanguage
-      );
+      const { blob, atsFailures } = await downloadResumePdf(resumeId, templateSettings, uiLanguage);
       const filename = sanitizeFilename(resumeTitle, resumeId, 'resume');
       downloadBlobAsFile(blob, filename);
       if (!isCurrentDownload(token)) return;
       setShowDownloadSuccessDialog(true);
-      if (errors.length > 0) {
+      if (atsFailures.length > 0) {
         setDownloadNotice({
-          title: t('common.error'),
-          description: `PDF ATS check: ${errors.join(' ')}`,
-          variant: 'danger',
-        });
-      } else if (warnings.length > 0) {
-        setDownloadNotice({
-          title: 'PDF Warning',
-          description: warnings.join(' '),
-          variant: 'warning',
+          title: t('builder.leftPanel.atsCheck'),
+          description: atsFailures.map((check) => describeAtsCheck(check, t)).join(' '),
+          // An ATS reads nothing / only garbage on a high-severity failure.
+          variant: atsFailures.some((check) => check.severity === 'high') ? 'danger' : 'warning',
         });
       }
     } catch (err) {

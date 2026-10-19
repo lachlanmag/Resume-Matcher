@@ -10,6 +10,7 @@ from httpx import ASGITransport, AsyncClient
 from app.database import ResumeNotFoundError
 from app.main import app
 from app.schemas import InterviewPrepData
+from tests.ats_fixtures import render
 
 SAMPLE_INTERVIEW_PREP = {
     "role_fit_analysis": ["Backend API experience maps to the role."],
@@ -559,68 +560,76 @@ class TestUploadResume:
         mock_db.create_resume_atomic_master.assert_not_called()
         mock_parse_resume_to_json.assert_not_called()
 
+
 class TestDownloadResumePdf:
     """GET /api/v1/resumes/{resume_id}/pdf"""
 
-    @patch("app.routers.resumes.evaluate_pdf_ats_extractability")
-    @patch("app.routers.resumes.add_pdf_metadata")
     @patch("app.routers.resumes.render_resume_pdf", new_callable=AsyncMock)
     @patch("app.routers.resumes.db", new_callable=AsyncMock)
-    async def test_download_resume_pdf_includes_warning_header(
+    async def test_download_reports_failed_ats_checks_from_the_parse_check(
         self,
         mock_db,
         mock_render_pdf,
-        mock_add_pdf_metadata,
-        mock_evaluate_ats,
+        client,
+        mock_resume_record,
+    ):
+        """The download runs the builder's ATS parse-check on the PDF it returns."""
+        mock_db.get_resume.return_value = mock_resume_record
+        # A real two-column render: the parse-check flags its two reading columns.
+        mock_render_pdf.return_value = render("two-column")
+
+        async with client:
+            resp = await client.get(
+                "/api/v1/resumes/res-123/pdf", params={"template": "swiss-two-column"}
+            )
+
+        assert resp.status_code == 200
+        assert resp.content.startswith(b"%PDF")
+        failures = json.loads(resp.headers["x-resume-pdf-ats-failures"])
+        multi = next(f for f in failures if f["id"] == "multi_column")
+        assert multi["status"] == "fail" and multi["severity"] == "medium"
+        assert multi["params"]["expected_by_template"] is True
+        assert all(f["status"] == "fail" for f in failures)
+        # The fork's own string headers are gone.
+        assert "x-resume-pdf-warnings" not in resp.headers
+        assert "x-resume-pdf-errors" not in resp.headers
+
+    @patch("app.routers.resumes.render_resume_pdf", new_callable=AsyncMock)
+    @patch("app.routers.resumes.db", new_callable=AsyncMock)
+    async def test_download_has_no_ats_header_when_every_check_passes(
+        self,
+        mock_db,
+        mock_render_pdf,
         client,
         mock_resume_record,
     ):
         mock_db.get_resume.return_value = mock_resume_record
-        mock_render_pdf.return_value = b"%PDF-raw"
-        mock_add_pdf_metadata.return_value = b"%PDF-metadata"
-        mock_evaluate_ats.return_value = (
-            ["Education appears before Experience in extracted text."],
-            [],
-        )
+        mock_render_pdf.return_value = render("single-column")
 
         async with client:
             resp = await client.get("/api/v1/resumes/res-123/pdf")
 
         assert resp.status_code == 200
-        assert resp.headers.get("x-resume-pdf-warnings") is not None
-        assert (
-            "Education appears before Experience in extracted text."
-            in resp.headers["x-resume-pdf-warnings"]
-        )
-        assert resp.headers.get("x-resume-pdf-errors") is None
+        assert "x-resume-pdf-ats-failures" not in resp.headers
 
-    @patch("app.routers.resumes.evaluate_pdf_ats_extractability")
-    @patch("app.routers.resumes.add_pdf_metadata")
+    @patch("app.routers.resumes.parse_check_pdf", new_callable=AsyncMock)
     @patch("app.routers.resumes.render_resume_pdf", new_callable=AsyncMock)
     @patch("app.routers.resumes.db", new_callable=AsyncMock)
-    async def test_download_resume_pdf_includes_error_header(
+    async def test_download_survives_a_failing_ats_check(
         self,
         mock_db,
         mock_render_pdf,
-        mock_add_pdf_metadata,
-        mock_evaluate_ats,
+        mock_parse_check,
         client,
         mock_resume_record,
     ):
         mock_db.get_resume.return_value = mock_resume_record
-        mock_render_pdf.return_value = b"%PDF-raw"
-        mock_add_pdf_metadata.return_value = b"%PDF-metadata"
-        mock_evaluate_ats.return_value = (
-            [],
-            ["Missing expected section term: experience"],
-        )
+        mock_render_pdf.return_value = render("single-column")
+        mock_parse_check.side_effect = RuntimeError("extractor crashed")
 
         async with client:
             resp = await client.get("/api/v1/resumes/res-123/pdf")
 
         assert resp.status_code == 200
-        assert resp.headers.get("x-resume-pdf-errors") is not None
-        assert (
-            "Missing expected section term: experience"
-            in resp.headers["x-resume-pdf-errors"]
-        )
+        assert resp.content.startswith(b"%PDF")
+        assert "x-resume-pdf-ats-failures" not in resp.headers

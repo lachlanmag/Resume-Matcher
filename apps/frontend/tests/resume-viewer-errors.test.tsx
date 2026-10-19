@@ -86,11 +86,38 @@ describe('resume viewer operation errors', () => {
           : 'resumeViewer.errors.failedToDownload'
       )
     ).toBeInTheDocument();
-    mockedDownload.mockResolvedValue({ blob: new Blob(['pdf']), warnings: [], errors: [] });
+    mockedDownload.mockResolvedValue({ blob: new Blob(['pdf']), atsFailures: [] });
     await act(async () => screen.getByRole('button', { name: 'common.retry' }).click());
     expect(mockedDownload).toHaveBeenCalledTimes(2);
     expect(await screen.findByText('common.success')).toBeInTheDocument();
     expect(screen.queryByText('resumeViewer.downloadFailedTitle')).not.toBeInTheDocument();
+  });
+
+  it('shows failed ATS checks of the downloaded PDF in the notice', async () => {
+    mockedDownload.mockResolvedValue({
+      blob: new Blob(['pdf']),
+      atsFailures: [
+        {
+          id: 'text_layer',
+          category: 'extraction',
+          severity: 'high',
+          status: 'fail',
+          params: {},
+        },
+      ],
+    });
+    render(<ResumeViewerPage />);
+    const downloadButton = await screen.findByRole('button', {
+      name: 'resumeViewer.downloadResume',
+    });
+    await act(async () => downloadButton.click());
+
+    expect(await screen.findByText('builder.leftPanel.atsCheck')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'builder.atsCheck.checks.text_layer.title: builder.atsCheck.checks.text_layer.fail'
+      )
+    ).toBeInTheDocument();
   });
 
   it('retains the edited title and offers retry after rename failure', async () => {

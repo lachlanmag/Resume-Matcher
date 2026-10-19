@@ -224,7 +224,12 @@ diverged 2026-06-22, so no fork feature was built for them.
 6. The agent `regenerate` prompt omits the summary item.
 
 ### Open
-- Two ATS paths coexist: fork download-time PDF checks (`X-Resume-Pdf-*` headers) and
-  upstream parse-check/score. The agent's `export_resume_pdf` only gets upstream's.
+- ~~Two ATS paths coexist~~ **Resolved (user decision 2026-10-19): folded into upstream.**
+  The PDF download runs upstream's parse-check on the bytes it returns and reports failed
+  checks in `X-Resume-Pdf-Ats-Failures`; the UI shows them with the ATS check's translated
+  messages. Fork's `evaluate_pdf_ats_extractability` (English-only section-term and
+  section-order heuristics) and its warning/error headers were removed; upstream's
+  `section_headings` (locale-aware), `multi_column`, `text_layer` and the round trip cover
+  them. PDF metadata on download (fork) is kept.
 - latex with long multi-role lines reads dates before titles (pdfminer column detection);
   single-role latex matches the modelled order.

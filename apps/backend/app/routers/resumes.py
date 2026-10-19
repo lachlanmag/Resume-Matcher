@@ -37,7 +37,6 @@ from app.pdf import (
     PRINT_ERROR_SELECTOR,
     PDFRenderError,
     add_pdf_metadata,
-    evaluate_pdf_ats_extractability,
     render_resume_pdf,
 )
 from app.preview import (
@@ -92,6 +91,8 @@ from app.schemas.models import ResumeTemplate
 from app.schemas.refinement import RefinementConfig
 from app.schemas.work_experience import finalize_tailored_work_experience
 from app.services.ats import compute_ats_score
+from app.services.ats_parse import parse_check_pdf
+from app.services.ats_parse.roundtrip import canonical_resume_data
 from app.services.bullet_selector import SELECTABLE_SECTIONS
 from app.services.cover_letter import (
     generate_cover_letter,
@@ -2634,32 +2635,49 @@ async def download_resume_pdf(
     except PDFRenderError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
-    pdf_warnings: list[str] = []
-    pdf_errors: list[str] = []
-
     try:
         pdf_bytes = add_pdf_metadata(pdf_bytes, _build_resume_pdf_metadata(resume))
     except Exception as e:
         logger.warning("Failed to attach PDF metadata for resume %s: %s", resume_id, e)
-        pdf_warnings.append("Failed to attach PDF metadata.")
-
-    try:
-        ats_warnings, ats_errors = evaluate_pdf_ats_extractability(pdf_bytes)
-        pdf_warnings.extend(ats_warnings)
-        pdf_errors.extend(ats_errors)
-    except Exception as e:
-        logger.warning(
-            "ATS extractability checks failed for resume %s: %s", resume_id, e
-        )
-        pdf_warnings.append("ATS extractability checks could not be completed.")
 
     headers = {"Content-Disposition": f'attachment; filename="resume_{resume_id}.pdf"'}
-    if pdf_warnings:
-        headers["X-Resume-Pdf-Warnings"] = json.dumps(pdf_warnings, ensure_ascii=False)
-    if pdf_errors:
-        headers["X-Resume-Pdf-Errors"] = json.dumps(pdf_errors, ensure_ascii=False)
+    ats_failures = await _download_ats_failures(resume_id, resume, pdf_bytes, fit)
+    if ats_failures:
+        headers[ATS_FAILURES_HEADER] = json.dumps(ats_failures, ensure_ascii=False)
 
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
+
+
+# Failed checks from the ATS parse-check of the downloaded PDF, as the builder's
+# ATS check reports them (id, severity, status, params). Absent when all pass.
+ATS_FAILURES_HEADER = "X-Resume-Pdf-Ats-Failures"
+
+
+async def _download_ats_failures(
+    resume_id: str,
+    resume: dict[str, Any],
+    pdf_bytes: bytes,
+    fit: PageFitSettings,
+) -> list[dict[str, Any]]:
+    """Parse-check the PDF being downloaded and return its failed checks.
+
+    Same engine and arguments as POST /resumes/{id}/parse-check, run on the bytes
+    already rendered for the download. Best effort: a check that cannot run never
+    blocks the download.
+    """
+    data = _get_original_resume_data(resume)
+    if not data:
+        return []
+    try:
+        report = await parse_check_pdf(pdf_bytes, canonical_resume_data(data), fit)
+    except Exception as e:
+        logger.warning("ATS check of downloaded PDF failed for %s: %s", resume_id, e)
+        return []
+    return [
+        check.model_dump(mode="json")
+        for check in report.checks
+        if check.status == "fail"
+    ]
 
 
 @router.delete("/{resume_id}")

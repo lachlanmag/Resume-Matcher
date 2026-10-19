@@ -11,6 +11,7 @@ import {
   type ParseCheckStatus,
 } from '@/lib/api/ats';
 import { useTranslations } from '@/lib/i18n';
+import { atsCheckParams } from '@/lib/utils/ats-check-messages';
 import { type TemplateSettings } from '@/lib/types/template-settings';
 
 interface AtsCheckViewProps {
@@ -25,8 +26,6 @@ const STATUS_TONE: Record<ParseCheckStatus, StatusTone> = {
   warn: 'warning',
   fail: 'error',
 };
-
-const SECTION_KIND_PARAMS = new Set(['found', 'missing']);
 
 function Box({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -67,20 +66,6 @@ export function AtsCheckView({
     } finally {
       setRunning(false);
     }
-  };
-
-  const formatParams = (check: ParseCheck): Record<string, string | number> => {
-    const params: Record<string, string | number> = {};
-    for (const [key, value] of Object.entries(check.params)) {
-      if (Array.isArray(value)) {
-        params[key] = SECTION_KIND_PARAMS.has(key)
-          ? value.map((kind) => t(`builder.atsCheck.sectionKinds.${kind}`)).join(', ')
-          : value.join(', ');
-      } else if (typeof value === 'number' || typeof value === 'string') {
-        params[key] = value;
-      }
-    }
-    return params;
   };
 
   const problemFields = report?.roundtrip?.fields.filter((f) => f.status !== 'found') ?? [];
@@ -150,7 +135,7 @@ export function AtsCheckView({
                     <p className="text-sm text-ink-soft">
                       {t(
                         `builder.atsCheck.checks.${check.id}.${check.status}`,
-                        formatParams(check)
+                        atsCheckParams(check, t)
                       )}
                     </p>
                     {check.id === 'multi_column' &&

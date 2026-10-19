@@ -53,6 +53,7 @@ import { generateFeedback, type ResumeFeedback } from '@/lib/api/feedback';
 import { fetchFeatureConfig } from '@/lib/api/config';
 import { JDComparisonView } from './jd-comparison-view';
 import { AtsCheckView } from './ats-check-view';
+import { describeAtsCheck } from '@/lib/utils/ats-check-messages';
 import { AtsScorePanel } from './ats-score-panel';
 import { RegenerateWizard } from './regenerate-wizard';
 import { TailorSettingsPanel } from '@/components/tailor/tailor-settings-panel';
@@ -1429,21 +1430,19 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
     }
     try {
       setIsDownloading(true);
-      const { blob, warnings, errors } = await downloadResumePdf(
-        resumeId,
-        templateSettings,
-        uiLanguage
-      );
+      const { blob, atsFailures } = await downloadResumePdf(resumeId, templateSettings, uiLanguage);
       const company = getCompanyFromTitle(resumeTitle);
       const userName = resumeData.personalInfo?.name?.trim() || null;
       const filename = buildResumeFilename(userName, company, resumeId, 'resume');
       downloadBlobAsFile(blob, filename);
       showNotification(t('builder.alerts.downloadSuccess'), 'success');
-      if (warnings.length > 0) {
-        showNotification(`PDF warning: ${warnings.join(' ')}`, 'warning');
-      }
-      if (errors.length > 0) {
-        showNotification(`PDF ATS check: ${errors.join(' ')}`, 'danger');
+      if (atsFailures.length > 0) {
+        showNotification(
+          `${t('builder.leftPanel.atsCheck')}: ${atsFailures
+            .map((check) => describeAtsCheck(check, t))
+            .join(' ')}`,
+          'warning'
+        );
       }
     } catch (error) {
       console.error('Failed to download resume:', error);

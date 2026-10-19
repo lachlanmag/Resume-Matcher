@@ -72,8 +72,7 @@ describe('resume viewer template settings', () => {
     mockResume(saved);
     vi.mocked(downloadResumePdf).mockResolvedValue({
       blob: new Blob(['pdf']),
-      warnings: [],
-      errors: [],
+      atsFailures: [],
     });
     render(<ResumeViewerPage />);
 
@@ -92,8 +91,7 @@ describe('resume viewer template settings', () => {
     mockResume(null);
     vi.mocked(downloadResumePdf).mockResolvedValue({
       blob: new Blob(['pdf']),
-      warnings: [],
-      errors: [],
+      atsFailures: [],
     });
     render(<ResumeViewerPage />);
 
