@@ -191,3 +191,40 @@ restriction was intentional, it needs a narrower condition (e.g. only when no
 - Fork-only UI (feedback modal/steps, markdown content, tailor panels) migrated to Swiss tokens and Phosphor icons.
 
 All decisions closed.
+
+## Post-merge gap review (2026-10-18)
+
+Agent mode (2026-10-16) and the MCP server (2026-10-06) are new in this pull; the fork
+diverged 2026-06-22, so no fork feature was built for them.
+
+### Fixed in this branch
+- ATS date consistency skipped multi-role work dates (`ats._collect_date_strings`).
+- Upstream LLM bullet scoring labelled multi-role jobs " @ Company" (`bullet_scoring._entry_label`).
+- Duplicating a tailored resume dropped `tailor_settings`.
+- ATS round trip checked only the first role, and modelled upstream's title-first entry
+  order instead of the fork's `WorkExperienceBlock` (company, titles, location, dates as
+  pdfminer reads it). All roles are now checked; `single-column.pdf`/`two-column.pdf`
+  render fixtures re-rendered from the fork templates (see
+  `tests/fixtures/ats/renders/README.md`). Verified on real 3-role renders: single-column
+  and modern order fidelity 1.0.
+- Page fitting could trim a job below the tailoring minimum (`trim_order` floored at 1).
+  Work entries now keep `bullets_per_job_min`; if the page limit is unreachable without
+  breaking it, the selection is kept and flagged `over`.
+
+### Deferred to the agent-mode branch
+1. Background feedback generation ignores agent mode: every tailored resume shows an
+   "Agent mode is on" error toast (`resume-builder.tsx` auto-generate effect).
+2. Apply length / Re-tailor / feedback apply call the in-app LLM; the tailor page's
+   agent prompt omits the length settings.
+3. MCP has no feedback tool; `save_tailored_resume` lacks `replace_resume_id` and
+   `tailor_length_settings`.
+4. `.claude/skills/resume-matcher/SKILL.md` example uses the flat `title`/`years` shape.
+5. Builder agent-sync deep-compares server data with normalized editor data; likely false
+   "agent updated" banners, and it ignores `resume_feedback`/`tailor_settings` (unverified).
+6. The agent `regenerate` prompt omits the summary item.
+
+### Open
+- Two ATS paths coexist: fork download-time PDF checks (`X-Resume-Pdf-*` headers) and
+  upstream parse-check/score. The agent's `export_resume_pdf` only gets upstream's.
+- latex with long multi-role lines reads dates before titles (pdfminer column detection);
+  single-role latex matches the modelled order.
