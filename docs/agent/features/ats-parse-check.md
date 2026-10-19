@@ -1,3 +1,13 @@
+# ATS parse-check (fork notes)
+
+Upstream's deterministic ATS parse-check lives in `apps/backend/app/services/ats_parse/`
+(`POST /ats/parse-check` for uploads, `POST /resumes/{id}/parse-check` for a saved resume's
+own render) and the builder's ATS CHECK tab (`components/builder/ats-check-view.tsx`).
+Upstream does not ship this docs folder; this file records fork-specific behaviour.
+
+Multi-role work entries: the round trip checks every role, in the order pdfminer reads the
+fork's `WorkExperienceBlock` (company, every role title, location, every role's dates); see
+`tests/fixtures/ats/renders/README.md`.
 
 ## On PDF download
 
