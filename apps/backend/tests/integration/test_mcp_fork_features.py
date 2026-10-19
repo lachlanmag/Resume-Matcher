@@ -295,3 +295,52 @@ async def test_feedback_respects_the_settings_switch(
     invalidate_config_cache()
     assert "turned off" in message
     assert (await isolated_db.get_resume(rid)).get("resume_feedback") is None
+
+
+async def test_a_tailored_resume_may_keep_fewer_bullets_but_not_invent_them(
+    isolated_db: Database,
+    monkeypatch: pytest.MonkeyPatch,
+    sample_resume: dict[str, Any],
+    sample_job_description: str,
+    sample_job_keywords: dict[str, Any],
+) -> None:
+    monkeypatch.setattr(
+        shared_module,
+        "render_resume_pdf",
+        AsyncMock(return_value=render("single-column")),
+    )
+    async with connect() as mcp:
+        master = await _master(mcp, _with_bullets(sample_resume, 6))
+        job_id = await _job(mcp, sample_job_description, sample_job_keywords)
+        kept = copy.deepcopy(master["resume_data"])
+        job = kept["workExperience"][0]
+        # The three most relevant, lightly reworded and reordered.
+        job["description"] = [
+            "Built service 4 in Python and FastAPI.",
+            "Built service 0 in Python.",
+            "Built service 2 in Python.",
+        ]
+        job["descriptionStyles"] = ["bullet"] * 3
+        args = {
+            "source_resume_id": master["resume_id"],
+            "job_id": job_id,
+            "resume_data": kept,
+            "tailor_length_settings": LENGTH,
+        }
+        saved = await call(mcp, "tailor_and_verify", args)
+
+        invented = copy.deepcopy(kept)
+        invented["workExperience"][0]["description"][1] = (
+            "Led a Kubernetes migration across 40 teams, cutting costs by 35%."
+        )
+        rejected = await call(
+            mcp, "tailor_and_verify", {**args, "resume_data": invented}
+        )
+
+    assert saved["saved"] is True, saved["validation"]["violations"]
+    assert "bullets_per_job" not in saved["issues"]
+    stored = await isolated_db.get_resume(saved["resume"]["resume_id"])
+    assert len(stored["processed_data"]["workExperience"][0]["description"]) == 3
+    assert rejected["saved"] is False
+    assert any("description[1]" in v for v in rejected["validation"]["violations"])
+    assert len([r for r in await isolated_db.list_resumes() if not r["is_master"]]) == 1

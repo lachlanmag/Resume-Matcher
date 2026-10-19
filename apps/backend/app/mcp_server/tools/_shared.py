@@ -1,5 +1,6 @@
 """Helpers and constants shared by the MCP tools."""
 
+import copy
 import functools
 import json
 import logging
@@ -37,6 +38,7 @@ from app.services.improver import generate_improvements
 from app.services.page_fit import print_margins, resume_print_url
 from app.services.refiner import analyze_keyword_gaps, calculate_keyword_match
 from app.services.resume_preservation import (
+    _best_source_row,
     finalize_ai_resume,
     grounding_review_warnings,
 )
@@ -238,10 +240,74 @@ def diff_paths(a: Any, b: Any, path: str = "") -> list[str]:
     return [] if a == b else [path or "<root>"]
 
 
+def _same_text(a: str, b: str) -> bool:
+    return " ".join(a.split()).casefold() == " ".join(b.split()).casefold()
+
+
+def condensed_source(
+    source: dict[str, Any], candidate: dict[str, Any]
+) -> dict[str, Any]:
+    """The source with each job cut to the bullets the candidate kept.
+
+    Tailoring length lets a job keep fewer bullets than the master, as in-app
+    tailoring does by condensing the source before it validates. Each kept bullet
+    is matched to its closest source bullet; preservation then checks the
+    candidate against those, so every bullet still has to come from the source.
+    """
+    condensed = copy.deepcopy(source)
+    source_work = condensed.get("workExperience")
+    candidate_work = candidate.get("workExperience")
+    if not isinstance(source_work, list) or not isinstance(candidate_work, list):
+        return condensed
+    if len(source_work) != len(candidate_work):
+        return condensed
+    for source_entry, candidate_entry in zip(source_work, candidate_work):
+        if not isinstance(source_entry, dict) or not isinstance(candidate_entry, dict):
+            continue
+        rows = source_entry.get("description")
+        kept = candidate_entry.get("description")
+        if not isinstance(rows, list) or not isinstance(kept, list):
+            continue
+        if not kept or len(kept) >= len(rows):
+            continue
+        texts = [str(r) for r in rows]
+        available = set(range(len(rows)))
+        picked: list[int | None] = [None] * len(kept)
+        # Bullets kept word for word map to themselves first; the rest go to
+        # their closest remaining source bullet.
+        for k, row in enumerate(kept):
+            same = [i for i in sorted(available) if _same_text(texts[i], str(row))]
+            if same:
+                picked[k] = same[0]
+                available.discard(same[0])
+        for k, row in enumerate(kept):
+            if picked[k] is not None:
+                continue
+            match = _best_source_row(str(row), texts, available)
+            if match is None:
+                break
+            picked[k] = match[0]
+            available.discard(match[0])
+        if any(i is None for i in picked):
+            continue
+        order = [i for i in picked if i is not None]
+        source_entry["description"] = [rows[i] for i in order]
+        styles = source_entry.get("descriptionStyles")
+        if isinstance(styles, list) and len(styles) == len(rows):
+            source_entry["descriptionStyles"] = [styles[i] for i in order]
+    return condensed
+
+
 def tailoring_report(
     original: dict[str, Any], candidate: dict[str, Any]
 ) -> dict[str, Any]:
-    """Run the same preservation checks as improve/confirm."""
+    """Run the same preservation checks as improve/confirm.
+
+    A job may keep fewer bullets than the source (tailoring length): those are
+    checked against the source bullets they came from.
+    """
+    full_source = original
+    original = condensed_source(original, candidate)
     violations: list[str] = []
     report: dict[str, Any] = {}
     repaired = ResumeData.model_validate(
@@ -257,11 +323,11 @@ def tailoring_report(
         _validate_confirm_payload(original, candidate, allow_appended_rows=True)
     except ValueError as e:
         violations.append(str(e))
-    changed = diff_paths(original, candidate)
+    changed = diff_paths(full_source, candidate)
     return {
         "valid": not violations,
         "violations": violations,
-        "grounding_warnings": grounding_review_warnings(original, candidate),
+        "grounding_warnings": grounding_review_warnings(full_source, candidate),
         "changed_fields": changed[:MAX_DIFF_PATHS],
         "changed_field_count": len(changed),
         **report,

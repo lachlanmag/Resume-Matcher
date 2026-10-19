@@ -89,12 +89,16 @@ Run `get_status`. If `master_resumes` is 0, ask the user for their resume file (
    {"personalInfo": {"name": "Ada Lovelace", "title": "Engineer", "email": "ada@example.com",
                      "phone": "+1 555 0100", "location": "London", "linkedin": "", "github": "", "website": ""},
     "summary": "One or two sentences from the resume.",
-    "workExperience": [{"id": 1, "title": "Engineer", "company": "Analytical Engines", "location": "London",
-                        "years": "Jan 2020 - Present", "description": ["Bullet one", "Bullet two"]}],
+    "workExperience": [{"id": 1, "company": "Analytical Engines", "location": "London",
+                        "roles": [{"id": 1, "title": "Senior Engineer", "years": "Jan 2022 - Present"},
+                                  {"id": 2, "title": "Engineer", "years": "Jan 2020 - Dec 2021"}],
+                        "description": ["Bullet one", "Bullet two"]}],
     "education": [{"id": 1, "institution": "University", "degree": "B.Sc. Mathematics", "years": "2014 - 2018"}],
     "personalProjects": [],
     "additional": {"technicalSkills": ["Python"], "languages": [], "certificationsTraining": [], "awards": []}}
    ```
+
+   One `workExperience` entry per employer. Each title held there is a role in `roles`, most recent first, with its own `years`; the bullets cover the whole entry.
 3. `create_master_resume resume_data:=@/abs/path/jobs/.work/master.json` (optionally `title=…`).
 4. Ask the user to check it at `http://localhost:3000/resumes/<resume_id>` and fix anything in the editor.
 
@@ -109,7 +113,7 @@ Job descriptions come pasted in chat, or as `.md`/`.txt` files in `jobs/` (ignor
    The keywords object has `required_skills`, `preferred_skills`, `experience_requirements`, `education_requirements`, `key_responsibilities` and `keywords` (lists of short strings); company and role go in the `company` and `role` arguments. A job pasted in chat is saved to `jobs/.work/<company>.md` first (scratch, not the batch); files the user saved in `jobs/` are the batch.
 2. **Read the source.** `get_resume resume_id=<master id>`. Start from its `resume_data` exactly as returned, including `sectionMeta` and `customSections`; a copy from anywhere else fails validation.
 3. **Write the tailored version** by the rules below.
-4. **Save and check:** `tailor_and_verify @/abs/path/jobs/.work/acme-tailor.json` with `{"source_resume_id", "job_id", "resume_data", "title": "<Role> @ <Company>"}`. It validates, saves a new resume (the master is untouched), renders the PDF, parse-checks it, scores it and adds an Applied card to the tracker. Call it **once per job**: every successful call adds another resume and tracker card, so fix things afterwards with `update_resume`.
+4. **Save and check:** `tailor_and_verify @/abs/path/jobs/.work/acme-tailor.json` with `{"source_resume_id", "job_id", "resume_data", "title": "<Role> @ <Company>"}`. Add `"tailor_length_settings": {"target_pages", "bullets_per_job_min", "bullets_per_job_max"}` when the user's prompt gives a length; without it the source's or the user's Settings apply, and the result's `tailor_length_settings` shows which. It validates, saves a new resume (the master is untouched), renders the PDF, parse-checks it, scores it and adds an Applied card to the tracker. Call it **once per job**: every successful call adds another resume and tracker card, so fix things afterwards with `update_resume`.
    - The result is long. The fields you need: `saved`, `resume.resume_id`, `score.overall_score`, `score.missing_keywords`, `page_count` and `issues` (`verify_resume` returns the same `score`, `page_count` and `issues`).
    - `saved: false`: nothing was written. Read `validation.violations`, fix them (or adopt `validation.repaired_resume_data`) and call it again.
    - `validation.grounding_warnings` are advisory: check each one against the source and fix anything unsupported.
@@ -118,6 +122,7 @@ Job descriptions come pasted in chat, or as `.md`/`.txt` files in `jobs/` (ignor
    | Issue | What to do |
    |---|---|
    | `injectable_keywords` | Work those keywords into existing bullets or the skills list; the master supports them |
+   | `bullets_per_job` | `bullet_count_problems` lists the jobs outside the length: drop the least relevant bullets, or add the job's most relevant unused bullets from the master |
    | `over_page_limit` | Tighten the summary and bullets; do not drop roles |
    | `multi_column`, `low_order_fidelity` | Suggest a single-column template such as `swiss-single` |
    | `garbled_glyphs`, `fields_missing` | Check unusual characters and empty fields |
@@ -130,7 +135,8 @@ Job descriptions come pasted in chat, or as `.md`/`.txt` files in `jobs/` (ignor
 
 These are the rules the app's own tailoring follows, and the validator enforces most of them.
 
-- Keep `personalInfo`, employers, job titles, locations, dates (`years`, copied exactly, months included), the number of entries and the number of bullets.
+- Keep `personalInfo`, employers, every role's title and dates (`years`, copied exactly, months included), locations and the number of entries.
+- Keep each job's bullets within the tailoring length (`bullets_per_job_min` to `bullets_per_job_max`) and the resume within `target_pages`. Choose the bullets most relevant to the job from that job's bullets in the master; never write a bullet the master does not support. A job with fewer bullets in the master than the minimum keeps the ones it has.
 - Never add a skill, tool, technology, certification, employer, metric or responsibility the source does not contain. Never raise seniority.
 - Rephrase existing bullets to use the job's wording where the source already shows that experience. Reorder skills by relevance, but never remove one.
 - Rewrite the summary for the role from facts already in the resume.
@@ -159,12 +165,16 @@ The app's AI buttons hand these prompts to you:
 | Enhance a resume | Ask the user about missing results, numbers and tools; then `get_resume`, edit, `update_resume`. Add only what they told you |
 | Rewrite parts | Show the user the changes first, then `update_resume` |
 | Interview prep | Answer in the chat from `get_resume` and `get_resume_job`; the app does not store it in agent mode |
+| Hiring feedback | `get_resume_feedback resume_id=<id>`: follow its `instructions` (the user's feedback prompt) with the resume and its job, then `set_resume_feedback` with `report_markdown` (every heading in `report_headings`) and `questions` for the user. They answer in the app |
+| Apply feedback answers | `get_resume_feedback` for the report and `feedback.answers`, `get_resume`, revise by `apply_rules` (new facts only from the answers), show the user the changes, then `apply_resume_feedback resume_id=<id> resume_data:=@…` |
+| Fit to the length settings | `get_resume` (the tailored resume), `get_resume_job` (its job and `source_resume_id`), `get_resume` on the source: pick each job's most relevant bullets from the source within the length, then `update_resume` and `verify_resume` |
+| Re-tailor | Tailor again from `source_resume_id` (from `get_resume_job`) by the steps above, with `tailor_and_verify` plus `"replace_resume_id": "<id>"` and the prompt's `tailor_length_settings`. It rewrites that resume in place: same link and tracker card |
 | PDF file | `export_resume_pdf resume_id=<id>` writes `data/exports/<id>-<template>.pdf` (pass `output_path` for elsewhere), or use **Download** in the editor |
 | Tracker | `list_applications`, `update_application` |
 
 ## Boundaries
 
-- No tool deletes anything. `update_resume`, `set_*`, `set_job_keywords` and `update_application` overwrite what they target: read it first.
+- No tool deletes anything. `update_resume`, `set_*`, `apply_resume_feedback`, `set_job_keywords`, `update_application` and a save with `replace_resume_id` overwrite what they target: read it first.
 - Change the app's settings only to switch on agent mode, and only after the user agrees.
 - The user's resume, job descriptions and exports stay out of git: `jobs/` and `apps/backend/data/` are gitignored. Never commit them.
 - Prefer MCP? The same tools run as an MCP server (`resume-matcher-mcp`); see [SETUP.md](../../../SETUP.md#use-resume-matcher-from-claude-code-or-claude-desktop-mcp).
