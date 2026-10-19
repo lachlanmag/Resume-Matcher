@@ -6,12 +6,14 @@ from typing import Any
 from mcp.types import ToolAnnotations
 
 from app.mcp_server.tools.add_job import add_job
+from app.mcp_server.tools.apply_resume_feedback import apply_resume_feedback
 from app.mcp_server.tools.create_application import create_application
 from app.mcp_server.tools.create_master_resume import create_master_resume
 from app.mcp_server.tools.export_resume_pdf import export_resume_pdf
 from app.mcp_server.tools.extract_document_text import extract_document_text
 from app.mcp_server.tools.get_job import get_job
 from app.mcp_server.tools.get_resume import get_resume
+from app.mcp_server.tools.get_resume_feedback import get_resume_feedback
 from app.mcp_server.tools.get_resume_job import get_resume_job
 from app.mcp_server.tools.get_resume_schema import get_resume_schema
 from app.mcp_server.tools.get_status import get_status
@@ -26,6 +28,7 @@ from app.mcp_server.tools.set_cover_letter import set_cover_letter
 from app.mcp_server.tools.set_default_master import set_default_master
 from app.mcp_server.tools.set_job_keywords import set_job_keywords
 from app.mcp_server.tools.set_outreach_message import set_outreach_message
+from app.mcp_server.tools.set_resume_feedback import set_resume_feedback
 from app.mcp_server.tools.set_resume_title import set_resume_title
 from app.mcp_server.tools.tailor_and_verify import tailor_and_verify
 from app.mcp_server.tools.update_application import update_application
@@ -42,6 +45,7 @@ READ_ONLY_TOOLS: list[Tool] = [
     get_resume,
     get_job,
     get_resume_job,
+    get_resume_feedback,
     extract_document_text,
     validate_tailored_resume,
     score_resume,
@@ -67,6 +71,8 @@ DESTRUCTIVE_TOOLS: list[Tool] = [
     set_resume_title,
     set_cover_letter,
     set_outreach_message,
+    set_resume_feedback,
+    apply_resume_feedback,
     set_default_master,
     set_job_keywords,
     export_resume_pdf,

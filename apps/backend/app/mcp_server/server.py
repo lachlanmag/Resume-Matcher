@@ -20,17 +20,19 @@ INSTRUCTIONS = """\
 Resume Matcher is a deterministic resume editor, validator and renderer. You are \
 the LLM: you write the content, these tools store, check and render it. Nothing \
 here deletes a resume or job, but update_resume, set_resume_title, \
-set_cover_letter, set_outreach_message, set_default_master, set_job_keywords and \
-update_application overwrite what is stored, and export_resume_pdf overwrites any \
-existing file at its output path. Check what is there before you pick a target; \
-tailor_and_verify and save_tailored_resume add new versions without overwriting.
+set_cover_letter, set_outreach_message, set_resume_feedback, apply_resume_feedback, \
+set_default_master, set_job_keywords and update_application overwrite what is \
+stored, and export_resume_pdf overwrites any existing file at its output path. \
+Check what is there before you pick a target; tailor_and_verify and save_tailored_resume add new versions without overwriting, \
+unless given replace_resume_id (Re-tailor in place).
 
 Typical flow:
 1. get_status, then list_resumes / get_resume. To import a file: \
 extract_document_text -> get_resume_schema -> create_master_resume.
 2. add_job with the job description and the keywords you extracted from it.
 3. Write tailored resume_data from the source resume. Keep personalInfo, \
-employers, dates and entry counts; never invent metrics or skills.
+employers, roles, dates and entry counts; never invent metrics or skills. Keep \
+each job's bullets within tailor_length_settings (the source's, else Settings).
 4. tailor_and_verify with the source, job, resume_data and print_settings. It \
 validates, saves, renders once, parse-checks and scores. If saved is false, fix \
 the violations and call it again.
@@ -39,6 +41,9 @@ multi_column or low_order_fidelity, suggest a single-column template. PDF \
 rendering needs the web frontend running. recalculate_ats_score refreshes the \
 score the builder shows after edits.
 6. export_resume_pdf to write the final file.
+7. Hiring feedback on a tailored resume: get_resume_feedback, write it, \
+set_resume_feedback. When the user has answered its questions, revise with \
+apply_resume_feedback.
 The single-step tools (validate_tailored_resume, save_tailored_resume, \
 score_resume, parse_check_resume) remain available.
 """

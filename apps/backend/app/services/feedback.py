@@ -24,7 +24,7 @@ from app.services.improver import apply_diffs, calculate_resume_diff
 
 logger = logging.getLogger(__name__)
 
-_REQUIRED_REPORT_HEADINGS: tuple[str, ...] = (
+REQUIRED_REPORT_HEADINGS: tuple[str, ...] = (
     "Candidate summary",
     "Strengths",
     "Concerns or gaps",
@@ -97,7 +97,7 @@ async def generate_structured_feedback(
         )
         raise ValueError("Invalid feedback output: missing list 'questions'.")
 
-    _validate_report_headings(report_markdown)
+    validate_report_headings(report_markdown)
 
     payload = {
         "report_markdown": report_markdown,
@@ -221,10 +221,10 @@ def _format_answers_block(
     return "\n".join(lines).strip()
 
 
-def _validate_report_headings(report_markdown: str) -> None:
+def validate_report_headings(report_markdown: str) -> None:
     """Ensure the feedback markdown includes all required report headings."""
     missing: list[str] = []
-    for heading in _REQUIRED_REPORT_HEADINGS:
+    for heading in REQUIRED_REPORT_HEADINGS:
         pattern = rf"^[ \t]*#{{1,6}}[ \t]*{re.escape(heading)}[ \t]*:?[ \t]*$"
         if not re.search(pattern, report_markdown, flags=re.IGNORECASE | re.MULTILINE):
             missing.append(heading)

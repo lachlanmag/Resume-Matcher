@@ -8,10 +8,12 @@ from app.mcp_server.tools._shared import (
     require_job,
     require_resume,
     require_structured,
+    resolve_tailor_length,
     store_tailored_resume,
     tailoring_report,
 )
 from app.schemas import ResumeData
+from app.schemas.models import TailorLengthSettings
 
 
 @guard
@@ -21,8 +23,15 @@ async def save_tailored_resume(
     resume_data: ResumeData,
     title: str | None = None,
     track_application: bool = True,
+    tailor_length_settings: TailorLengthSettings | None = None,
+    replace_resume_id: str | None = None,
 ) -> dict[str, Any]:
-    """Save a tailored resume you wrote. Rejected if it breaks preservation rules."""
+    """Save a tailored resume you wrote. Rejected if it breaks preservation rules.
+
+    tailor_length_settings defaults to the source's, else the user's Settings, and is
+    stored on the resume. replace_resume_id rewrites that tailored resume of the same
+    source in place (Re-tailor) instead of adding a new one; no tracker card is added.
+    """
     source = await require_resume(source_resume_id)
     job = await require_job(job_id)
     candidate = resume_data.model_dump()
@@ -35,6 +44,12 @@ async def save_tailored_resume(
             + ". Run validate_tailored_resume for details."
         )
     saved = await store_tailored_resume(
-        source, job, candidate, title, track_application
+        source,
+        job,
+        candidate,
+        title,
+        track_application,
+        tailor_length=resolve_tailor_length(source, tailor_length_settings),
+        replace_resume_id=replace_resume_id,
     )
     return {**saved, "grounding_warnings": report["grounding_warnings"]}

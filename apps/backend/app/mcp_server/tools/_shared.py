@@ -14,7 +14,13 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.ai_limits import MAX_SOURCE_CHARACTERS
 from app.config import settings
-from app.database import DatabaseBusyError, ResumeNotFoundError, db
+from app.config_cache import load_config
+from app.database import (
+    DatabaseBusyError,
+    ReplaceTargetError,
+    ResumeNotFoundError,
+    db,
+)
 from app.pdf import render_resume_pdf
 from app.routers.resumes import (
     _cached_job_keywords,
@@ -25,7 +31,7 @@ from app.routers.resumes import (
     _validate_confirm_payload,
 )
 from app.schemas import ResumeData, normalize_resume_data
-from app.schemas.models import PageFitSettings
+from app.schemas.models import PageFitSettings, TailorLengthSettings
 from app.services.ats import compute_ats_score
 from app.services.improver import generate_improvements
 from app.services.page_fit import print_margins, resume_print_url
@@ -34,6 +40,7 @@ from app.services.resume_preservation import (
     finalize_ai_resume,
     grounding_review_warnings,
 )
+from app.services.tailor_length import resolve_tailor_length_settings
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +61,8 @@ AUTHORING_RULES = [
     "Inline HTML in descriptions is limited to <strong>, <em>, <u> and <a>.",
     "Keep existing ids and sectionMeta from the source; omit sectionMeta on new resumes to get defaults.",
     "Keep each work entry's condensed flag as in the source; it only controls how the entry is laid out.",
+    "A work entry is one employer: its job titles and dates are in roles[] (most recent first), one role per title held there. Keep every role's title and years.",
+    "Keep each job's bullet count within the tailoring length (tailor_length_settings: bullets_per_job_min to bullets_per_job_max), and the resume within target_pages.",
 ]
 
 
@@ -288,14 +297,30 @@ def keyword_score(
     return {"keyword_match_percentage": round(match, 1), **ats}
 
 
+def resolve_tailor_length(
+    source: dict[str, Any], requested: TailorLengthSettings | None
+) -> TailorLengthSettings:
+    """The tailoring length the app would use: requested, else the source's, else Settings."""
+    return resolve_tailor_length_settings(
+        request_settings=requested, resume=source, config=load_config()
+    )
+
+
 async def store_tailored_resume(
     source: dict[str, Any],
     job: dict[str, Any],
     candidate: dict[str, Any],
     title: str | None,
     track_application: bool,
+    tailor_length: TailorLengthSettings | None = None,
+    replace_resume_id: str | None = None,
 ) -> dict[str, Any]:
-    """Save a validated tailored resume, link it to the job and add a tracker card."""
+    """Save a validated tailored resume, link it to the job and add a tracker card.
+
+    With ``replace_resume_id`` the existing tailored resume of the same source is
+    rewritten in place (same id, links and tracker card; no new card), as the
+    app's Re-tailor does.
+    """
     source_id = source["resume_id"]
     title = clean_title(title) or clean_title(job.get("role"))
     # The builder's last ATS score, as stored when preview confirmation saves a resume.
@@ -310,25 +335,38 @@ async def store_tailored_resume(
             )
         except Exception:  # noqa: BLE001 - the score is recalculable, never block the save
             logger.warning("ATS score at save failed", exc_info=True)
-    tailored = await db.create_tailored_resume(
-        request_id=str(uuid4()),
-        original_resume_id=source_id,
-        job_id=job["job_id"],
-        resume_fields={
-            "content": json.dumps(candidate, indent=2),
-            "content_type": "json",
-            "filename": f"tailored_{source.get('filename') or 'resume'}",
-            "is_master": False,
-            "parent_id": source_id,
-            "processed_data": candidate,
-            "processing_status": "ready",
-            "title": title,
-        },
-        improvements=generate_improvements(job.get("job_keywords") or {}),
-        ats_score=ats_record,
-    )
+    try:
+        tailored = await db.create_tailored_resume(
+            request_id=str(uuid4()),
+            original_resume_id=source_id,
+            job_id=job["job_id"],
+            replace_resume_id=replace_resume_id,
+            resume_fields={
+                "content": json.dumps(candidate, indent=2),
+                "content_type": "json",
+                "filename": f"tailored_{source.get('filename') or 'resume'}",
+                "is_master": False,
+                "parent_id": source_id,
+                "processed_data": candidate,
+                "processing_status": "ready",
+                "title": title,
+                "tailor_settings": tailor_length.model_dump()
+                if tailor_length
+                else None,
+            },
+            improvements=generate_improvements(job.get("job_keywords") or {}),
+            ats_score=ats_record,
+        )
+    except ReplaceTargetError as e:
+        raise ToolError(
+            "replace_resume_id must be a tailored resume of source_resume_id."
+            if not e.not_found
+            else "The tailored resume to replace was not found."
+        ) from e
     result = {**summary(tailored), "ats_score": ats_record}
-    if track_application:
+    if replace_resume_id:
+        result["replaced"] = True
+    elif track_application:
         try:
             application = await db.create_application(
                 job_id=job["job_id"],
