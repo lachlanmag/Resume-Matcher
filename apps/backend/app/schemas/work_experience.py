@@ -60,6 +60,10 @@ def normalize_experience_entry(data: Any) -> dict[str, Any]:
         "roles": roles,
         "description": entry.get("description", []),
     }
+    if "descriptionStyles" in entry:
+        normalized["descriptionStyles"] = entry["descriptionStyles"]
+    if "condensed" in entry:
+        normalized["condensed"] = entry["condensed"]
     if normalized["location"] == "":
         normalized["location"] = None
     return normalized
@@ -92,9 +96,7 @@ def preserve_work_experience_identity(
             continue
 
         orig_normalized = normalize_experience_entry(orig_entry)
-        tailored_entry = (
-            tailored_list[index] if index < len(tailored_list) else None
-        )
+        tailored_entry = tailored_list[index] if index < len(tailored_list) else None
         if isinstance(tailored_entry, dict) and "description" in tailored_entry:
             desc = tailored_entry["description"]
             if isinstance(desc, list):
@@ -105,9 +107,7 @@ def preserve_work_experience_identity(
                 tailored_description = [copy.deepcopy(desc)]
         else:
             # Missing tailored row or no description field — keep master/original pool.
-            tailored_description = copy.deepcopy(
-                orig_normalized.get("description", [])
-            )
+            tailored_description = copy.deepcopy(orig_normalized.get("description", []))
 
         preserved.append(
             {

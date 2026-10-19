@@ -1,14 +1,14 @@
 <div align="center">
 
-[![Resume Matcher](assets/header.png)](https://www.resumematcher.fyi)
+[![Resume Matcher](assets/header.webp)](https://www.resumematcher.fyi)
 
 # Resume Matcher
 
 [English](README.md) | [Español](README.es.md) | [简体中文](README.zh-CN.md) | **日本語**
 
-[𝙹𝚘𝚒𝚗 𝙳𝚒𝚜𝚌𝚘𝚛𝚍](https://dsc.gg/resume-matcher) ✦ [𝚆𝚎𝚋𝚜𝚒𝚝𝚎](https://resumematcher.fyi) ✦ [𝙷𝚘𝚠 𝚝𝚘 𝙸𝚗𝚜𝚝𝚊𝚕𝚕](https://resumematcher.fyi/docs/installation) ✦ [𝙲𝚘𝚗𝚝𝚛𝚒𝚋𝚞𝚝𝚘𝚛𝚜](#contributors) ✦ [𝚂𝚙𝚘𝚗𝚜𝚘𝚛](#sponsor-resume-matcher) ✦ [𝚃𝚠𝚒𝚝𝚝𝚎𝚛/𝚇](https://twitter.com/srbhrai) ✦ [𝙻𝚒𝚗𝚔𝚎𝚍𝙸𝚗](https://www.linkedin.com/company/resume-matcher/) ✦ [𝙲𝚛𝚎𝚊𝚝𝚘𝚛](https://srbhr.com)
+[𝙹𝚘𝚒𝚗 𝙳𝚒𝚜𝚌𝚘𝚛𝚍](https://dsc.gg/resume-matcher) ✦ [𝚆𝚎𝚋𝚜𝚒𝚝𝚎](https://resumematcher.fyi) ✦ [𝙷𝚘𝚠 𝚝𝚘 𝙸𝚗𝚜𝚝𝚊𝚕𝚕](https://resumematcher.fyi/docs/installation) ✦ [𝙲𝚘𝚗𝚝𝚛𝚒𝚋𝚞𝚝𝚘𝚛𝚜](#contributors) ✦ [𝚂𝚙𝚘𝚗𝚜𝚘𝚛](#sponsors) ✦ [𝚃𝚠𝚒𝚝𝚝𝚎𝚛/𝚇](https://twitter.com/srbhr_r) ✦ [𝙻𝚒𝚗𝚔𝚎𝚍𝙸𝚗](https://www.linkedin.com/company/resume-matcher/) ✦ [𝙲𝚛𝚎𝚊𝚝𝚘𝚛](https://srbhr.com)
 
-求人ごとに最適化した履歴書を、AI の提案で作成できます。Ollama を使ってローカルで動かすことも、API 経由でお気に入りの LLM プロバイダに接続することも可能です。
+オープンソースの履歴書ビルダー。求人票ごとに履歴書（レジュメ）を最適化します。Claude、ChatGPT、DeepSeek、Kimi、GLM、Gemma などのローカル／リモート LLM に対応した、セルフホスト型の AI ツールです。
 
 ![Resume Matcher Demo](assets/Resume_Matcher_Demo_2.gif)
 
@@ -19,7 +19,7 @@
 <div align="center">
 
 ![Stars](https://img.shields.io/github/stars/srbhr/Resume-Matcher?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8)
-![Apache 2.0](https://img.shields.io/github/license/srbhr/Resume-Matcher?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8) ![Forks](https://img.shields.io/github/forks/srbhr/Resume-Matcher?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8) ![version](https://img.shields.io/badge/Version-1.2%20Nightvision%20-FFF?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8)
+![Apache 2.0](https://img.shields.io/github/license/srbhr/Resume-Matcher?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8) ![Forks](https://img.shields.io/github/forks/srbhr/Resume-Matcher?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8) ![version](https://img.shields.io/badge/Version-1.3%20Crescendolls%20-FFF?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8)
 
 [![Discord](https://img.shields.io/discord/1122069176962531400?labelColor=F0F0E8&logo=discord&logoColor=1d4ed8&style=for-the-badge&color=1d4ed8)](https://dsc.gg/resume-matcher) [![Website](https://img.shields.io/badge/website-Resume%20Matcher-FFF?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8)](https://resumematcher.fyi) [![LinkedIn](https://img.shields.io/badge/LinkedIn-Resume%20Matcher-FFF?labelColor=F0F0E8&logo=LinkedIn&style=for-the-badge&color=1d4ed8)](https://www.linkedin.com/company/resume-matcher/)
 
@@ -31,7 +31,15 @@
 
 > \[!IMPORTANT]
 >
-> 本プロジェクトはアクティブに開発中です。新機能は継続的に追加され、コミュニティからのコントリビューションも歓迎しています。提案や機能要望があれば、GitHub に Issue を立てるか、[Discord](https://dsc.gg/resume-matcher) でご相談ください。
+> 本プロジェクトには皆さまの支援が必要です。少額でもご寄付いただけると、Resume Matcher の開発と改善を続ける力になります。
+
+<div align="center">
+
+[![Sponsor on GitHub](https://img.shields.io/github/sponsors/srbhr?style=for-the-badge&label=Sponsor&color=1d4ed8&labelColor=F0F0E8&logo=github&logoColor=black)](https://github.com/sponsors/srbhr) [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&color=1d4ed8&labelColor=F0F0E8&logoColor=black)](https://www.buymeacoffee.com/srbhr)
+
+**企業としてのスポンサーをご検討ですか？** あなたのロゴを 27k 人超の開発者に届けましょう → **[スポンサーになる ↓](#sponsors)**
+
+</div>
 
 ## はじめに
 
@@ -46,25 +54,42 @@ Resume Matcher は、まず「マスター履歴書」を作り、それを各�
 5. **調整**：レイアウトやセクションを好みに合わせてカスタマイズ
 6. **書き出し**：好みのテンプレートで PDF を出力
 
+### ソフトウェアエンジニアのために
+
+Resume Matcher のインストールにはターミナルが必要なので、使っている人の多くはソフトウェアを書く人です。普段の開発スタイルにそのまま馴染みます：
+
+- **自分のマシンで動く。** FastAPI のバックエンド、Next.js のフロントエンド、SQLite ファイルだけです。リポジトリをクローンするか、Docker コンテナを 1 つ起動します。アカウント登録は不要で、履歴書は自分のデータベースに保存されます。
+- **モデルは自分で選ぶ。** OpenAI、Anthropic、Gemini、DeepSeek、OpenRouter、Groq の API キーを使うか、Ollama でローカルモデルを動かせば、履歴書がマシンの外に出ることはありません。
+- **Claude Code から操作できる。** [MCP サーバー](SETUP.ja.md#claude-code--claude-desktop-から-resume-matcher-を使うmcp)を使えば、Claude Code、Cursor、Codex が最適化した履歴書を書き、Resume Matcher が保存・チェック・レンダリングを担当します。LLM の API キーは不要です。
+- **実際の経歴だけを使う。** 最適化用のプロンプトは、マスター履歴書にないスキル、ツール、会社名、数値の追加を禁止しています。
+- **スコアは読めるコード。** ATS スコア（[`services/ats.py`](apps/backend/app/services/ats.py)）と ATS チェック（[`services/ats_parse/`](apps/backend/app/services/ats_parse/)）は LLM を呼び出しません。ATS チェックは pdfminer で PDF を読み取り、応募者追跡システム（ATS）が抽出する内容を表示します。
+- **エンジニアらしいテンプレート。** 1 カラム・2 カラムに加えて、Deedy、Modern Deedy、LaTeX 風のレイアウトがあります。うち 7 つのデザインは、Overleaf で編集できる pdfLaTeX プロジェクトとして [resume-matcher-templates](https://github.com/resume-matcher/resume-matcher-templates) でも公開しています。
+
 ### コミュニティ
 
-[![Discord](assets/resume_matcher_discord.png)](https://dsc.gg/resume-matcher)
+[![Discord](assets/resume_matcher_discord.webp)](https://dsc.gg/resume-matcher)
 
 ディスカッション、要望、サポートは [Discord](https://dsc.gg/resume-matcher) へ。
 
-[![LinkedIn](assets/resume_matcher_linkedin.png)](https://www.linkedin.com/company/resume-matcher/)
+[![LinkedIn](assets/resume_matcher_linkedin.webp)](https://www.linkedin.com/company/resume-matcher/)
 
 最新情報は [LinkedIn](https://www.linkedin.com/company/resume-matcher/) でも発信しています。
 
-![Star Resume Matcher](assets/star_resume_matcher.png)
+![Star Resume Matcher](assets/star_resume_matcher.webp)
 
 Star を付けていただけると開発の励みになります（リリース通知も受け取れます）。
 
+<a id="sponsors"></a>
+
 ## スポンサー
 
-![sponsors](assets/sponsors.png)
+![sponsors](assets/sponsors.webp)
 
-スポンサーの皆さまに感謝します。Resume Matcher が役立ったと感じたら、[**GitHub Sponsors**](https://github.com/sponsors/srbhr) での支援をご検討ください。継続的な開発と改善につながります。
+Resume Matcher は無料かつオープンソースで、スポンサーと支援者の皆さまによって支えられています。役立つと感じたら、開発の支援をご検討ください。
+
+### Resume Matcher を支える企業
+
+企業ティアでスポンサーになると、**あなたのロゴ・リンク・紹介文がここに掲載されます** —— **27k 超の Star と 4.9k の Fork** を持つコミュニティに向けて。[Trendshift](https://trendshift.io/repositories/565) や [Vercel OSS プログラム](https://vercel.com/oss) にも掲載されています。
 
 | Sponsor | Description |
 |---------|-------------|
@@ -72,14 +97,18 @@ Star を付けていただけると開発の励みになります（リリース
 | [Vercel](https://vercel.com?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) | Resume Matcher は Vercel OSS // Summer 2025 プログラムの一部です 🌐 [vercel.com](https://vercel.com?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) |
 | [Cubic.dev](https://cubic.dev?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) | Cubic は Resume Matcher に PR レビューを提供しています 🌐 [cubic.dev](https://cubic.dev?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) |
 | [Kilo Code](https://kilo.ai?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) | Kilo Code は Resume Matcher に AI コードレビューとコーディングクレジットを提供しています 🌐 [kilo.ai](https://kilo.ai?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) |
+| [ZanReal](https://zanreal.com/?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) | ZanReal は AI 駆動の開発企業で、戦略・UX から DevOps まで、スケーラブルなクラウドソリューションを構築し、チームがより速くリリースしアイデアを本番へと導く支援をしています。 🌐 [zanreal.com](https://zanreal.com/?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) |
+| **✦ あなたの企業のロゴをここに** | 27k 超の開発者と 4.9k の Fork にリーチ。**[スポンサーになる →](https://github.com/sponsors/srbhr)** |
+
+スポンサーシップがプロジェクトにどのように役立つかについての詳細は、[Sponsorship Guide](https://resumematcher.fyi/docs/sponsoring) をご覧ください。ReadME およびウェブサイトにて特別に感謝の意を表します。
 
 <a id="support-the-development-by-donating"></a>
 
-## Resume Matcher を支援する
+### 個人として支援する
 
-![donate](assets/supporting_resume_matcher.png)
+![donate](assets/supporting_resume_matcher.webp)
 
-スポンサーシップがプロジェクトにどのように役立つかについての詳細は、[Sponsorship Guide](https://resumematcher.fyi/docs/sponsoring) をご覧ください。ReadME およびウェブサイトにて特別に感謝の意を表します。
+少額の支援でも Resume Matcher を無料に保ち、新機能の開発を支えます —— ReadME とウェブサイトにて感謝の意をお伝えします。
 
 | プラットフォーム | リンク |
 |------------------|--------|
@@ -95,22 +124,22 @@ Resume Matcher をご覧いただきありがとうございます。つなが�
 
 - Website: [https://srbhr.com](https://srbhr.com)
 - Linkedin: [https://www.linkedin.com/in/srbhr/](https://www.linkedin.com/in/srbhr/)
-- Twitter: [https://twitter.com/srbhrai](https://twitter.com/srbhrai)
+- Twitter: [https://twitter.com/srbhr_r](https://twitter.com/srbhr_r)
 - GitHub: [https://github.com/srbhr](https://github.com/srbhr)
 
 ## 主な機能
 
-![resume_matcher_features](assets/features.png)
+![resume_matcher_features](assets/features.webp)
 
 ### コア機能
 
 **マスター履歴書（Master Resume）**：既存の履歴書から、再利用できる包括的なマスター履歴書を作成します。
 
-![Job Description Input](assets/step_2.png)
+![Dashboard with a master resume and seven tailored resumes](assets/step_2.webp)
 
 ### 履歴書ビルダー
 
-![Resume Builder](assets/step_5_ja.png)
+![Resume Builder with the template picker and a live preview of a software engineer resume](assets/step_5.webp)
 
 求人票を貼り付けると、その職種に合わせた AI 提案の履歴書を生成します。
 
@@ -125,13 +154,13 @@ Resume Matcher をご覧いただきありがとうございます。つなが�
 
 求人票と履歴書に基づき、カスタマイズされたカバーレターとメール文面を生成します。
 
-![Cover Letter](assets/cover_letter_ja.png)
+![Cover letter editor next to its PDF preview](assets/cover_letter.webp)
 
 ### 履歴書スコアリング（開発中）
 
 履歴書と求人票を比較して、マッチスコアと改善提案を出す機能を開発中です。
 
-![Resume Scoring and Keyword Highlight](assets/keyword_highlighter_ja.png)
+![JD Match tab with the ATS score breakdown and matching keywords highlighted](assets/keyword_highlighter.webp)
 
 ### PDF 出力
 
@@ -139,12 +168,20 @@ Resume Matcher をご覧いただきありがとうございます。つなが�
 
 ### テンプレート
 
+どのテンプレートも、テキストを含む PDF（A4 または US Letter）として書き出すので、応募者追跡システム（ATS）で読み取れます。
+
 | テンプレート名 | プレビュー | 説明 |
 |---------------|-----------|------|
-| **クラシック（1 カラム）** | ![Classic Template](assets/pdf-templates/single-column.jpg) | 伝統的でクリーンなレイアウト。多くの業種に適しています。[PDF を見る](assets/pdf-templates/single-column.pdf) |
-| **モダン（1 カラム）** | ![Modern Template](assets/pdf-templates/modern-single-column.jpg) | 可読性と美しさを重視した現代的なデザイン。[PDF を見る](assets/pdf-templates/modern-single-column.pdf) |
-| **クラシック（2 カラム）** | ![Classic Two Column Template](assets/pdf-templates/two-column.jpg) | セクションを分けて見やすく整理します。[PDF を見る](assets/pdf-templates/two-column.pdf) |
-| **モダン（2 カラム）** | ![Modern Two Column Template](assets/pdf-templates/modern-two-column.jpg) | 2 カラムを活用して情報をより整理します。[PDF を見る](assets/pdf-templates/modern-two-column.pdf) |
+| **1カラム** | ![1カラム](assets/pdf-templates/single-column.webp) | 内容密度が高い伝統的な全幅レイアウト。[PDF を見る](assets/pdf-templates/single-column.pdf) |
+| **2カラム** | ![2カラム](assets/pdf-templates/two-column.webp) | 経験中心のメイン列とスキル用サイドバー。[PDF を見る](assets/pdf-templates/two-column.pdf) |
+| **モダン** | ![モダン](assets/pdf-templates/modern-single-column.webp) | カラフルなアクセントとテーマ色のカスタマイズ。[PDF を見る](assets/pdf-templates/modern-single-column.pdf) |
+| **モダン2カラム** | ![モダン2カラム](assets/pdf-templates/modern-two-column.webp) | モダンな2カラムとカラフルなアクセント。[PDF を見る](assets/pdf-templates/modern-two-column.pdf) |
+| **LaTeX** | ![LaTeX](assets/pdf-templates/latex.webp) | 罫線付き見出しのクラシックなセリフ体レイアウト。[PDF を見る](assets/pdf-templates/latex.pdf) |
+| **クリーン** | ![クリーン](assets/pdf-templates/clean.webp) | 大きく控えめな見出しのミニマルなサンセリフ体レイアウト。[PDF を見る](assets/pdf-templates/clean.pdf) |
+| **ビビッド** | ![ビビッド](assets/pdf-templates/vivid.webp) | アクセント見出しと矢印箇条書きのカラフルな2カラムレイアウト。[PDF を見る](assets/pdf-templates/vivid.pdf) |
+| **ビビッド1カラム** | ![ビビッド1カラム](assets/pdf-templates/vivid-single.webp) | アクセント見出しと矢印箇条書きのカラフルな1カラムレイアウト。[PDF を見る](assets/pdf-templates/vivid-single.pdf) |
+| **Modern Deedy** | ![Modern Deedy](assets/pdf-templates/modern-deedy.webp) | Lato書体の1ページ向け高密度レイアウト。見出しは淡いグレーの大文字。[PDF を見る](assets/pdf-templates/modern-deedy.pdf) |
+| **Deedy** | ![Deedy](assets/pdf-templates/deedy.webp) | 細字の名前、狭い左カラム、薄いグレーの見出しを備えた2カラムレイアウト。[PDF を見る](assets/pdf-templates/deedy.pdf) |
 
 ### 国際化
 
@@ -159,11 +196,24 @@ Resume Matcher をご覧いただきありがとうございます。つなが�
 - 定量的でインパクトのある内容を作る AI Canvas
 - 複数求人票の同時最適化
 
+## ソフトウェアエンジニア向け履歴書ガイド
+
+[Resume Matcher ブログ](https://resumematcher.fyi/blog/)（英語）では、初めてのインターン応募から FAANG への応募まで、開発者向けの履歴書ガイドを公開しています：
+
+- [Software engineer resume](https://resumematcher.fyi/blog/software-engineer-resume/)：1 ページのテンプレート、注釈付きの例 2 つ、セクションごとの書き方
+- [Computer science resume](https://resumematcher.fyi/blog/computer-science-resume/)：学生・新卒向け。プロジェクトとインターン経験で書く履歴書
+- [FAANG resume](https://resumematcher.fyi/blog/faang-resume/)：Google、Meta、Amazon が自社の採用ページで挙げている選考基準
+- [LaTeX resume](https://resumematcher.fyi/blog/latex-resume/)：Jake's、sb2nov、Awesome-CV、Overleaf、そしてパーサーが PDF をどう読むか
+- [Open source resume builders](https://resumematcher.fyi/blog/open-source-resume-builders/)：Reactive Resume、RenderCV、YAMLResume、Awesome-CV などの比較
+- [Master resume](https://resumematcher.fyi/blog/master-resume/)：すべての応募のもとになる、完全版の履歴書
+- [Tailor your resume to a job description](https://resumematcher.fyi/blog/how-to-match-your-resume-to-a-job-description/)：求人票に合わせて最適化する手順
+- [Private AI resume tailoring with Ollama](https://resumematcher.fyi/blog/local-ai-resume-tailoring-ollama/)：履歴書を自分のマシンから出さずに最適化する
+
 <a id="how-to-install"></a>
 
 ## インストール方法
 
-![Installation](assets/how_to_install_resumematcher.png)
+![Installation](assets/how_to_install_resumematcher.webp)
 
 詳細なセットアップ手順は **[SETUP.ja.md](SETUP.ja.md)** を参照してください（[English](SETUP.md) / [Español](SETUP.es.md) / [简体中文](SETUP.zh-CN.md) も利用できます）。
 
@@ -172,7 +222,7 @@ Resume Matcher をご覧いただきありがとうございます。つなが�
 | ツール | バージョン | インストール |
 |--------|------------|--------------|
 | Python | 3.13+ | [python.org](https://python.org) |
-| Node.js | 22+ | [nodejs.org](https://nodejs.org) |
+| Node.js | 24+ | [nodejs.org](https://nodejs.org) |
 | uv | 最新 | [astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/) |
 
 ### クイックスタート
@@ -233,7 +283,7 @@ docker run srbhr/resume-matcher:latest
 
 ## 参加・コントリビュート
 
-![how to contribute](assets/how_to_contribute.png)
+![how to contribute](assets/how_to_contribute.webp)
 
 どなたでもコントリビュート歓迎です。開発者・デザイナー・ユーザーを問わず、協力してくれる方を募集しています。コントリビューター一覧は、公式サイトの [about ページ](https://resumematcher.fyi/about) と GitHub README に掲載されています。
 
@@ -243,7 +293,7 @@ docker run srbhr/resume-matcher:latest
 
 ## コントリビューター
 
-![Contributors](assets/contributors.png)
+![Contributors](assets/contributors.webp)
 
 <a href="https://github.com/srbhr/Resume-Matcher/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=srbhr/Resume-Matcher" />
@@ -254,8 +304,8 @@ docker run srbhr/resume-matcher:latest
 <details>
   <summary><kbd>Star の推移</kbd></summary>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=srbhr/resume-matcher&theme=dark&type=Date">
-    <img width="100%" src="https://api.star-history.com/svg?repos=srbhr/resume-matcher&theme=dark&type=Date">
+    <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=srbhr/resume-matcher&theme=dark&type=Date">
+    <img width="100%" src="https://star-history.dera.page/svg?repos=srbhr/resume-matcher&theme=dark&type=Date">
   </picture>
 </details>
 

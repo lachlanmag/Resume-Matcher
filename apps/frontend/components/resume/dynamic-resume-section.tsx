@@ -6,7 +6,8 @@ import type {
   CustomSectionItem,
 } from '@/components/dashboard/resume-component';
 import { formatDateRange } from '@/lib/utils';
-import { SafeHtml } from './safe-html';
+import { DescriptionList } from './description-list';
+import { RESUME_SECTION, RESUME_SECTION_TITLE, resumeItem } from './page-break-attrs';
 import baseStyles from './styles/_base.module.css';
 
 interface DynamicResumeSectionProps {
@@ -46,8 +47,10 @@ export const DynamicResumeSection: React.FC<DynamicResumeSectionProps> = ({
   if (!hasContent) return null;
 
   return (
-    <div className={baseStyles['resume-section']}>
-      <h3 className={baseStyles['resume-section-title']}>{sectionMeta.displayName}</h3>
+    <div {...RESUME_SECTION} className={baseStyles['resume-section']}>
+      <h3 {...RESUME_SECTION_TITLE} className={baseStyles['resume-section-title']}>
+        {sectionMeta.displayName}
+      </h3>
       {renderContent(sectionMeta.sectionType, customSection)}
     </div>
   );
@@ -87,7 +90,7 @@ const ItemListSectionContent: React.FC<{ items: CustomSectionItem[] }> = ({ item
   return (
     <div className={baseStyles['resume-items']}>
       {items.map((item) => (
-        <div key={item.id} className={baseStyles['resume-item']}>
+        <div key={item.id} {...resumeItem(item.description)} className={baseStyles['resume-item']}>
           {/* Title and Years Row */}
           <div className={`flex justify-between items-baseline ${baseStyles['resume-row-tight']}`}>
             <h4 className={baseStyles['resume-item-title']}>{item.title}</h4>
@@ -109,18 +112,7 @@ const ItemListSectionContent: React.FC<{ items: CustomSectionItem[] }> = ({ item
           )}
 
           {/* Description Points */}
-          {item.description && item.description.length > 0 && (
-            <ul className={`ml-4 ${baseStyles['resume-list']} ${baseStyles['resume-text-sm']}`}>
-              {item.description.map((desc, index) => (
-                <li key={index} className="flex">
-                  <span className="mr-1.5 flex-shrink-0">•&nbsp;</span>
-                  <span>
-                    <SafeHtml html={desc} />
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <DescriptionList items={item.description} styles={item.descriptionStyles} />
         </div>
       ))}
     </div>

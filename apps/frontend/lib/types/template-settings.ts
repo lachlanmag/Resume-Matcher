@@ -12,7 +12,22 @@ export type TemplateType =
   | 'modern-two-column'
   | 'latex'
   | 'clean'
-  | 'vivid';
+  | 'vivid'
+  | 'vivid-single'
+  | 'modern-deedy'
+  | 'deedy';
+
+const TWO_COLUMN_TEMPLATES: ReadonlySet<TemplateType> = new Set([
+  'swiss-two-column',
+  'modern-two-column',
+  'vivid',
+  'deedy',
+]);
+
+/** Two-column layouts can be read out of order by ATS parsers. */
+export function isTwoColumnTemplate(template: TemplateType): boolean {
+  return TWO_COLUMN_TEMPLATES.has(template);
+}
 
 export type PageSize = 'A4' | 'LETTER';
 
@@ -52,6 +67,9 @@ export interface TemplateSettings {
   compactMode: boolean; // Apply tighter spacing across the board
   showContactIcons: boolean; // Show icons next to contact info
   accentColor: AccentColor; // Accent color for Modern template
+  // On saved settings: which builder session saved them, and its save number.
+  session?: string | null;
+  revision?: number;
 }
 
 /**
@@ -128,18 +146,49 @@ export const SECTION_HEADER_SCALE_MAP: Record<SpacingLevel, number> = {
   5: 1.4,
 };
 
-// Header font family mapping
-export const HEADER_FONT_MAP: Record<HeaderFontFamily, string> = {
-  serif: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-  'sans-serif': 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"',
-  mono: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+/**
+ * CJK fallback ordering, per content locale.
+ *
+ * Noto Sans SC, KR and JP all cover Han ideographs, and SC additionally covers
+ * ~93% of kana — so whichever face is listed first wins for any shared
+ * codepoint. A single static order cannot be right for every locale:
+ *
+ *   - SC first  → correct Chinese, but Japanese kana renders in SC forms
+ *   - JP first  → correct Japanese, but Chinese Han renders in JP forms
+ *   - Hangul    → only KR covers it meaningfully (SC covers 0.7%, i.e. tofu)
+ *
+ * so the stack is ordered by the locale the document is actually rendered in.
+ */
+const CJK_FONT_STACKS: Record<string, string[]> = {
+  zh: ['--font-noto-sans-sc', '--font-noto-sans-jp', '--font-noto-sans-kr'],
+  ja: ['--font-noto-sans-jp', '--font-noto-sans-kr', '--font-noto-sans-sc'],
+  ko: ['--font-noto-sans-kr', '--font-noto-sans-jp', '--font-noto-sans-sc'],
 };
 
-export const BODY_FONT_MAP: Record<BodyFontFamily, string> = {
-  serif: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-  'sans-serif': 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"',
-  mono: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+const DEFAULT_CJK_STACK = CJK_FONT_STACKS.zh;
+
+const cjkVars = (locale?: string): string => {
+  const key = (locale ?? '').toLowerCase().split('-')[0];
+  const stack = CJK_FONT_STACKS[key] ?? DEFAULT_CJK_STACK;
+  return stack.map((v) => `var(${v})`).join(', ');
 };
+
+// Header font family mapping. Exported as functions of the locale; the eager
+// maps below preserve the previous default-ordering API for existing callers.
+// Each stack starts with a face the app ships (loaded by components/dashboard/
+// resume-component.tsx), so the preview and the PDF renderer use the same font file
+// whatever fonts their machines have.
+export const buildHeaderFontMap = (locale?: string): Record<HeaderFontFamily, string> => ({
+  serif: `"Noto Serif", ui-serif, Georgia, Cambria, "Times New Roman", ${cjkVars(locale)}, Times, serif`,
+  'sans-serif': `"Noto Sans", ui-sans-serif, system-ui, ${cjkVars(locale)}, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"`,
+  mono: `"Noto Sans Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, ${cjkVars(locale)}, monospace`,
+});
+
+export const buildBodyFontMap = (locale?: string): Record<BodyFontFamily, string> =>
+  buildHeaderFontMap(locale);
+
+export const HEADER_FONT_MAP: Record<HeaderFontFamily, string> = buildHeaderFontMap();
+export const BODY_FONT_MAP: Record<BodyFontFamily, string> = buildBodyFontMap();
 
 /**
  * Accent color mapping for Modern template
@@ -163,7 +212,10 @@ export const COMPACT_LINE_HEIGHT_MULTIPLIER = 0.92;
 /**
  * Convert TemplateSettings to CSS custom properties
  */
-export function settingsToCssVars(settings?: TemplateSettings): React.CSSProperties {
+export function settingsToCssVars(
+  settings?: TemplateSettings,
+  locale?: string
+): React.CSSProperties {
   const s = settings || DEFAULT_TEMPLATE_SETTINGS;
   const compact = s.compactMode ? COMPACT_MULTIPLIER : 1;
 
@@ -175,6 +227,13 @@ export function settingsToCssVars(settings?: TemplateSettings): React.CSSPropert
 
   // Get accent colors for Modern template
   const accentColors = ACCENT_COLOR_MAP[s.accentColor];
+
+  // Modern Deedy's signature face is Lato: its "sans-serif" choice resolves to the
+  // self-hosted --font-lato (app/layout.tsx), with the regular sans stack as fallback.
+  const withTemplateFace = (map: Record<HeaderFontFamily, string>) =>
+    s.template === 'modern-deedy'
+      ? { ...map, 'sans-serif': `var(--font-lato), ${map['sans-serif']}` }
+      : map;
 
   return {
     '--section-gap': s.compactMode
@@ -190,8 +249,8 @@ export function settingsToCssVars(settings?: TemplateSettings): React.CSSPropert
     '--font-size-base': FONT_SIZE_MAP[s.fontSize.base],
     '--header-scale': HEADER_SCALE_MAP[s.fontSize.headerScale],
     '--section-header-scale': SECTION_HEADER_SCALE_MAP[s.fontSize.headerScale],
-    '--header-font': HEADER_FONT_MAP[s.fontSize.headerFont],
-    '--body-font': BODY_FONT_MAP[s.fontSize.bodyFont],
+    '--header-font': withTemplateFace(buildHeaderFontMap(locale))[s.fontSize.headerFont],
+    '--body-font': withTemplateFace(buildBodyFontMap(locale))[s.fontSize.bodyFont],
     '--margin-top': `${marginTop}mm`,
     '--margin-bottom': `${marginBottom}mm`,
     '--margin-left': `${marginLeft}mm`,
@@ -247,6 +306,22 @@ export const TEMPLATE_OPTIONS: TemplateInfo[] = [
     name: 'Vivid',
     description: 'Colorful two-column layout with accent headers and arrow bullets',
   },
+  {
+    id: 'vivid-single',
+    name: 'Vivid Single Column',
+    description: 'Colorful single-column layout with accent headers and arrow bullets',
+  },
+  {
+    id: 'modern-deedy',
+    name: 'Modern Deedy',
+    description: 'Dense one-page layout in Lato with light grey uppercase section headings',
+  },
+  {
+    id: 'deedy',
+    name: 'Deedy',
+    description:
+      'Two-column layout with a hairline name, a narrow left column and light gray headings',
+  },
 ];
 
 /**
@@ -262,6 +337,7 @@ export const TEMPLATE_FONT_PRESETS: Partial<
 > = {
   latex: { headerFont: 'serif', bodyFont: 'serif' },
   clean: { headerFont: 'sans-serif', bodyFont: 'sans-serif' },
+  'modern-deedy': { headerFont: 'sans-serif', bodyFont: 'sans-serif' },
 };
 
 /**

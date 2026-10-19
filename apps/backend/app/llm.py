@@ -1,17 +1,33 @@
 """LiteLLM wrapper for multi-provider AI support."""
 
+import hmac
 import json
 import logging
 import re
 import threading
+from collections.abc import Callable
 from typing import Any, Literal
+from urllib.parse import urlsplit, urlunsplit
 
 import litellm
 from litellm import Router
 from litellm.router import RetryPolicy
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
-from app.config import load_config_file, save_config_file, settings
+from app.ai_budget import remaining_timeout
+from app.ai_limits import validate_prompt_size
+from app.chatgpt_auth import ChatGPTNotConnectedError
+from app.chatgpt_auth import is_connected as chatgpt_is_connected
+from app.chatgpt_inference import ChatGPTPlanError, chatgpt_acompletion
+from app.claude_cli import ClaudeCliNotFoundError, claude_acompletion
+from app.config import (
+    load_config_file,
+    normalize_provider,
+    save_config_file,
+    settings,
+)
+from app.crypto import keyed_digest
+from app.host_guard import LOOPBACK_HOSTS
 
 LITELLM_LOGGER_NAMES = ("LiteLLM", "LiteLLM Router", "LiteLLM Proxy")
 
@@ -35,6 +51,15 @@ litellm.drop_params = True
 # current code path sends thinking, but future-proofs the Router.
 litellm.modify_params = True
 
+#: The user's coding agent does the AI work through the CLI or MCP tools; the
+#: app itself makes no model calls.
+AGENT_PROVIDER = "agent"
+
+
+class AgentModeError(RuntimeError):
+    """A model call was attempted while the agent provider is selected."""
+
+
 # LLM timeout configuration (seconds) - base values
 LLM_TIMEOUT_HEALTH_CHECK = 30
 LLM_TIMEOUT_COMPLETION = 120
@@ -50,6 +75,42 @@ MAX_JSON_CONTENT_SIZE = 1024 * 1024  # 1MB
 # automatically clamped to the model's actual capacity.
 DEFAULT_JSON_MAX_TOKENS = 8192
 
+# ---------------------------------------------------------------------------
+# OpenAI-compatible endpoint allowlists
+#
+# Why this exists: custom OpenAI-compatible servers expose no capability
+# discovery API, so there is no way to ask an endpoint at runtime whether it
+# accepts OpenAI JSON mode (``response_format={"type": "json_object"}``).
+# Sending it optimistically to an unverified server can turn a prompt-only JSON
+# request that previously worked into a hard 400, so support is opt-in: an
+# endpoint gets JSON mode only when it appears below.
+#
+# Bar for adding an entry: the endpoint must be *verified to support OpenAI JSON
+# mode* - a real request against the live endpoint that came back with a
+# parseable JSON body. A vendor doc claiming OpenAI compatibility is not enough.
+#
+# Which constant to edit when adding a provider:
+#   * A server that accepts plain OpenAI JSON mode -> add its lowercase
+#     hostname to ``JSON_MODE_VERIFIED_HOSTS``. Hosts are compared against the
+#     exact parsed hostname of ``api_base``, so lookalike domains such as
+#     ``evil-opencode.ai`` never match.
+#   * A new OpenCode Zen HY3 model alias -> add it (lowercased) to
+#     ``OPENCODE_ZEN_HY3_MODELS``. The Zen route is separate from the plain host
+#     allowlist because it also drives a vendor-specific ``no_think`` reasoning
+#     switch, and must stay scoped to the exact gateway/model pair.
+# ---------------------------------------------------------------------------
+
+#: Exact hostname of the OpenCode Zen gateway.
+OPENCODE_ZEN_HOST: str = "opencode.ai"
+#: Path prefix identifying the Zen gateway on that host (``/zen``, ``/zen/v1``, ...).
+OPENCODE_ZEN_PATH_PREFIX: str = "/zen"
+#: Lowercased model names served by Zen's HY3-compatible route.
+OPENCODE_ZEN_HY3_MODELS: frozenset[str] = frozenset({"hy3", "hy3-free"})
+
+#: Hostnames verified to accept OpenAI JSON mode over an ``openai_compatible``
+#: endpoint. See the comment block above before adding to this set.
+JSON_MODE_VERIFIED_HOSTS: frozenset[str] = frozenset({"api.stepfun.com"})
+
 
 class LLMConfig(BaseModel):
     """LLM configuration model."""
@@ -58,10 +119,74 @@ class LLMConfig(BaseModel):
     model: str
     api_key: str
     api_base: str | None = None
+    api_version: str | None = None
     reasoning_effort: Literal["minimal", "low", "medium", "high"] | None = None
+    # False when the resolved key was withheld from the saved Base URL (see
+    # saved_endpoint_accepts_key); no request is made with such a config.
+    endpoint_confirmed: bool = True
+
+    @field_validator("provider", mode="before")
+    @classmethod
+    def _normalize_provider(cls, value: Any) -> Any:
+        return normalize_provider(value)
 
 
-def _normalize_api_base(provider: str, api_base: str | None) -> str | None:
+def _is_azure_openai_foundry_endpoint(
+    api_base: str | None, model: str | None = None
+) -> bool:
+    """Return True for Azure AI Foundry endpoints exposing Azure OpenAI APIs."""
+    if not api_base:
+        return False
+    parsed = urlsplit(api_base.strip())
+    host = parsed.hostname or ""
+    path = parsed.path.rstrip("/")
+    if not host.endswith(".services.ai.azure.com"):
+        return False
+    if path == "/models" or path.startswith("/models/"):
+        return False
+    if not path:
+        return model is not None and _is_azure_foundry_gpt5_model(model)
+    return path == "/openai" or path.startswith("/openai/")
+
+
+def _is_azure_foundry_gpt5_model(model: str) -> bool:
+    """Return True when a deployment/model name should use LiteLLM GPT-5 routing."""
+    normalized = model.lower()
+    return "gpt-5" in normalized or "gpt5_series/" in normalized
+
+
+def _azure_foundry_api_version(config: LLMConfig) -> str | None:
+    """Resolve API version for Azure Foundry calls.
+
+    Azure's v1 Foundry/OpenAI URLs look like
+    `https://<resource>.services.ai.azure.com/openai/v1/responses`. LiteLLM
+    expects the service root plus `api_version='v1'` for that API family.
+    """
+    # M-01: the provider check must come first. An explicit api_version is an
+    # Azure concept; returning it for any provider leaks the value into
+    # litellm_params for Ollama, OpenAI-compatible servers and the rest.
+    if config.provider != "azure_foundry" or not config.api_base:
+        return None
+    if config.api_version:
+        return config.api_version
+    # H-03: gate on exactly the same predicate _normalize_api_base uses. If the
+    # base URL is not rewritten to the service root but we still report v1,
+    # LiteLLM appends `/openai/v1/` to a path that already contains it and
+    # every call 404s on a URL this module built itself.
+    if not _is_azure_openai_foundry_endpoint(config.api_base, config.model):
+        return None
+    parsed = urlsplit(config.api_base.strip())
+    path = parsed.path.rstrip("/")
+    if "/openai/v1" in path or (
+        not path and _is_azure_foundry_gpt5_model(config.model)
+    ):
+        return "v1"
+    return None
+
+
+def _normalize_api_base(
+    provider: str, api_base: str | None, model: str | None = None
+) -> str | None:
     """Normalize api_base for LiteLLM provider-specific expectations.
 
     When using proxies/aggregators, users often paste a base URL that already
@@ -82,6 +207,41 @@ def _normalize_api_base(provider: str, api_base: str | None) -> str | None:
         return None
 
     base = base.rstrip("/")
+
+    # Azure AI Foundry can expose Azure OpenAI APIs under paths like
+    # /openai/v1/responses. LiteLLM's Azure v1 client expects the service root
+    # and appends /openai/v1/ itself, so strip endpoint-specific suffixes.
+    # L-01: pass `model` so this agrees with _azure_foundry_api_version, whose
+    # bare-service-root branch depends on it. Two callers disagreeing about
+    # whether an endpoint is Foundry-OpenAI is what produced H-03.
+    if provider == "azure_foundry" and _is_azure_openai_foundry_endpoint(base, model):
+        parsed = urlsplit(base)
+        # L-02: rebuild from hostname/port rather than netloc so any userinfo
+        # in a pasted URL (https://user:secret@host/...) is not carried forward.
+        #
+        # `parsed.port` is a property that RAISES ValueError for a non-numeric
+        # or out-of-range port ("...:99999", "...:abc"). This function runs
+        # inside _build_router and check_llm_health, so an unhandled raise here
+        # would surface as a crash before any LLM error handling. Fall back to
+        # the untouched base — a malformed endpoint should fail as a connection
+        # error from the provider, not as a ValueError from URL parsing.
+        host = parsed.hostname or ""
+        if not host:
+            return base
+        try:
+            port: int | None = parsed.port
+        except ValueError:
+            # Malformed port. Do NOT return `base` untouched — it may carry
+            # userinfo, which is exactly the credential leak this rebuild
+            # exists to prevent. Rebuild from the parsed hostname and drop the
+            # bad port; the endpoint then fails as a provider connection error
+            # rather than as a ValueError, and with no secret attached.
+            logging.warning(
+                "Invalid port in api_base; dropping it during normalization"
+            )
+            port = None
+        netloc = f"{host}:{port}" if port else host
+        return f"{parsed.scheme}://{netloc}"
 
     # OpenAI / OpenAI-compatible: preserve the URL as-is. The OpenAI client
     # resolves paths correctly whether the base includes /v1 or not.
@@ -132,11 +292,212 @@ def _effective_api_key(provider: str, api_key: str) -> str:
     return api_key
 
 
-def _extract_text_parts(value: Any, depth: int = 0, max_depth: int = 10) -> list[str]:
+def _uses_opencode_zen_hy3(config: LLMConfig) -> bool:
+    """Return whether a request targets OpenCode Zen's HY3-compatible route.
+
+    HY3 is a reasoning model.  Zen exposes its supported switch as top-level
+    ``reasoning_effort: \"no_think\"``.  Scope this workaround to the exact
+    gateway/model pair - ``OPENCODE_ZEN_HOST`` + ``OPENCODE_ZEN_PATH_PREFIX`` +
+    ``OPENCODE_ZEN_HY3_MODELS`` - so an unrelated OpenAI-compatible server never
+    receives a vendor-specific parameter.
+    """
+    if config.provider != "openai_compatible" or not isinstance(config.model, str):
+        return False
+    if config.model.strip().lower() not in OPENCODE_ZEN_HY3_MODELS:
+        return False
+    if not isinstance(config.api_base, str):
+        return False
+    parsed = urlsplit(config.api_base.strip())
+    if (parsed.hostname or "").lower() != OPENCODE_ZEN_HOST:
+        return False
+    # ``/zen``, ``/zen/`` and ``/zen/<segment>`` are all the Zen gateway; a
+    # merely prefixed path such as ``/zenith`` is a different service.
+    path = parsed.path.rstrip("/")
+    return path == OPENCODE_ZEN_PATH_PREFIX or path.startswith(
+        f"{OPENCODE_ZEN_PATH_PREFIX}/"
+    )
+
+
+def _openai_compatible_supports_json_mode(config: LLMConfig) -> bool:
+    """Return whether a compatible endpoint is known to accept JSON mode.
+
+    Custom OpenAI-compatible servers have no uniform capability-discovery API.
+    Sending ``response_format`` to every one of them can turn a prompt-only
+    JSON request that previously worked into a 400, so this stays an allowlist:
+    an endpoint qualifies only when its host is in ``JSON_MODE_VERIFIED_HOSTS``
+    or it is the OpenCode Zen HY3 route. Read the allowlist comment block above
+    those constants before adding an entry.
+    """
+    if config.provider != "openai_compatible" or not isinstance(config.api_base, str):
+        return False
+    host = (urlsplit(config.api_base.strip()).hostname or "").lower()
+    return _uses_opencode_zen_hy3(config) or host in JSON_MODE_VERIFIED_HOSTS
+
+
+OPENAI_API_HOST = "api.openai.com"
+
+
+def _is_native_openai(config: LLMConfig) -> bool:
+    """Return True when ``config`` targets OpenAI itself.
+
+    The ``openai`` provider is also how users point at llama.cpp, vLLM and other
+    compatible servers via ``api_base`` (issue #751), so the provider name alone
+    does not mean the request reaches OpenAI.
+    """
+    if config.provider != "openai":
+        return False
+    api_base = config.api_base if isinstance(config.api_base, str) else ""
+    if not api_base.strip():
+        return True
+    return (urlsplit(api_base.strip()).hostname or "").lower() == OPENAI_API_HOST
+
+
+def _output_token_kwarg(config: LLMConfig, max_tokens: int) -> dict[str, int]:
+    """Build the kwarg that caps output tokens for ``config``'s provider.
+
+    OpenAI's chat models take ``max_completion_tokens`` (reasoning-era models
+    reject ``max_tokens``; gpt-4o and gpt-4.1 accept either). LiteLLM only remaps
+    ``max_tokens`` to it for model names it recognises, so an unknown or new
+    OpenAI model received the raw ``max_tokens`` and failed with "Unsupported
+    parameter: 'max_tokens'" (issue #1030). Deciding by provider avoids keeping a
+    list of model names. Every other provider keeps the portable ``max_tokens``.
+
+    The ChatGPT plan route rejects ``max_output_tokens`` (and every other
+    output cap), so ``chatgpt`` gets no output-token parameter at all.
+    """
+    if config.provider == "chatgpt":
+        return {}
+    if _is_native_openai(config):
+        return {"max_completion_tokens": max_tokens}
+    return {"max_tokens": max_tokens}
+
+
+#: Thinking budget (tokens) LiteLLM maps each ``reasoning_effort`` to on
+#: Anthropic's extended-thinking API. Anthropic rejects a request unless
+#: ``max_tokens`` exceeds the budget, and LiteLLM only raises ``max_tokens``
+#: itself when the caller sends none.
+_ANTHROPIC_THINKING_BUDGETS: dict[str, int] = {
+    "minimal": 1024,
+    "low": 1024,
+    "medium": 2048,
+    "high": 4096,
+}
+
+
+def _reasoning_effort_kwarg(
+    config: LLMConfig, reasoning_effort: str | None, max_tokens: int
+) -> dict[str, str]:
+    """Build the ``reasoning_effort`` kwarg, or nothing when it would 400.
+
+    A stored effort can outlive the model it was set for (the gpt-5 migration
+    persists ``minimal``). On Anthropic it becomes a thinking budget of at least
+    1024 tokens, so a call capped at or below that budget (the 64-token health
+    probe, short cover-letter calls) is rejected with "`max_tokens` must be
+    greater than `thinking.budget_tokens`". Such a call cannot hold the thinking
+    anyway, so it runs without it. Other providers pass the effort through.
+    """
+    if not reasoning_effort:
+        return {}
+    if config.provider == "anthropic" and max_tokens <= (
+        _ANTHROPIC_THINKING_BUDGETS.get(reasoning_effort, 0)
+    ):
+        logging.info(
+            "Omitting reasoning_effort=%s: max_tokens=%d is not above the "
+            "Anthropic thinking budget",
+            reasoning_effort,
+            max_tokens,
+        )
+        return {}
+    return {"reasoning_effort": reasoning_effort}
+
+
+def _apply_reasoning_effort(
+    config: LLMConfig,
+    kwargs: dict[str, Any],
+    reasoning_effort: str | None,
+    max_tokens: int,
+) -> None:
+    """Add ``reasoning_effort`` to ``kwargs`` and drop what it conflicts with.
+
+    Anthropic rejects extended thinking alongside a temperature other than 1,
+    so a request that carries the effort there goes out without ``temperature``.
+    """
+    effort_kwarg = _reasoning_effort_kwarg(config, reasoning_effort, max_tokens)
+    kwargs.update(effort_kwarg)
+    if effort_kwarg and config.provider == "anthropic":
+        kwargs.pop("temperature", None)
+
+
+_MAX_TOKENS_REJECTED_RE = re.compile(
+    r"'max_tokens' is not supported|unsupported parameter:?\s*'max_tokens'"
+)
+
+
+def _is_max_tokens_unsupported(error: Exception) -> bool:
+    """Return True if a 400 says ``max_tokens`` is unsupported in favour of
+    ``max_completion_tokens`` (issue #1030).
+
+    Matches OpenAI's "Unsupported parameter: 'max_tokens' is not supported with
+    this model. Use 'max_completion_tokens' instead." as relayed by Azure,
+    OpenRouter and compatible servers. Both parameter names must appear and
+    ``max_tokens`` must be the rejected one, so the reverse rejection and
+    unrelated 400s do not match.
+    """
+    msg = str(error).lower()
+    return "max_completion_tokens" in msg and bool(_MAX_TOKENS_REJECTED_RE.search(msg))
+
+
+async def _route_acompletion(config: LLMConfig, transport: Any, **kwargs: Any) -> Any:
+    """Route a completion to the local Claude Code CLI or to LiteLLM.
+
+    When ``config.provider == "claude_cli"`` the request is served by the
+    machine's installed ``claude`` CLI (no API key configured here; the CLI
+    itself still calls Anthropic); otherwise it goes through ``transport`` — the LiteLLM ``Router`` for
+    completions, or the ``litellm`` module for the health check.
+
+    Providers other than native OpenAI send ``max_tokens`` (see
+    ``_output_token_kwarg``), but an OpenAI-style one fronting a reasoning model
+    rejects it. When the 400 says exactly that, retry once with
+    ``max_completion_tokens``; every other error propagates unchanged.
+    """
+    if not config.endpoint_confirmed:
+        raise ValueError(
+            "The API key is not confirmed for the saved Base URL. "
+            "Re-enter the key in Settings."
+        )
+    if config.provider == "claude_cli":
+        return await claude_acompletion(cli_model=config.model, **kwargs)
+    if config.provider == "chatgpt":
+        # Signed-in ChatGPT plan: the Responses API with the sign-in token.
+        # ``kwargs["model"]`` is the Router alias here, so pass the real slug.
+        return await chatgpt_acompletion(config.model, **kwargs)
+    try:
+        return await transport.acompletion(**kwargs)
+    except litellm.BadRequestError as e:
+        if "max_tokens" not in kwargs or not _is_max_tokens_unsupported(e):
+            raise
+        logging.warning(
+            "Provider %s rejected max_tokens; retrying once with max_completion_tokens",
+            config.provider,
+        )
+        retry_kwargs = {k: v for k, v in kwargs.items() if k != "max_tokens"}
+        retry_kwargs["max_completion_tokens"] = kwargs["max_tokens"]
+        return await transport.acompletion(**retry_kwargs)
+
+
+def _extract_text_parts(
+    value: Any,
+    depth: int = 0,
+    max_depth: int = 10,
+    *,
+    exclude_reasoning: bool = False,
+) -> list[str]:
     """Recursively extract text segments from nested response structures.
 
     Handles strings, lists, dicts with 'text'/'content'/'value' keys, and objects
-    with text/content attributes. Limits recursion depth to avoid cycles.
+    with text/content attributes. Limits recursion depth to avoid cycles.  Set
+    ``exclude_reasoning`` for structured output, where typed reasoning blocks
+    must not be joined with a model's final answer.
 
     Args:
         value: Input value that may contain text in strings, lists, dicts, or objects.
@@ -159,26 +520,84 @@ def _extract_text_parts(value: Any, depth: int = 0, max_depth: int = 10) -> list
         parts: list[str] = []
         next_depth = depth + 1
         for item in value:
-            parts.extend(_extract_text_parts(item, next_depth, max_depth))
+            parts.extend(
+                _extract_text_parts(
+                    item,
+                    next_depth,
+                    max_depth,
+                    exclude_reasoning=exclude_reasoning,
+                )
+            )
         return parts
 
     if isinstance(value, dict):
+        block_type = value.get("type")
+        if (
+            exclude_reasoning
+            and isinstance(block_type, str)
+            and block_type.lower() in _REASONING_BLOCK_TYPES
+        ):
+            return []
         next_depth = depth + 1
         if "text" in value:
-            return _extract_text_parts(value.get("text"), next_depth, max_depth)
+            return _extract_text_parts(
+                value.get("text"),
+                next_depth,
+                max_depth,
+                exclude_reasoning=exclude_reasoning,
+            )
         if "content" in value:
-            return _extract_text_parts(value.get("content"), next_depth, max_depth)
+            return _extract_text_parts(
+                value.get("content"),
+                next_depth,
+                max_depth,
+                exclude_reasoning=exclude_reasoning,
+            )
         if "value" in value:
-            return _extract_text_parts(value.get("value"), next_depth, max_depth)
+            return _extract_text_parts(
+                value.get("value"),
+                next_depth,
+                max_depth,
+                exclude_reasoning=exclude_reasoning,
+            )
         return []
 
+    block_type = getattr(value, "type", None)
+    if (
+        exclude_reasoning
+        and isinstance(block_type, str)
+        and block_type.lower() in _REASONING_BLOCK_TYPES
+    ):
+        return []
     next_depth = depth + 1
     if hasattr(value, "text"):
-        return _extract_text_parts(getattr(value, "text"), next_depth, max_depth)
+        return _extract_text_parts(
+            getattr(value, "text"),
+            next_depth,
+            max_depth,
+            exclude_reasoning=exclude_reasoning,
+        )
     if hasattr(value, "content"):
-        return _extract_text_parts(getattr(value, "content"), next_depth, max_depth)
+        return _extract_text_parts(
+            getattr(value, "content"),
+            next_depth,
+            max_depth,
+            exclude_reasoning=exclude_reasoning,
+        )
+    if hasattr(value, "value"):
+        return _extract_text_parts(
+            getattr(value, "value"),
+            next_depth,
+            max_depth,
+            exclude_reasoning=exclude_reasoning,
+        )
 
     return []
+
+
+_REASONING_BLOCK_TYPES = frozenset(
+    {"analysis", "reasoning", "reasoning_content", "thinking"}
+)
 
 
 def _join_text_parts(parts: list[str]) -> str | None:
@@ -257,6 +676,36 @@ def _extract_choice_text(choice: Any) -> str | None:
     return None
 
 
+def _extract_choice_primary_text(choice: Any) -> str | None:
+    """Extract only a model's final answer, never its reasoning trace.
+
+    Reasoning models commonly return their chain-of-thought in
+    ``reasoning_content`` before (or, when the output budget is exhausted,
+    instead of) the user-facing ``content``.  That trace is not an answer and
+    must never be fed into the JSON parser.  The broader
+    :func:`_extract_choice_text` intentionally retains its reasoning fallback
+    for the health-check UI, where it is useful evidence that a provider can
+    respond.
+    """
+    message = _safe_get(choice, "message")
+    content = _join_text_parts(
+        _extract_text_parts(_safe_get(message, "content"), exclude_reasoning=True)
+    )
+    if content:
+        return content
+
+    for field in ("text", "delta"):
+        value = _safe_get(choice, field)
+        if value is not None:
+            extracted = _join_text_parts(
+                _extract_text_parts(value, exclude_reasoning=True)
+            )
+            if extracted:
+                return extracted
+
+    return None
+
+
 def _to_code_block(content: str | None, language: str = "text") -> str:
     """Wrap content in a markdown code block for client display."""
     text = (content or "").strip()
@@ -281,6 +730,9 @@ _SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"AIza[0-9A-Za-z_\-]{10,}"),
     # Generic Bearer tokens in an Authorization header line.
     re.compile(r"(?i)(Bearer\s+)[^\s\"']+"),
+    # Azure sends its key in a bare ``api-key:`` header and the value is a plain
+    # 32-84 char alphanumeric, so it matches none of the patterns above. M-08.
+    re.compile(r"(?i)(api[-_]?key[\"'\s:=]+)[^\s\"',}]+"),
 )
 
 
@@ -303,6 +755,7 @@ def _scrub_secrets(text: str) -> str:
 _PROVIDER_KEY_MAP: dict[str, str] = {
     "openai": "openai",
     "openai_compatible": "openai_compatible",
+    "azure_foundry": "azure_foundry",
     "cursor": "cursor",
     "anthropic": "anthropic",
     "gemini": "google",
@@ -318,7 +771,7 @@ _PROVIDER_KEY_MAP: dict[str, str] = {
 # default), because the env var may hold a real paid-API key that would then
 # leak to a local/compatible endpoint the user set up expecting no auth.
 _PROVIDERS_WITHOUT_ENV_KEY_FALLBACK: frozenset[str] = frozenset(
-    {"openai_compatible", "cursor", "ollama"}
+    {"openai_compatible", "ollama", "claude_cli", "chatgpt", "agent", "cursor"}
 )
 
 
@@ -362,6 +815,66 @@ def resolve_api_key(stored: dict, provider: str) -> str:
     return api_key
 
 
+#: config.json field that binds the saved custom ``api_base`` to the key
+#: confirmed for it (a keyed digest, never the key itself).
+API_BASE_KEY_BINDING = "api_base_key_binding"
+#: Error code for a key that has not been confirmed for the endpoint it would reach.
+API_KEY_REQUIRED_FOR_ENDPOINT = "api_key_required_for_endpoint"
+
+
+def normalize_endpoint(api_base: str | None) -> str:
+    """Compare-ready form of a Base URL: scheme and host lowercased only.
+
+    Paths and queries are case-sensitive (a shared proxy can route
+    ``/TeamA/v1`` and ``/teama/v1`` to different users), so they are kept as
+    written; otherwise a saved key could follow a case-only path change.
+    """
+    raw = (api_base or "").strip().rstrip("/")
+    try:
+        parts = urlsplit(raw)
+        host = parts.hostname
+        port = parts.port
+    except ValueError:
+        return raw
+    if not parts.scheme or host is None:
+        return raw
+    if ":" in host:
+        host = f"[{host}]"
+    userinfo = parts.netloc.rpartition("@")[0]
+    netloc = f"{userinfo}@{host}" if userinfo else host
+    if port is not None:
+        netloc = f"{netloc}:{port}"
+    return urlunsplit(
+        (parts.scheme.lower(), netloc, parts.path, parts.query, parts.fragment)
+    )
+
+
+def api_base_key_binding(provider: str, api_base: str | None, api_key: str) -> str:
+    """Digest tying ``api_key`` to ``provider`` at ``api_base``, for config.json."""
+    return keyed_digest("\0".join((provider, normalize_endpoint(api_base), api_key)))
+
+
+def saved_endpoint_accepts_key(
+    stored: dict, provider: str, api_base: str | None, api_key: str
+) -> bool:
+    """Whether ``api_key`` may be sent to ``api_base`` when that is the saved custom base.
+
+    The API is unauthenticated, so a custom base saved through it is bound to
+    the key confirmed for it (PUT /config/llm-api-key). A different key
+    resolving later, such as ``LLM_API_KEY`` after the saved key is deleted, is
+    withheld instead of being sent to a server the caller may control. The
+    provider's own endpoint and the operator's ``LLM_API_BASE`` are not saved
+    bases and are not bound; a base saved before bindings existed is trusted.
+    """
+    base = normalize_endpoint(api_base)
+    if not api_key or not base or base != normalize_endpoint(stored.get("api_base")):
+        return True
+    binding = stored.get(API_BASE_KEY_BINDING)
+    if not isinstance(binding, str):
+        return True
+    return hmac.compare_digest(binding, api_base_key_binding(provider, base, api_key))
+
+
 def get_llm_config() -> LLMConfig:
     """Get current LLM configuration.
 
@@ -399,6 +912,15 @@ def get_llm_config() -> LLMConfig:
             logging.warning("Failed to persist gpt-5 migration: %s", e)
 
     api_key = resolve_api_key(stored, provider)
+    api_base = stored.get("api_base") or settings.llm_api_base or None
+    endpoint_confirmed = saved_endpoint_accepts_key(stored, provider, api_base, api_key)
+    if not endpoint_confirmed:
+        logging.warning(
+            "Withholding the %s API key: it is not the key confirmed for the "
+            "saved Base URL",
+            provider,
+        )
+        api_key = ""
 
     raw_re = stored.get("reasoning_effort", settings.reasoning_effort)
     # Normalize empty string to None — user explicitly cleared.
@@ -408,8 +930,10 @@ def get_llm_config() -> LLMConfig:
         provider=provider,
         model=model,
         api_key=api_key,
-        api_base=stored.get("api_base", settings.llm_api_base),
+        api_base=api_base,
+        api_version=stored.get("api_version"),
         reasoning_effort=reasoning_effort,
+        endpoint_confirmed=endpoint_confirmed,
     )
 
 
@@ -426,6 +950,7 @@ def get_model_name(config: LLMConfig) -> str:
         # client handles the request; works for llama.cpp, vLLM, LM Studio,
         # and any server exposing the OpenAI Chat Completions API shape.
         "openai_compatible": "openai/",
+        "azure_foundry": "azure_ai/",
         "cursor": "openai/",
         "anthropic": "anthropic/",
         "openrouter": "openrouter/",
@@ -437,12 +962,34 @@ def get_model_name(config: LLMConfig) -> str:
 
     prefix = provider_prefixes.get(config.provider, "")
 
+    if config.provider == "azure_foundry" and _is_azure_openai_foundry_endpoint(
+        config.api_base, config.model
+    ):
+        if config.model.startswith(("azure/", "azure_ai/")):
+            return config.model
+        # Deliberately no `gpt5_series/` segment. That string is absent from
+        # LiteLLM's model registry, and every capability decision in this module
+        # is derived from `litellm.get_model_info`: with the prefix,
+        # get_safe_max_tokens collapses 128k -> the 4096 default and
+        # _supports_json_mode returns False, so long resumes get truncated JSON
+        # and response_format is never sent. LiteLLM already routes gpt-5 family
+        # deployments to its GPT-5 config from the bare name, so the prefix
+        # bought nothing and cost both.
+        return f"azure/{config.model}"
+
     # OpenRouter is special: always add openrouter/ prefix unless already present
     # OpenRouter models use nested format: openrouter/anthropic/claude-3.5-sonnet
     if config.provider == "openrouter":
         if config.model.startswith("openrouter/"):
             return config.model
         return f"openrouter/{config.model}"
+
+    # Groq models can have publisher namespaces (e.g., openai/gpt-oss-120b, meta-llama/...)
+    # Always ensure groq/ prefix so LiteLLM doesn't mistake publisher prefixes for the target provider.
+    if config.provider == "groq":
+        if config.model.startswith("groq/"):
+            return config.model
+        return f"groq/{config.model}"
 
     # For other providers, don't add prefix if model already has a known prefix
     known_prefixes = [
@@ -451,6 +998,8 @@ def get_model_name(config: LLMConfig) -> str:
         "gemini/",
         "deepseek/",
         "groq/",
+        "azure/",
+        "azure_ai/",
         "ollama/",
         "ollama_chat/",
         "openai/",
@@ -471,6 +1020,35 @@ _router_config_key: str = ""
 _router_lock = threading.Lock()
 
 
+class _PolicyRouter(Router):
+    """Apply the complete app retry policy with the installed LiteLLM Router.
+
+    LiteLLM 1.86.2's retry-policy dispatcher does not classify
+    ``InternalServerError`` even though ``RetryPolicy`` exposes the matching
+    field. Its ``None`` result falls back to the Router-wide retry count.
+    Keep that compatibility correction confined to the omitted exception.
+    LiteLLM 1.103+ dispatches it natively with the same count of 2, so the
+    override is now a version-independent guard rather than a correction.
+    """
+
+    async def make_call(
+        self,
+        original_function: Any,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        try:
+            return await super().make_call(original_function, *args, **kwargs)
+        except litellm.InternalServerError as error:
+            # Verified against pinned LiteLLM 1.86.2: the outer
+            # async_function_with_retries awaits self.make_call(), then reads
+            # e.num_retries in its except block before consulting retry policy.
+            # Base make_call performs one provider invocation, not the retry
+            # loop, so this override is observed before another attempt.
+            error.num_retries = 2
+            raise
+
+
 def _config_fingerprint(config: LLMConfig) -> str:
     """Generate a fingerprint to detect config changes.
 
@@ -480,7 +1058,7 @@ def _config_fingerprint(config: LLMConfig) -> str:
     The raw key is never stored in the fingerprint string.
     """
     key_hash = hash(config.api_key) if config.api_key else 0
-    return f"{config.provider}|{config.model}|{key_hash}|{config.api_base}"
+    return f"{config.provider}|{config.model}|{key_hash}|{config.api_base}|{config.api_version}"
 
 
 def _build_router(config: LLMConfig) -> Router:
@@ -491,11 +1069,14 @@ def _build_router(config: LLMConfig) -> Router:
     effective_key = _effective_api_key(config.provider, config.api_key)
     if effective_key:
         litellm_params["api_key"] = effective_key
-    api_base = _normalize_api_base(config.provider, config.api_base)
+    api_base = _normalize_api_base(config.provider, config.api_base, config.model)
     if api_base:
         litellm_params["api_base"] = api_base
+    api_version = _azure_foundry_api_version(config)
+    if api_version:
+        litellm_params["api_version"] = api_version
 
-    return Router(
+    return _PolicyRouter(
         model_list=[
             {
                 "model_name": "primary",
@@ -518,26 +1099,67 @@ def _build_router(config: LLMConfig) -> Router:
     )
 
 
-def get_router(config: LLMConfig | None = None) -> tuple[Router, LLMConfig]:
+def get_router(config: LLMConfig | None = None) -> tuple[Router | None, LLMConfig]:
     """Get or rebuild the LiteLLM Router.
 
     The Router is cached and only rebuilt when the underlying config changes.
-    Returns the Router and the config it was built from.
+    Returns the Router and the config it was built from. The Router is ``None``
+    for ``claude_cli``: that provider is served by the local ``claude`` binary
+    (see ``_route_acompletion``) and has no LiteLLM deployment — LiteLLM rejects
+    the bare ``claude_cli`` model name when the Router is constructed. It is
+    also ``None`` for ``chatgpt``, whose bearer token is per call and comes from
+    the Sign in with ChatGPT store, not from a Router deployment.
     """
     global _router, _router_config_key
 
     if config is None:
         config = get_llm_config()
 
+    if config.provider == AGENT_PROVIDER:
+        raise AgentModeError(
+            "Agent mode is on: Resume Matcher makes no AI calls. "
+            "Ask your coding agent to do this instead."
+        )
+    if config.provider in ("claude_cli", "chatgpt"):
+        return None, config
+
     key = _config_fingerprint(config)
     with _router_lock:
         if _router is None or _router_config_key != key:
             _router = _build_router(config)
             _router_config_key = key
-            logging.info("LiteLLM Router rebuilt for %s/%s", config.provider, config.model)
+            logging.info(
+                "LiteLLM Router rebuilt for %s/%s", config.provider, config.model
+            )
         router = _router
 
     return router, config
+
+
+def _targets_container_loopback(config: LLMConfig) -> bool:
+    """Whether a containerised backend is calling its own loopback for the model.
+
+    No model server runs inside the image, so such a call can only fail; the
+    server on the host is at host.docker.internal. A blank Ollama base is
+    LiteLLM's default, http://localhost:11434.
+    """
+    if not settings.in_container:
+        return False
+    if config.api_base and config.api_base.strip():
+        try:
+            host = urlsplit(config.api_base.strip()).hostname or ""
+        except ValueError:
+            return False
+    else:
+        host = "localhost" if config.provider == "ollama" else ""
+    return host in LOOPBACK_HOSTS
+
+
+#: ChatGPT plan errors the settings page explains (docs: "Errors and recovery").
+_CHATGPT_ERROR_CODES: dict[str, str] = {
+    "subscription_sharing_usage_limit_exceeded": "chatgpt_usage_limit",
+    "subscription_sharing_user_not_eligible": "chatgpt_not_eligible",
+}
 
 
 async def check_llm_health(
@@ -550,16 +1172,42 @@ async def check_llm_health(
     if config is None:
         config = get_llm_config()
 
+    if config.provider == AGENT_PROVIDER:
+        return {
+            "healthy": False,
+            "provider": config.provider,
+            "model": config.model,
+            "error_code": "agent_mode",
+        }
+    if not config.endpoint_confirmed:
+        return {
+            "healthy": False,
+            "provider": config.provider,
+            "model": config.model,
+            "error_code": API_KEY_REQUIRED_FOR_ENDPOINT,
+        }
+
     # Check if API key is configured. Ollama and openai_compatible local
     # servers often run without auth, so a blank key is acceptable for those
     # providers — a sentinel is passed downstream (see _effective_api_key)
     # to satisfy the OpenAI client's non-empty-string validation.
-    if config.provider not in ("ollama", "openai_compatible", "cursor") and not config.api_key:
+    if (
+        config.provider
+        not in ("ollama", "openai_compatible", "claude_cli", "chatgpt", "cursor")
+        and not config.api_key
+    ):
         return {
             "healthy": False,
             "provider": config.provider,
             "model": config.model,
             "error_code": "api_key_missing",
+        }
+    if config.provider == "chatgpt" and not chatgpt_is_connected():
+        return {
+            "healthy": False,
+            "provider": config.provider,
+            "model": config.model,
+            "error_code": "chatgpt_not_connected",
         }
 
     model_name = get_model_name(config)
@@ -572,15 +1220,19 @@ async def check_llm_health(
         kwargs: dict[str, Any] = {
             "model": model_name,
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 64,
+            **_output_token_kwarg(config, 64),
             "api_key": _effective_api_key(config.provider, config.api_key),
-            "api_base": _normalize_api_base(config.provider, config.api_base),
+            "api_base": _normalize_api_base(
+                config.provider, config.api_base, config.model
+            ),
             "timeout": LLM_TIMEOUT_HEALTH_CHECK,
         }
-        if config.reasoning_effort:
-            kwargs["reasoning_effort"] = config.reasoning_effort
+        api_version = _azure_foundry_api_version(config)
+        if api_version:
+            kwargs["api_version"] = api_version
+        _apply_reasoning_effort(config, kwargs, config.reasoning_effort, 64)
 
-        response = await litellm.acompletion(**kwargs)
+        response = await _route_acompletion(config, litellm, **kwargs)
         content = _extract_choice_text(response.choices[0])
         if not content:
             # LLM-003: Empty response (even after reasoning_content / thinking
@@ -622,10 +1274,9 @@ async def check_llm_health(
             )
             reasoning_text = None
             if primary_content:
-                reasoning_text = (
-                    _join_text_parts(_extract_text_parts(_safe_get(msg, "reasoning_content")))
-                    or _join_text_parts(_extract_text_parts(_safe_get(msg, "thinking")))
-                )
+                reasoning_text = _join_text_parts(
+                    _extract_text_parts(_safe_get(msg, "reasoning_content"))
+                ) or _join_text_parts(_extract_text_parts(_safe_get(msg, "thinking")))
             result["reasoning_content"] = (
                 _to_code_block(reasoning_text) if reasoning_text else None
             )
@@ -640,7 +1291,15 @@ async def check_llm_health(
         # Provide a minimal, actionable client-facing hint without leaking secrets.
         error_code = "health_check_failed"
         message = str(e)
-        if "404" in message and "/v1/v1/" in message:
+        if isinstance(e, ClaudeCliNotFoundError):
+            error_code = "claude_cli_not_found"
+        elif isinstance(e, ChatGPTNotConnectedError):
+            error_code = "chatgpt_not_connected"
+        elif isinstance(e, ChatGPTPlanError):
+            error_code = _CHATGPT_ERROR_CODES.get(e.code, error_code)
+        elif _targets_container_loopback(config):
+            error_code = "loopback_in_container"
+        elif "404" in message and "/v1/v1/" in message:
             error_code = "duplicate_v1_path"
         elif "404" in message:
             error_code = "not_found_404"
@@ -673,6 +1332,7 @@ async def complete(
 
     Transport retries (429, 500, timeout) are handled by the Router.
     """
+    validate_prompt_size(prompt + (system_prompt or ""))
     router, config = get_router(config)
     model_name = get_model_name(config)
 
@@ -685,15 +1345,18 @@ async def complete(
         kwargs: dict[str, Any] = {
             "model": "primary",
             "messages": messages,
-            "max_tokens": max_tokens,
-            "timeout": _calculate_timeout("completion", max_tokens, config.provider),
+            **_output_token_kwarg(config, max_tokens),
+            "timeout": remaining_timeout(
+                _calculate_timeout("completion", max_tokens, config.provider)
+            ),
         }
-        if _supports_temperature(model_name, temperature):
+        if _supports_temperature(
+            model_name, temperature, reasoning_effort=config.reasoning_effort
+        ):
             kwargs["temperature"] = temperature
-        if config.reasoning_effort:
-            kwargs["reasoning_effort"] = config.reasoning_effort
+        _apply_reasoning_effort(config, kwargs, config.reasoning_effort, max_tokens)
 
-        response = await router.acompletion(**kwargs)
+        response = await _route_acompletion(config, router, **kwargs)
 
         content = _extract_choice_text(response.choices[0])
         if not content:
@@ -701,13 +1364,15 @@ async def complete(
         # Strip thinking tags from reasoning models (deepseek-r1, qwq, etc.)
         if "<think>" in content:
             content = _strip_thinking_tags(content)
-            if not content:
-                raise ValueError("Response contained only thinking content, no output")
+        content = content.strip()
+        if not content:
+            raise ValueError("Response contained no visible output")
         return content
+    except TimeoutError:
+        raise
     except Exception as e:
         # Log the actual error server-side for debugging
-        logging.error(f"LLM completion failed: {e}", extra={
-                      "model": model_name})
+        logging.error(f"LLM completion failed: {e}", extra={"model": model_name})
         raise ValueError(
             "LLM completion failed. Please check your API configuration and try again."
         ) from e
@@ -741,7 +1406,9 @@ def _supports_json_mode(model_name: str) -> bool:
         # mode (the system prompt already instructs "respond with valid JSON
         # only"). This avoids sending response_format to models that may
         # reject it.
-        logging.debug("Model %s not in LiteLLM registry, skipping JSON mode", model_name)
+        logging.debug(
+            "Model %s not in LiteLLM registry, skipping JSON mode", model_name
+        )
         return False
 
 
@@ -773,7 +1440,12 @@ def _is_response_format_unsupported(error: Exception) -> bool:
 
 FALLBACK_MAX_TOKENS = 4096
 
-def get_safe_max_tokens(model_name: str, requested: int = DEFAULT_JSON_MAX_TOKENS) -> int:
+
+def get_safe_max_tokens(
+    model_name: str,
+    requested: int = DEFAULT_JSON_MAX_TOKENS,
+    config: LLMConfig | None = None,
+) -> int:
     """Return a token count safe for the given model, clamped to its output limit.
 
     Queries LiteLLM's model registry for ``max_output_tokens`` and returns
@@ -781,11 +1453,14 @@ def get_safe_max_tokens(model_name: str, requested: int = DEFAULT_JSON_MAX_TOKEN
     what the backend actually supports.
 
     If the model is not in the registry (e.g. custom Ollama models), it falls
-    back to a safe conservative limit (FALLBACK_MAX_TOKENS).
+    back to a conservative limit. The verified OpenCode Zen HY3 route is an
+    exception because JSON extraction disables reasoning for that model and
+    needs the full structured-output budget.
 
     Args:
         model_name: LiteLLM-formatted model name (from get_model_name).
         requested: Desired token budget; defaults to DEFAULT_JSON_MAX_TOKENS.
+        config: Optional provider configuration for scoped compatibility rules.
 
     Returns:
         Safe token count, clamped correctly and always >= 1.
@@ -808,11 +1483,15 @@ def get_safe_max_tokens(model_name: str, requested: int = DEFAULT_JSON_MAX_TOKEN
     except Exception:
         pass  # Model not in registry, drop down to fallback logic
 
-    safe = min(safe_requested, FALLBACK_MAX_TOKENS)
+    fallback_limit = (
+        DEFAULT_JSON_MAX_TOKENS
+        if config is not None and _uses_opencode_zen_hy3(config)
+        else FALLBACK_MAX_TOKENS
+    )
+    safe = min(safe_requested, fallback_limit)
     logging.debug(
-        "Model %s not in LiteLLM registry, clamping requested max_tokens %d → %d constraint",
+        "Model %s not in LiteLLM registry, using fallback max_tokens %d",
         model_name,
-        safe_requested,
         safe,
     )
     return safe
@@ -828,24 +1507,17 @@ def _appears_truncated(data: dict, schema_type: str = "resume") -> bool:
     Args:
         data: Parsed JSON dict.
         schema_type: Expected schema — "resume" (full resume), "enrichment"
-            (analyze output), "feedback" (tailored resume feedback),
-            "diff" (diff changes), or "keywords".
+            (analyze output), "diff" (diff changes), "keywords",
+            "interview_prep", or "feedback" (tailored resume feedback).
             Determines which fields are checked for truncation.
     """
     if not isinstance(data, dict):
         return False
 
     if schema_type == "resume":
-        # Full resume structure: check for empty required arrays
-        suspicious_empty_arrays = ["workExperience", "education", "skills"]
-        for key in suspicious_empty_arrays:
-            if key in data and data[key] == []:
-                # Log warning - these are rarely empty in real resumes
-                logging.warning(
-                    "Possible truncation detected: '%s' is empty",
-                    key,
-                )
-                return True
+        # A resume can legitimately omit or empty every optional section.
+        # Callers that need stronger guarantees provide a response validator
+        # based on their source contract.
         return False
 
     if schema_type == "enrichment":
@@ -855,6 +1527,23 @@ def _appears_truncated(data: dict, schema_type: str = "resume") -> bool:
         if "items_to_enrich" not in data or "questions" not in data:
             logging.warning(
                 "Possible truncation detected: enrichment missing required keys"
+            )
+            return True
+        return False
+
+    if schema_type == "interview_prep":
+        required = {
+            "role_fit_analysis",
+            "resume_questions",
+            "project_follow_ups",
+            "skill_gaps",
+            "talking_points",
+        }
+        missing = required - set(data)
+        if missing:
+            logging.warning(
+                "Possible truncation detected: interview_prep missing required keys: %s",
+                ", ".join(sorted(missing)),
             )
             return True
         return False
@@ -878,21 +1567,29 @@ def _appears_truncated(data: dict, schema_type: str = "resume") -> bool:
     return False
 
 
-def _supports_temperature(model_name: str, temperature: float | None = None) -> bool:
+def _supports_temperature(
+    model_name: str,
+    temperature: float | None = None,
+    reasoning_effort: str | None = None,
+) -> bool:
     """Check if the model supports the given temperature value.
 
     Uses LiteLLM model registry for capability detection, with
-    provider-specific fallbacks for known restrictions:
+    narrowly scoped fallbacks for known restrictions:
       - Anthropic claude-opus-4.*: temperature is deprecated
       - Moonshot kimi-k2.6: only temperature=1 allowed
+      - Reasoning GPT-5 models: non-default values require registry
+        support for no-reasoning mode and an effective effort of "none"
 
     Queries LiteLLM's model info for every provider so that capability is
-    always determined from the registry rather than a hardcoded list.
+    determined from the registry rather than a provider-wide exemption.
 
     Args:
         model_name: LiteLLM-formatted model name (from get_model_name).
         temperature: The temperature value to check. If None, returns True
             (caller isn't setting a specific value).
+        reasoning_effort: Configured reasoning mode. None means the request
+            omits the parameter and uses a model's no-reasoning default.
 
     Returns:
         True if the model supports the given temperature, False otherwise.
@@ -918,6 +1615,12 @@ def _supports_temperature(model_name: str, temperature: float | None = None) -> 
         )
         return False
 
+    # LiteLLM's model map flags models that removed sampling parameters (e.g.
+    # Claude Opus 5.5), even where get_model_info() still lists temperature.
+    registry_entry = litellm.model_cost.get(info.get("key"), {})
+    if registry_entry.get("supports_sampling_params") is False:
+        return False
+
     # Provider-specific restrictions not captured by the registry.
     # Anthropic Opus 4.x deprecated temperature entirely.
     if "claude-opus-4" in model_name.lower():
@@ -927,21 +1630,66 @@ def _supports_temperature(model_name: str, temperature: float | None = None) -> 
     if "kimi-k2.6" in model_name.lower() and temperature != 1.0:
         return False
 
+    # GPT-5 reasoning models allow flexible sampling only when the model map
+    # advertises a no-reasoning mode and the effective effort is "none": the
+    # configured reasoning_effort, or the model's default_reasoning_effort when
+    # the request omits it. Supporting "none" is not defaulting to it (gpt-5.5
+    # supports it but defaults to reasoning); this mirrors LiteLLM's own gate.
+    # LiteLLM routes the exact gpt-5-chat* family through its regular chat
+    # transform (versioned names such as gpt-5.1-chat remain reasoning models),
+    # so preserve sampling for that family even though its current registry
+    # metadata says supports_reasoning=True. Provider prefixes are ignored so
+    # OpenAI, Azure, and registered compatible aliases receive the same
+    # capability decision. Unknown compatible aliases returned False above.
+    normalized_model = model_name.rsplit("/", 1)[-1].lower()
+    is_reasoning_gpt5 = normalized_model.startswith(
+        "gpt-5"
+    ) and not normalized_model.startswith("gpt-5-chat")
+    reasoning_capability = info.get("supports_reasoning")
+    if (
+        is_reasoning_gpt5
+        and temperature != 1.0
+        and not isinstance(reasoning_capability, bool)
+    ):
+        logging.warning(
+            "Missing or invalid reasoning capability for %s; omitting temperature",
+            model_name,
+        )
+        return False
+    if is_reasoning_gpt5 and reasoning_capability is True and temperature != 1.0:
+        effective_effort = (
+            reasoning_effort
+            if reasoning_effort is not None
+            else info.get("default_reasoning_effort")
+        )
+        supports_no_reasoning = info.get("supports_none_reasoning_effort") is True
+        if not supports_no_reasoning or effective_effort != "none":
+            return False
+
     return True
 
 
-def _get_retry_temperature(model_name: str, attempt: int, base_temp: float = 0.1) -> float | None:
+def _get_retry_temperature(
+    model_name: str,
+    attempt: int,
+    base_temp: float = 0.1,
+    reasoning_effort: str | None = None,
+) -> float | None:
     """LLM-002: Get temperature for retry attempt.
 
-    Returns None if the model does not support temperature at all.
-    Returns 1.0 for models that only support temperature=1.
-    Otherwise returns increasing temperatures for retry variation.
+    Returns None if the model does not accept the requested temperature.
+    Returns 1.0 for kimi-k2.6, which requires an explicit temperature=1.
+    Otherwise returns increasing temperatures for retry variation. GPT-5
+    capability checks include the configured reasoning mode; None means the
+    request omits reasoning_effort rather than sending a literal "none".
     """
     # Moonshot kimi-k2.6 only allows temperature=1.
     if "kimi-k2.6" in model_name.lower():
         return 1.0
 
-    if not _supports_temperature(model_name, base_temp):
+    if not _supports_temperature(
+        model_name, base_temp, reasoning_effort=reasoning_effort
+    ):
         return None
 
     temperatures = [base_temp, 0.3, 0.5, 0.7]
@@ -973,6 +1721,7 @@ def _calculate_timeout(
         "openai_compatible": 2.0,
         "cursor": 2.0,
         "anthropic": 1.2,
+        "azure_foundry": 1.2,
         "openrouter": 1.5,  # More variable latency
         "groq": 1.0,
         "ollama": 2.0,  # Local models can be slower
@@ -996,6 +1745,42 @@ def _strip_thinking_tags(content: str) -> str:
     return stripped.strip()
 
 
+def _object_starts_inside_array(content: str, object_start: int) -> bool:
+    """Return whether the prefix is valid JSON array grammar around the object."""
+    array_starts: list[int] = []
+    in_string = False
+    escaped = False
+    for index, char in enumerate(content[:object_start]):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+        elif char == "[":
+            array_starts.append(index)
+        elif char == "]" and array_starts:
+            array_starts.pop()
+    if not array_starts:
+        return False
+
+    candidate = content[array_starts[0] : object_start] + "{}" + "]" * len(array_starts)
+    try:
+        value, end = json.JSONDecoder().raw_decode(candidate)
+    except RecursionError:
+        # Treat prefixes too deeply nested for the decoder as unreadable arrays
+        # instead of salvaging an object from inside them.
+        return True
+    except json.JSONDecodeError:
+        # An object-like fragment inside an unclosed array string is not a
+        # trustworthy recovery point. Plain bracketed prose remains salvageable.
+        return in_string
+    return isinstance(value, list) and not candidate[end:].strip()
+
+
 def _extract_json(content: str, _depth: int = 0) -> str:
     """Extract JSON from LLM response, handling various formats.
 
@@ -1005,11 +1790,9 @@ def _extract_json(content: str, _depth: int = 0) -> str:
     """
     # JSON-010: Safety limits
     if _depth > MAX_JSON_EXTRACTION_RECURSION:
-        raise ValueError(
-            f"JSON extraction exceeded max recursion depth: {_depth}")
+        raise ValueError(f"JSON extraction exceeded max recursion depth: {_depth}")
     if len(content) > MAX_JSON_CONTENT_SIZE:
-        raise ValueError(
-            f"Content too large for JSON extraction: {len(content)} bytes")
+        raise ValueError(f"Content too large for JSON extraction: {len(content)} bytes")
 
     original = content
 
@@ -1029,6 +1812,9 @@ def _extract_json(content: str, _depth: int = 0) -> str:
                 content = content[4:]
 
     content = content.strip()
+
+    if content.startswith("["):
+        raise ValueError("Expected a JSON object, received a top-level array")
 
     # If content starts with {, find the matching }
     if content.startswith("{"):
@@ -1069,16 +1855,24 @@ def _extract_json(content: str, _depth: int = 0) -> str:
 
     # Try to find JSON object in the content (only if not already at start)
     start_idx = content.find("{")
+    if start_idx < 0 and "[" in content:
+        raise ValueError("Expected a JSON object, received a top-level array")
+    if start_idx >= 0 and _object_starts_inside_array(content, start_idx):
+        raise ValueError("Expected a JSON object, received a top-level array")
     if start_idx > 0:
         # Only recurse if { is found after position 0 to avoid infinite recursion
         return _extract_json(content[start_idx:], _depth + 1)
 
     # LLM-007: Log unrecognized format for debugging
+    # Model output can include a user's full resume or job description.  Keep
+    # diagnostics useful without writing that personal content to server logs.
     logging.error(
-        "Could not extract JSON from response format. Content preview: %s",
-        content[:200] if content else "<empty>",
+        "Could not extract JSON from response format (response length: %d)",
+        len(content) if content else 0,
     )
-    raise ValueError(f"No JSON found in response: {original[:200]}")
+    # Do not include model output in the exception either: callers log this
+    # exception and model output can contain a user's resume or job details.
+    raise ValueError(f"No JSON found in response (response length: {len(original)})")
 
 
 async def complete_json(
@@ -1088,6 +1882,7 @@ async def complete_json(
     max_tokens: int = 4096,
     retries: int = 2,
     schema_type: str = "resume",
+    response_validator: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Make a completion request expecting JSON response.
 
@@ -1096,10 +1891,14 @@ async def complete_json(
     are handled by the Router and are NOT retried again here.
 
     Args:
-        schema_type: Expected schema — "resume", "enrichment", "feedback",
-            "diff", or "keywords". Passed to _appears_truncated for
-            context-aware truncation detection and used to tailor retry hints.
+        schema_type: Expected schema — "resume", "enrichment", "diff",
+            "keywords", "interview_prep", or "feedback". Passed to
+            _appears_truncated for context-aware truncation detection and
+            used to tailor retry hints.
+        response_validator: Optional synchronous schema/source validator. A
+            ``ValueError`` rejects the content inside this retry budget.
     """
+    validate_prompt_size(prompt + (system_prompt or ""))
     router, config = get_router(config)
     model_name = get_model_name(config)
 
@@ -1112,8 +1911,16 @@ async def complete_json(
         {"role": "user", "content": prompt},
     ]
 
-    # Check if we can use JSON mode
-    use_json_mode = _supports_json_mode(model_name)
+    # Unknown compatible servers may reject response_format. Use JSON mode
+    # when LiteLLM advertises it or when the endpoint is explicitly known to
+    # support it; prompt-only JSON remains the portable default.
+    #
+    # The ChatGPT plan route has no JSON mode to opt into: never send it, even
+    # when the slug is in LiteLLM's registry. The prompt plus extraction and
+    # retries below carry JSON for that provider, as for claude_cli.
+    use_json_mode = config.provider != "chatgpt" and (
+        _supports_json_mode(model_name) or _openai_compatible_supports_json_mode(config)
+    )
     json_mode_failed = False
 
     for attempt in range(retries + 1):
@@ -1121,15 +1928,45 @@ async def complete_json(
             kwargs: dict[str, Any] = {
                 "model": "primary",
                 "messages": messages,
-                "max_tokens": max_tokens,
-                "timeout": _calculate_timeout("json", max_tokens, config.provider),
+                **_output_token_kwarg(config, max_tokens),
+                "timeout": remaining_timeout(
+                    _calculate_timeout("json", max_tokens, config.provider)
+                ),
             }
             # LLM-002: Increase temperature on retry for variation
-            retry_temp = _get_retry_temperature(model_name, attempt)
+            retry_temp = _get_retry_temperature(
+                model_name, attempt, reasoning_effort=config.reasoning_effort
+            )
             if retry_temp is not None:
                 kwargs["temperature"] = retry_temp
-            if config.reasoning_effort:
-                kwargs["reasoning_effort"] = config.reasoning_effort
+            reasoning_effort = config.reasoning_effort
+            # Azure Foundry GPT-5 deployments can burn their whole budget on
+            # reasoning and return no visible content. Dropping to minimal
+            # effort on retry leaves room for the JSON itself. Scoped to this
+            # provider so other providers keep their configured effort.
+            #
+            # Note this only engages when reasoning_effort was explicitly set:
+            # the default is None (see LLMConfig and Settings), which the
+            # frontend documents as "do not send the parameter". The empty
+            # responses that motivated this were most likely caused by the
+            # `gpt5_series/` prefix falling out of LiteLLM's model registry and
+            # clamping max_tokens to 4096 — fixed above. Kept as belt-and-braces
+            # for users who do configure an effort level.
+            if (
+                attempt > 0
+                and config.provider == "azure_foundry"
+                and reasoning_effort in ("low", "medium", "high")
+            ):
+                reasoning_effort = "minimal"
+            # HY3-Free on OpenCode Zen otherwise spends much of its output
+            # allocation in ``reasoning_content`` and truncates large resume
+            # JSON. LiteLLM filters unknown top-level parameters, so use its
+            # OpenAI-compatible ``extra_body`` passthrough for the HY3-native
+            # no_think setting. Scope it to structured-output requests only.
+            if _uses_opencode_zen_hy3(config):
+                kwargs["extra_body"] = {"reasoning_effort": "no_think"}
+            else:
+                _apply_reasoning_effort(config, kwargs, reasoning_effort, max_tokens)
 
             # JSON-012: Fallback to prompt-only JSON mode after JSON-mode failure.
             # LiteLLM registry may report support for models that the upstream
@@ -1138,24 +1975,51 @@ async def complete_json(
             # `json_object` and accept only `json_schema`/`text`. Keep JSON mode
             # for providers known to support json_object and fall back to
             # prompt-only JSON for openai_compatible.
-            if use_json_mode and not json_mode_failed and config.provider not in ("openai_compatible", "cursor"):
+            # Fork's openai_compatible/cursor servers often reject response_format,
+            # but a verified-compatible endpoint (e.g. OpenCode Zen's HY3 route)
+            # should still get it when _openai_compatible_supports_json_mode
+            # (folded into use_json_mode above) identified it as safe.
+            provider_skips_response_format = config.provider == "cursor" or (
+                config.provider == "openai_compatible"
+                and not _openai_compatible_supports_json_mode(config)
+            )
+            if (
+                use_json_mode
+                and not json_mode_failed
+                and not provider_skips_response_format
+            ):
                 kwargs["response_format"] = {"type": "json_object"}
 
-            response = await router.acompletion(**kwargs)
-            content = _extract_choice_text(response.choices[0])
+            response = await _route_acompletion(config, router, **kwargs)
+            # Never parse ``reasoning_content`` as JSON.  If the model has
+            # consumed its budget on reasoning but produced no final answer,
+            # treat it as an empty completion and retry with the full budget.
+            content = _extract_choice_primary_text(response.choices[0])
 
             if not content:
                 raise ValueError("Empty response from LLM")
 
+            # Do not log response bodies: they frequently contain a resume or
+            # a job description and are therefore user-provided personal data.
             logging.debug(
-                f"LLM response (attempt {attempt + 1}): {content[:300]}")
+                "Received LLM JSON response (attempt %d, length: %d)",
+                attempt + 1,
+                len(content),
+            )
 
             # Extract and parse JSON
             json_str = _extract_json(content)
             result = json.loads(json_str)
 
+            if not isinstance(result, dict):
+                raise ValueError("Expected a JSON object")
+            if response_validator is not None:
+                result = response_validator(result)
+                if not isinstance(result, dict):
+                    raise ValueError("Response validator must return a JSON object")
+
             # LLM-001: Check if parsed result appears truncated
-            if isinstance(result, dict) and _appears_truncated(result, schema_type):
+            if _appears_truncated(result, schema_type):
                 if attempt < retries:
                     logging.warning(
                         "Parsed JSON appears truncated (attempt %d/%d), retrying",
@@ -1163,21 +2027,15 @@ async def complete_json(
                         retries + 1,
                     )
                     if schema_type == "resume":
-                        hint = (
-                            "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL sections. Do not truncate."
-                        )
+                        hint = "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL sections. Do not truncate."
                     elif schema_type == "enrichment":
-                        hint = (
-                            "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: items_to_enrich, questions, analysis_summary. Do not truncate."
-                        )
+                        hint = "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: items_to_enrich, questions, analysis_summary. Do not truncate."
+                    elif schema_type == "interview_prep":
+                        hint = "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: role_fit_analysis, resume_questions, project_follow_ups, skill_gaps, talking_points. Do not truncate."
                     elif schema_type == "feedback":
-                        hint = (
-                            "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: report_markdown, questions. Do not truncate report_markdown."
-                        )
+                        hint = "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL keys: report_markdown, questions. Do not truncate report_markdown."
                     else:
-                        hint = (
-                            "\n\nIMPORTANT: Output ONLY a valid JSON object. Start with { and end with }."
-                        )
+                        hint = "\n\nIMPORTANT: Output ONLY a valid JSON object. Start with { and end with }."
                     messages[-1]["content"] = prompt + hint
                     continue
                 logging.warning(
@@ -1195,7 +2053,8 @@ async def complete_json(
                 json_mode_failed = True
                 logging.warning(
                     "JSON mode failed for %s, falling back to prompt-only (attempt %d)",
-                    model_name, attempt + 1,
+                    model_name,
+                    attempt + 1,
                 )
             if attempt < retries:
                 messages[-1]["content"] = (
@@ -1203,13 +2062,16 @@ async def complete_json(
                     + "\n\nIMPORTANT: Output ONLY a valid JSON object. Start with { and end with }."
                 )
                 continue
-            raise ValueError(
-                f"Failed to parse JSON after {retries + 1} attempts: {e}")
+            raise ValueError(f"Failed to parse JSON after {retries + 1} attempts: {e}")
 
         except ValueError as e:
             # Content quality — empty response, JSON extraction failure
             logging.warning(f"Content extraction failed (attempt {attempt + 1}): {e}")
             if attempt < retries:
+                messages[-1]["content"] = (
+                    prompt
+                    + "\n\nIMPORTANT: Output ONLY a valid JSON object that satisfies every requested field and type."
+                )
                 continue
             raise
 

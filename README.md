@@ -1,14 +1,14 @@
 <div align="center">
 
-[![Resume Matcher](assets/header.png)](https://www.resumematcher.fyi)
+[![Resume Matcher](assets/header.webp)](https://www.resumematcher.fyi)
 
 # Resume Matcher
 
-[𝙹𝚘𝚒𝚗 𝙳𝚒𝚜𝚌𝚘𝚛𝚍](https://dsc.gg/resume-matcher) ✦ [𝚆𝚎𝚋𝚜𝚒𝚝𝚎](https://resumematcher.fyi) ✦ [𝙷𝚘𝚠 𝚝𝚘 𝙸𝚗𝚜𝚝𝚊𝚕𝚕](https://resumematcher.fyi/docs/installation) ✦ [𝙲𝚘𝚗𝚝𝚛𝚒𝚋𝚞𝚝𝚘𝚛𝚜](#contributors) ✦ [𝚂𝚙𝚘𝚗𝚜𝚘𝚛](#sponsor-resume-matcher) ✦ [𝚃𝚠𝚒𝚝𝚝𝚎𝚛/𝚇](https://twitter.com/srbhrai) ✦ [𝙻𝚒𝚗𝚔𝚎𝚍𝙸𝚗](https://www.linkedin.com/company/resume-matcher/) ✦ [𝙲𝚛𝚎𝚊𝚝𝚘𝚛](https://srbhr.com)
+[𝙹𝚘𝚒𝚗 𝙳𝚒𝚜𝚌𝚘𝚛𝚍](https://dsc.gg/resume-matcher) ✦ [𝚆𝚎𝚋𝚜𝚒𝚝𝚎](https://resumematcher.fyi) ✦ [𝙷𝚘𝚠 𝚝𝚘 𝙸𝚗𝚜𝚝𝚊𝚕𝚕](https://resumematcher.fyi/docs/installation) ✦ [𝙲𝚘𝚗𝚝𝚛𝚒𝚋𝚞𝚝𝚘𝚛𝚜](#contributors) ✦ [𝚂𝚙𝚘𝚗𝚜𝚘𝚛](#sponsors) ✦ [𝚃𝚠𝚒𝚝𝚝𝚎𝚛/𝚇](https://twitter.com/srbhr_r) ✦ [𝙻𝚒𝚗𝚔𝚎𝚍𝙸𝚗](https://www.linkedin.com/company/resume-matcher/) ✦ [𝙲𝚛𝚎𝚊𝚝𝚘𝚛](https://srbhr.com)
 
 **English** | [Español](README.es.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
-Create tailored resumes for each job application with AI-powered suggestions. Works locally with Ollama or connect to your favorite LLM provider via API.
+Open-source resume builder that tailors your resume (CV) to each job description. A self-hosted AI harness for Claude, ChatGPT, DeepSeek, Kimi, GLM, Gemma and other LLMs, local or remote.
 
 ![Resume Matcher Demo](assets/Resume_Matcher_Demo_2.gif)
 
@@ -19,7 +19,7 @@ Create tailored resumes for each job application with AI-powered suggestions. Wo
 <div align="center">
 
 ![Stars](https://img.shields.io/github/stars/srbhr/Resume-Matcher?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8)
-![Apache 2.0](https://img.shields.io/github/license/srbhr/Resume-Matcher?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8) ![Forks](https://img.shields.io/github/forks/srbhr/Resume-Matcher?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8) ![version](https://img.shields.io/badge/Version-1.2%20Nightvision%20-FFF?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8)
+![Apache 2.0](https://img.shields.io/github/license/srbhr/Resume-Matcher?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8) ![Forks](https://img.shields.io/github/forks/srbhr/Resume-Matcher?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8) ![version](https://img.shields.io/badge/Version-1.3%20Crescendolls%20-FFF?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8)
 
 [![Discord](https://img.shields.io/discord/1122069176962531400?labelColor=F0F0E8&logo=discord&logoColor=1d4ed8&style=for-the-badge&color=1d4ed8)](https://dsc.gg/resume-matcher) [![Website](https://img.shields.io/badge/website-Resume%20Matcher-FFF?labelColor=F0F0E8&style=for-the-badge&color=1d4ed8)](https://resumematcher.fyi) [![LinkedIn](https://img.shields.io/badge/LinkedIn-Resume%20Matcher-FFF?labelColor=F0F0E8&logo=LinkedIn&style=for-the-badge&color=1d4ed8)](https://www.linkedin.com/company/resume-matcher/)
 
@@ -31,7 +31,15 @@ Create tailored resumes for each job application with AI-powered suggestions. Wo
 
 > \[!IMPORTANT]
 >
-> This project is in active development. New features are being added continuously, and we welcome contributions from the community. If you have any suggestions or feature requests, please feel free to open an issue on GitHub or discuss it on our [Discord](https://dsc.gg/resume-matcher) server.
+> The project needs your help and support. If you can donate a small amount, that will help me to continue developing and improving Resume Matcher.
+
+<div align="center">
+
+[![Sponsor on GitHub](https://img.shields.io/github/sponsors/srbhr?style=for-the-badge&label=Sponsor&color=1d4ed8&labelColor=F0F0E8&logo=github&logoColor=black)](https://github.com/sponsors/srbhr) [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&color=1d4ed8&labelColor=F0F0E8&logoColor=black)](https://www.buymeacoffee.com/srbhr)
+
+**Sponsoring for a company?** Put your logo in front of 27k+ developers → **[become a sponsor ↓](#sponsors)**
+
+</div>
 
 ## Getting Started
 
@@ -42,29 +50,44 @@ Resume Matcher works by creating a master resume that you can use to tailor for 
 1. **Upload** your master resume (PDF or DOCX)
 2. **Paste** a job description you're targeting
 3. **Review** AI-generated improvements and tailored content
-4. **Cover Letter** generator for the job application
+4. **Cover Letter** and optional interview preparation for the job application
 5. **Customize** the layout and sections to fit your style
 6. **Export** as a professional PDF with your preferred template
 
+### Built for Software Engineers
+
+Installing Resume Matcher takes a terminal, so most of the people running it write software. It fits the way you already work:
+
+- **It runs on your machine.** A FastAPI backend, a Next.js frontend and a SQLite file. Clone the repo or start one Docker container. You don't create an account, and your resume stays in your own database.
+- **You choose the model.** Bring an API key for OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter or Groq, or run a local model with Ollama so your resume never leaves the machine.
+- **Claude Code can drive it.** The [MCP server](SETUP.md#use-resume-matcher-from-claude-code-or-claude-desktop-mcp) lets Claude Code, Cursor or Codex write the tailored resume while Resume Matcher stores, checks and renders it, with no LLM key.
+- **It sticks to your real experience.** The tailoring prompts forbid adding skills, tools, employers or metrics that aren't in your master resume.
+- **The scores are plain code.** The ATS score ([`services/ats.py`](apps/backend/app/services/ats.py)) and the ATS check ([`services/ats_parse/`](apps/backend/app/services/ats_parse/)) make no LLM call. The ATS check runs your PDF through pdfminer to show what an applicant tracking system would extract.
+- **The templates look like engineering resumes.** Deedy, Modern Deedy and a LaTeX-style layout sit next to single- and two-column options. Seven of the designs also come as editable pdfLaTeX projects for Overleaf in [resume-matcher-templates](https://github.com/resume-matcher/resume-matcher-templates).
+
 ### Stay Connected
 
-[![Discord](assets/resume_matcher_discord.png)](https://dsc.gg/resume-matcher)
+[![Discord](assets/resume_matcher_discord.webp)](https://dsc.gg/resume-matcher)
 
 Join our [Discord](https://dsc.gg/resume-matcher) for discussions, feature requests, and community support.
 
-[![LinkedIn](assets/resume_matcher_linkedin.png)](https://www.linkedin.com/company/resume-matcher/)
+[![LinkedIn](assets/resume_matcher_linkedin.webp)](https://www.linkedin.com/company/resume-matcher/)
 
 Follow us on [LinkedIn](https://www.linkedin.com/company/resume-matcher/) for updates.
 
-![Star Resume Matcher](assets/star_resume_matcher.png)
+![Star Resume Matcher](assets/star_resume_matcher.webp)
 
 Star the repo to support development and get notified of new releases.
 
 ## Sponsors
 
-![sponsors](assets/sponsors.png)
+![sponsors](assets/sponsors.webp)
 
-We are grateful to our sponsors who help keep this project going. If you find Resume Matcher helpful, please consider [**sponsoring us**](https://github.com/sponsors/srbhr) to ensure continued development and improvements.
+Resume Matcher is free and open-source, kept alive by its sponsors and backers. If it helps you, please consider supporting its development.
+
+### Companies backing Resume Matcher
+
+Sponsor at a company tier and **your logo + link + blurb lands here** — in front of a community of **27k+ stars and 4.9k forks**, featured on [Trendshift](https://trendshift.io/repositories/565) and the [Vercel OSS Program](https://vercel.com/oss).
 
 | Sponsor | Description |
 |---------|-------------|
@@ -73,14 +96,17 @@ We are grateful to our sponsors who help keep this project going. If you find Re
 | [Cubic.dev](https://cubic.dev?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) | Cubic provides PR reviews for Resume Matcher 🌐 [cubic.dev](https://cubic.dev?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) |
 | [Kilo Code](https://kilo.ai?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) | Kilo Code provides AI code reviews and coding credits to Resume Matcher 🌐 [kilo.ai](https://kilo.ai?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) |
 | [ZanReal](https://zanreal.com/?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) | ZanReal is an AI-driven development company building scalable cloud solutions, from strategy and UX to DevOps, helping teams ship faster and turn ideas into production. 🌐 [zanreal.com](https://zanreal.com/?utm_source=resumematcher&utm_medium=github&utm_campaign=sponsors) |
+| **✦ Your company here** | Reach 27k+ developers and 4.9k forks. **[Become a sponsor →](https://github.com/sponsors/srbhr)** |
+
+Read the [Sponsorship Guide](https://resumematcher.fyi/docs/sponsoring) for tiers and details. Sponsors get a special thank-you in the README and on our website.
 
 <a id="support-the-development-by-donating"></a>
 
-## Sponsor Resume Matcher
+### Support as an individual
 
-![donate](assets/supporting_resume_matcher.png)
+![donate](assets/supporting_resume_matcher.webp)
 
-Please read our [Sponsorship Guide]([docs/agent/80-sponsorship/sponsorship-guide.md](https://resumematcher.fyi/docs/sponsoring)) for details on how your sponsorship helps the project. You will receive a special thank you in the ReadME and on our website.
+Every bit keeps Resume Matcher free and funds new features — and you'll be thanked in the README and on our website.
 
 | Platform  | Link                                   |
 |-----------|----------------------------------------|
@@ -89,7 +115,7 @@ Please read our [Sponsorship Guide]([docs/agent/80-sponsorship/sponsorship-guide
 
 ## Creators' Note
 
-[![srbhr](assets/creators_note.png)](https://srbhr.com)
+[![srbhr](assets/creators_note.webp)](https://srbhr.com)
 
 Thank you for checking out Resume Matcher. If you want to connect, collaborate, or just say hi, feel free to reach out!
 ~ **Saurabh Rai** ✨
@@ -98,22 +124,22 @@ You can follow me on:
 
 - Website: [https://srbhr.com](https://srbhr.com)
 - Linkedin: [https://www.linkedin.com/in/srbhr/](https://www.linkedin.com/in/srbhr/)
-- Twitter: [https://twitter.com/srbhrai](https://twitter.com/srbhrai)
+- Twitter: [https://twitter.com/srbhr_r](https://twitter.com/srbhr_r)
 - GitHub: [https://github.com/srbhr](https://github.com/srbhr)
 
 ## Key Features
 
-![resume_matcher_features](assets/features.png)
+![resume_matcher_features](assets/features.webp)
 
 ### Core Features
 
 **Master Resume**: Create a comprehensive master resume to draw from your existing one.
 
-![Job Description Input](assets/step_2.png)
+![Dashboard with a master resume and seven tailored resumes](assets/step_2.webp)
 
 ### Resume Builder
 
-![Resume Builder](assets/step_5.png)
+![Resume Builder with the template picker and a live preview of a software engineer resume](assets/step_5.webp)
 
 Paste in a job description and get AI-powered resume tailored for that specific role.
 
@@ -128,13 +154,21 @@ You can:
 
 Generate tailored cover letters based on the job description and your resume.
 
-![Cover Letter](assets/cover_letter.png)
+![Cover letter editor next to its PDF preview](assets/cover_letter.webp)
+
+### Interview Preparation
+
+Generate structured, resume-grounded interview prep for saved tailored resumes. Use the Builder's Interview Prep tab on demand, or enable automatic generation in Settings.
+
+### Tailoring Queue
+
+Paste several job descriptions on the Tailoring Queue page and they are tailored from your master resume one after another in the background. Role, company and job ID are detected from the text without an AI call, and you can edit them. An optional cooldown between jobs (0 to 60 seconds) lowers the risk of hitting your provider's rate limits. Queued jobs are kept in the database and resume after a restart.
 
 ### Resume Scoring & Keyword Highlighting
 
 Analyze your resume against the job description with a match score, keyword highlighting, and suggestions for improvement.
 
-![Resume Scoring and Keyword Highlight](assets/keyword_highlighter.png)
+![JD Match tab with the ATS score breakdown and matching keywords highlighted](assets/keyword_highlighter.webp)
 
 ### PDF Export
 
@@ -151,12 +185,20 @@ The script uses `pdftotext` when available and falls back to `pdfminer`. It vali
 
 ### Templates
 
+The templates export text-based PDFs in A4 or US Letter that applicant tracking systems can parse.
+
 | Template Name | Preview | Description |
 |---------------|---------|-------------|
-| **Classic Single Column** | ![Classic Template](assets/pdf-templates/single-column.jpg) | A traditional and clean layout suitable for most industries. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/single-column.pdf) |
-| **Modern Single Column** | ![Modern Template](assets/pdf-templates/modern-single-column.jpg) | A contemporary design with a focus on readability and aesthetics. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/modern-single-column.pdf)|
-| **Classic Two Column** | ![Classic Two Column Template](assets/pdf-templates/two-column.jpg) | A structured layout that separates sections for clarity. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/two-column.pdf)|
-| **Modern Two Column** | ![Modern Two Column Template](assets/pdf-templates/modern-two-column.jpg) | A sleek design that utilizes two columns for better organization. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/modern-two-column.pdf)|
+| **Single Column** | ![Single Column](assets/pdf-templates/single-column.webp) | Traditional full-width layout with maximum content density. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/single-column.pdf) |
+| **Two Column** | ![Two Column](assets/pdf-templates/two-column.webp) | Experience-focused main column with sidebar for skills. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/two-column.pdf) |
+| **Modern** | ![Modern](assets/pdf-templates/modern-single-column.webp) | Colorful accents with customizable theme colors. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/modern-single-column.pdf) |
+| **Modern Two Column** | ![Modern Two Column](assets/pdf-templates/modern-two-column.webp) | Two-column layout with modern colorful accents and themes. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/modern-two-column.pdf) |
+| **LaTeX** | ![LaTeX](assets/pdf-templates/latex.webp) | Classic serif academic layout with ruled section headers. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/latex.pdf) |
+| **Clean** | ![Clean](assets/pdf-templates/clean.webp) | Minimal sans layout with large understated section headers. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/clean.pdf) |
+| **Vivid** | ![Vivid](assets/pdf-templates/vivid.webp) | Colorful two-column layout with accent headers and arrow bullets. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/vivid.pdf) |
+| **Vivid Single Column** | ![Vivid Single Column](assets/pdf-templates/vivid-single.webp) | Colorful single-column layout with accent headers and arrow bullets. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/vivid-single.pdf) |
+| **Modern Deedy** | ![Modern Deedy](assets/pdf-templates/modern-deedy.webp) | Dense one-page layout in Lato with light grey uppercase section headings. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/modern-deedy.pdf) |
+| **Deedy** | ![Deedy](assets/pdf-templates/deedy.webp) | Two-column layout with a hairline name, a narrow left column and light gray headings. [𝐕𝐢𝐞𝐰 𝐏𝐃𝐅](assets/pdf-templates/deedy.pdf) |
 
 ### Internationalization
 
@@ -171,11 +213,24 @@ If you have any suggestions or feature requests, please feel free to open an iss
 - Email template generator for job applications
 - Multi-job description optimization
 
+## Resume Guides for Software Engineers
+
+The [Resume Matcher blog](https://resumematcher.fyi/blog/) has writing guides for developers, from a first internship resume to a FAANG application:
+
+- [Software engineer resume](https://resumematcher.fyi/blog/software-engineer-resume/): a one-page template, two annotated examples and advice for each section
+- [Computer science resume](https://resumematcher.fyi/blog/computer-science-resume/): for students and new grads, built from projects and internships
+- [FAANG resume](https://resumematcher.fyi/blog/faang-resume/): what Google, Meta and Amazon say they screen for, from their own careers pages
+- [LaTeX resume](https://resumematcher.fyi/blog/latex-resume/): Jake's, sb2nov and Awesome-CV, Overleaf, and how a parser reads the PDF
+- [Open source resume builders](https://resumematcher.fyi/blog/open-source-resume-builders/): Reactive Resume, RenderCV, YAMLResume, Awesome-CV and others compared
+- [Master resume](https://resumematcher.fyi/blog/master-resume/): the one complete resume you tailor each application from
+- [Tailor your resume to a job description](https://resumematcher.fyi/blog/how-to-match-your-resume-to-a-job-description/): the method, step by step
+- [Private AI resume tailoring with Ollama](https://resumematcher.fyi/blog/local-ai-resume-tailoring-ollama/): keep your resume on your own machine
+
 <a id="how-to-install"></a>
 
 ## How to Install
 
-![Installation](assets/how_to_install_resumematcher.png)
+![Installation](assets/how_to_install_resumematcher.webp)
 
 For detailed setup instructions, see **[SETUP.md](SETUP.md)** (English) or: [Español](SETUP.es.md), [简体中文](SETUP.zh-CN.md), [日本語](SETUP.ja.md).
 
@@ -184,7 +239,7 @@ For detailed setup instructions, see **[SETUP.md](SETUP.md)** (English) or: [Esp
 | Tool | Version | Installation |
 |------|---------|--------------|
 | Python | 3.13+ | [python.org](https://python.org) |
-| Node.js | 22+ | [nodejs.org](https://nodejs.org) |
+| Node.js | 24+ | [nodejs.org](https://nodejs.org) |
 | uv | Latest | [astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/) |
 
 ### Quick Start
@@ -210,16 +265,22 @@ npm run dev
 
 Open **<http://localhost:3000>** and configure your AI provider in Settings.
 
+**Windows 11:** see [Windows 11 Setup](SETUP.md#windows-11-setup) for PowerShell commands.
+
 ### Supported AI Providers
 
 | Provider | Local/Cloud | Notes |
 |----------|-------------|-------|
+| **Your coding agent** | Local | No API key. Open Claude Code, Codex, Cursor or Copilot in this folder and ask it to set up Resume Matcher and tailor your resume: the agent does the AI work in its own app, and Resume Matcher stores, checks and renders the result for you to edit. Choose **Coding agent** in Settings. See [SETUP.md](SETUP.md#use-resume-matcher-with-a-coding-agent). |
 | **Ollama** | Local | Free, runs on your machine |
+| **Claude subscription (via Claude Code)** | Cloud (via local CLI) | Runs your installed `claude` CLI, so this app needs no API key and never sees or stores your Claude credentials, but prompts still go to Anthropic through your Claude Code login and count toward your plan's usage limits (Anthropic may draw them from usage credits instead). Anthropic doesn't allow third-party apps to route requests through Claude Free/Pro/Max plans, this option may count as one, and Anthropic can enforce that without notice; Settings asks you to accept that risk first. For guaranteed access, use the **Anthropic** provider with an API key, or let Claude Code do the work as [your coding agent](SETUP.md#use-resume-matcher-with-a-coding-agent). Set `LLM_PROVIDER=claude_cli`; pick the model in Settings or with `LLM_MODEL` (`fable`, `opus`, `sonnet`, `haiku` or a full `claude-…` name). Requires [Claude Code](https://claude.com/claude-code) installed and signed in (`claude auth login`); not available inside the Docker images. |
+| **ChatGPT plan (Sign in with ChatGPT)** | Cloud | Community-built. Uses OpenAI's official [Sign in with ChatGPT for open-source apps](https://developers.openai.com/siwc/token-sharing-open-source) (preview, may change) with ChatGPT Plus or Pro: choose **ChatGPT plan** in Settings and click **Continue with ChatGPT**; no API key needed. Requests go from your machine to OpenAI's Responses API and count toward your plan's limits (on Plus the five-hour limit is shared with your other apps; Pro has none). Sign in from a browser on the machine running the backend; the default Docker setup can't complete the sign-in (see [SETUP.md](SETUP.md#option-c-your-chatgpt-plan-sign-in-with-chatgpt)). For guaranteed access, use the **OpenAI** provider with an API key. Set `LLM_PROVIDER=chatgpt`. |
 | **OpenAI** | Cloud | GPT-5 Nano, GPT-4o |
 | **Anthropic** | Cloud | Claude Haiku 4.5 |
 | **Google Gemini** | Cloud | Gemini 3 Flash |
 | **OpenRouter** | Cloud | Access to multiple models |
 | **DeepSeek** | Cloud | DeepSeek Chat |
+| **Groq** | Cloud | Llama 3.3 70B, GPT-OSS |
 
 ### Docker Deployment
 
@@ -237,8 +298,8 @@ docker run --name resume-matcher \
   ghcr.io/srbhr/resume-matcher:latest
 ```
 
-Prefer pinning a version in production, for example `ghcr.io/srbhr/resume-matcher:1.2.0` or
-`ghcr.io/srbhr/resume-matcher:1.2`.
+Prefer pinning a version in production, for example `ghcr.io/srbhr/resume-matcher:1.3.0` or
+`ghcr.io/srbhr/resume-matcher:1.3`.
 
 Endpoints:
 
@@ -246,7 +307,7 @@ Endpoints:
 - API health check: <http://localhost:3000/api/v1/health>
 - API docs: <http://localhost:3000/docs>
 
-> **Using Ollama with Docker?** Use `http://host.docker.internal:11434` as the Ollama URL instead of `localhost`.
+> **Using Ollama with Docker?** Use `http://host.docker.internal:11434` as the Ollama URL instead of `localhost` (on Linux, Ollama must also listen beyond `127.0.0.1`; see [SETUP.md](SETUP.md#using-ollama-with-docker)). Docker publishes the app on `127.0.0.1` only; to open it from another device, see [SETUP.md](SETUP.md#opening-it-from-another-device).
 
 ### Tech Stack
 
@@ -254,13 +315,13 @@ Endpoints:
 |-----------|------------|
 | Backend | FastAPI, Python 3.13+, LiteLLM |
 | Frontend | Next.js 16, React 19, TypeScript |
-| Database | TinyDB (JSON file storage) |
+| Database | SQLite by default, optional PostgreSQL (SQLAlchemy 2.0) |
 | Styling | Tailwind CSS 4, Swiss International Style |
 | PDF | Headless Chromium via Playwright |
 
 ## Join Us and Contribute
 
-![how to contribute](assets/how_to_contribute.png)
+![how to contribute](assets/how_to_contribute.webp)
 
 We welcome contributions from everyone! Whether you're a developer, designer, or just someone who wants to help out. All the contributors are listed in the [about page](https://resumematcher.fyi/about) on our website and on the GitHub Readme here.
 
@@ -270,7 +331,7 @@ Check out the roadmap if you would like to work on the features that are planned
 
 ## Contributors
 
-![Contributors](assets/contributors.png)
+![Contributors](assets/contributors.webp)
 
 <a href="https://github.com/srbhr/Resume-Matcher/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=srbhr/Resume-Matcher" />
@@ -281,8 +342,8 @@ Check out the roadmap if you would like to work on the features that are planned
 <details>
   <summary><kbd>Star History</kbd></summary>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=srbhr/resume-matcher&theme=dark&type=Date">
-    <img width="100%" src="https://api.star-history.com/svg?repos=srbhr/resume-matcher&theme=dark&type=Date">
+    <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=srbhr/resume-matcher&theme=dark&type=Date">
+    <img width="100%" src="https://star-history.dera.page/svg?repos=srbhr/resume-matcher&theme=dark&type=Date">
   </picture>
 </details>
 

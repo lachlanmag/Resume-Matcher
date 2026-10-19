@@ -3,9 +3,11 @@
 import asyncio
 import logging
 import sys
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 # Fix for Windows: Use ProactorEventLoop for subprocess support (Playwright)
 if sys.platform == "win32":
@@ -15,11 +17,16 @@ logger = logging.getLogger(__name__)
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
+from app.ai_budget import operation_error_content
 from app.config import settings
-from app.database import db
-from app.pdf import close_pdf_renderer, init_pdf_renderer
+from app.database import DatabaseBusyError, db
+from app.host_guard import HostGuardMiddleware
+from app.pdf import close_pdf_renderer
 from app.routers import (
     applications_router,
+    ats_router,
+    chatgpt_callback_router,
+    chatgpt_router,
     config_router,
     enrichment_router,
     health_router,
@@ -27,6 +34,7 @@ from app.routers import (
     resume_wizard_router,
     resumes_router,
 )
+from app.routers.resumes import drain_processing_cleanup_tasks
 
 
 def _configure_application_logging() -> None:
@@ -39,10 +47,14 @@ _configure_application_logging()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan manager."""
     # Startup
     settings.data_dir.mkdir(parents=True, exist_ok=True)
+    if settings.database_url:
+        from app.db_url import redact
+
+        logger.info("Using PostgreSQL at %s", redact(settings.database_url))
     # Import a legacy TinyDB database into SQLite if present (idempotent).
     # Fail-fast on error: starting with an empty DB would look like data loss.
     from app.scripts.migrate_tinydb_to_sqlite import migrate as migrate_tinydb
@@ -55,10 +67,24 @@ async def lifespan(app: FastAPI):
     from app.config import migrate_legacy_keys
 
     migrate_legacy_keys()
+
+    from app.services.queue_worker import queue_manager
+
+    await queue_manager.start()
     # PDF renderer uses lazy initialization - will initialize on first use
     # await init_pdf_renderer()
     yield
     # Shutdown - wrap each cleanup in try-except to ensure all resources are released
+    try:
+        await queue_manager.stop()
+    except Exception:
+        logger.exception("Error stopping the tailoring queue")
+
+    try:
+        await drain_processing_cleanup_tasks()
+    except Exception:
+        logger.exception("Error draining processing cleanup")
+
     try:
         await close_pdf_renderer()
     except Exception as e:
@@ -77,6 +103,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.exception_handler(DatabaseBusyError)
+async def database_busy_handler(
+    request: Request, error: DatabaseBusyError
+) -> JSONResponse:
+    logger.warning("Database write contention for %s", request.url.path, exc_info=error)
+    return JSONResponse(
+        status_code=503,
+        content=operation_error_content(
+            request, "Database is busy. Please retry shortly."
+        ),
+        headers={"Retry-After": "1"},
+    )
+
+
 # CORS middleware - origins configurable via CORS_ORIGINS env var
 app.add_middleware(
     CORSMiddleware,
@@ -85,6 +126,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Added last so it runs first: reject requests for hosts this app does not serve.
+app.add_middleware(HostGuardMiddleware, allowed_hosts=settings.effective_allowed_hosts)
 
 # Include routers
 app.include_router(health_router, prefix="/api/v1")
@@ -94,6 +137,10 @@ app.include_router(jobs_router, prefix="/api/v1")
 app.include_router(enrichment_router, prefix="/api/v1")
 app.include_router(applications_router, prefix="/api/v1")
 app.include_router(resume_wizard_router, prefix="/api/v1")
+app.include_router(ats_router, prefix="/api/v1")
+app.include_router(chatgpt_router, prefix="/api/v1")
+# OpenAI redirects to 127.0.0.1:<port>/auth/callback; the path is fixed.
+app.include_router(chatgpt_callback_router)
 
 
 @app.get("/")

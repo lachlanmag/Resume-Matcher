@@ -38,6 +38,16 @@ uv.lock
 
 # Encryption secret for API keys at rest - NEVER COMMIT
 **/data/.secret_key
+# Sign in with ChatGPT credentials (encrypted) and their refresh lock - NEVER COMMIT
+**/data/chatgpt_credentials.enc
+# save_record() stages the write here; an interrupted process can leave it behind
+**/data/.chatgpt_credentials.enc.*.tmp
+**/data/chatgpt_credentials.lock
+# PDFs the resume-matcher command exports
+**/data/exports/
+# Job descriptions saved for a coding agent (see jobs/README.md)
+/jobs/*
+!/jobs/README.md
 
 # Test artifacts
 .pytest_cache/
@@ -62,6 +72,10 @@ apps/backend/data/config.json
 .claude/*
 !.claude/CLAUDE.md
 !.claude/settings.json
+# Except the resume-matcher skill, which AGENTS.md points every agent to.
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/resume-matcher/
 skills-lock.json
 
 # AI assistant tool folders (personal workflow, not tracked)
@@ -75,6 +89,8 @@ skills-lock.json
 .codex/
 .firecrawl/
 AGENTS.md
+# The root AGENTS.md is shared: it tells agents how to use Resume Matcher.
+!/AGENTS.md
 GEMINI.md
 CODEX.md
 
@@ -140,3 +156,8 @@ LLM_API_BASE=http://host.docker.internal:8765/v1
 
 # Superpowers brainstorming visual-companion scratch (local only)
 /.superpowers/
+
+# Local agent context, not shipped
+/docs/superpowers/
+/docs/agent/
+/docs/portable/

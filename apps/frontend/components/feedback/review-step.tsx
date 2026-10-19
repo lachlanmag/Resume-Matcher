@@ -12,16 +12,24 @@ interface ReviewStepProps {
   onApplyFeedback: () => void;
 }
 
-export function ReviewStep({ feedback, answers, onBack, onEdit, onApplyFeedback }: ReviewStepProps) {
+export function ReviewStep({
+  feedback,
+  answers,
+  onBack,
+  onEdit,
+  onApplyFeedback,
+}: ReviewStepProps) {
   const { t } = useTranslations();
 
   return (
     <div className="flex h-full min-h-[500px] flex-col">
       <div className="mb-4">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-steel-grey">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-steel">
           {t('feedback.review.kicker')}
         </p>
-        <h2 className="font-serif text-2xl font-bold uppercase tracking-tight">{t('feedback.review.title')}</h2>
+        <h2 className="font-serif text-2xl font-bold uppercase tracking-tight">
+          {t('feedback.review.title')}
+        </h2>
       </div>
 
       <div className="flex-1 overflow-hidden border-2 border-black bg-white shadow-sw-sm">
@@ -30,13 +38,18 @@ export function ReviewStep({ feedback, answers, onBack, onEdit, onApplyFeedback 
             {feedback.questions.map((question, index) => {
               const answer = answers[question.question_id]?.trim() ?? '';
               return (
-                <div key={question.question_id} className="border-2 border-black bg-background p-4">
+                <div
+                  key={question.question_id}
+                  className="border border-ink bg-white p-4 shadow-sw-nested"
+                >
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
-                      <p className="mb-1 font-mono text-xs uppercase tracking-[0.2em] text-steel-grey">
+                      <p className="mb-1 font-mono text-xs uppercase tracking-[0.2em] text-steel">
                         {t('feedback.review.questionLabel', { number: index + 1 })}
                       </p>
-                      <p className="font-serif text-lg font-semibold leading-tight">{question.prompt}</p>
+                      <p className="font-serif text-lg font-semibold leading-tight">
+                        {question.prompt}
+                      </p>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => onEdit(index)}>
                       {t('common.edit')}
@@ -45,9 +58,11 @@ export function ReviewStep({ feedback, answers, onBack, onEdit, onApplyFeedback 
 
                   <div className="border border-black bg-white p-3">
                     {answer ? (
-                      <p className="whitespace-pre-wrap font-mono text-sm text-ink-soft">{answer}</p>
+                      <p className="whitespace-pre-wrap font-mono text-sm text-ink-soft">
+                        {answer}
+                      </p>
                     ) : (
-                      <p className="font-mono text-sm italic text-steel-grey">
+                      <p className="font-mono text-sm italic text-steel">
                         {t('feedback.review.skipped')}
                       </p>
                     )}

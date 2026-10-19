@@ -7,13 +7,17 @@ export type { TailorLengthSettings };
 export type LLMProvider =
   | 'openai'
   | 'openai_compatible'
+  | 'azure_foundry'
   | 'cursor'
   | 'anthropic'
   | 'openrouter'
   | 'gemini'
   | 'deepseek'
   | 'groq'
-  | 'ollama';
+  | 'ollama'
+  | 'claude_cli'
+  | 'chatgpt'
+  | 'agent';
 
 // Reasoning-effort levels supported by LiteLLM. `null` (or absent) means
 // "do not send the parameter" — the default for max compatibility.
@@ -56,6 +60,8 @@ export interface SystemStatus {
   status: 'ready' | 'setup_required';
   llm_configured: boolean;
   llm_healthy: boolean;
+  /** The user's coding agent does the AI work; the app makes no model calls. */
+  agent_mode?: boolean;
   has_master_resume: boolean;
   database_stats: DatabaseStats;
 }
@@ -102,12 +108,42 @@ export async function updateLlmConfig(config: LLMConfigUpdate): Promise<LLMConfi
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to update LLM config (status ${res.status}).`);
+    const data = (await res.json().catch(() => ({}))) as { detail?: unknown };
+    // FastAPI returns `detail` as a string OR a structured object (this
+    // endpoint now emits {code, field, missing} for a missing Base URL).
+    // Passing an object straight to `new Error()` renders "[object Object]",
+    // so serialize explicitly — same treatment as updateFeaturePrompts.
+    let message: string;
+    if (typeof data.detail === 'string') {
+      message = data.detail;
+    } else if (data.detail) {
+      message = JSON.stringify(data.detail);
+    } else {
+      message = `Failed to update LLM config (status ${res.status}).`;
+    }
+    const code =
+      data.detail && typeof data.detail === 'object' && 'code' in data.detail
+        ? String((data.detail as { code: unknown }).code)
+        : undefined;
+    throw new LlmConfigError(message, code);
   }
 
   return res.json();
 }
+
+/** Raised by updateLlmConfig; `code` is the server's structured error code, if any. */
+export class LlmConfigError extends Error {
+  code?: string;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = 'LlmConfigError';
+    this.code = code;
+  }
+}
+
+/** The server refuses to move a saved key to a new endpoint unless the key is sent too. */
+export const API_KEY_REQUIRED_FOR_ENDPOINT = 'api_key_required_for_endpoint';
 
 // Legacy function for backwards compatibility
 export async function updateLlmApiKey(value: string): Promise<string> {
@@ -151,7 +187,39 @@ export async function fetchSystemStatus(): Promise<SystemStatus> {
 // Provider display names and default models
 export const PROVIDER_INFO: Record<
   LLMProvider,
-  { name: string; defaultModel: string; requiresKey: boolean }
+  {
+    name: string;
+    defaultModel: string;
+    requiresKey: boolean;
+    requiresBaseUrl?: boolean;
+    /**
+     * Base URL this provider owns. Used both to seed the field on switch-in
+     * and to decide whether to clear it on switch-out, so a previous
+     * provider's endpoint can't be persisted against the next one.
+     */
+    defaultBaseUrl?: string;
+    /**
+     * i18n key suffix under `settings.llmConfiguration.` for provider-specific
+     * base-URL copy. The example URL stays a literal in baseUrlPlaceholder.
+     */
+    baseUrlI18nKey?: string;
+    baseUrlPlaceholder?: string;
+    /**
+     * Served by a CLI installed on the machine running the backend. There is no
+     * key, endpoint or reasoning effort to configure; the model is a CLI alias.
+     */
+    localCli?: boolean;
+    /**
+     * Signs in with ChatGPT (OAuth) instead of taking a key, endpoint or reasoning
+     * effort; the settings page shows the connection panel for it.
+     */
+    chatgptSignIn?: boolean;
+    /**
+     * The user's coding agent does the AI work through the resume-matcher command.
+     * There is no key, model, endpoint or reasoning effort to configure.
+     */
+    agentMode?: boolean;
+  }
 > = {
   openai: { name: 'OpenAI', defaultModel: 'gpt-5-nano-2025-08-07', requiresKey: true },
   // OpenAI-compatible: llama.cpp, vLLM, LM Studio, and other servers that expose
@@ -161,11 +229,21 @@ export const PROVIDER_INFO: Record<
     name: 'OpenAI-Compatible (Local)',
     defaultModel: 'custom-model',
     requiresKey: false,
+    defaultBaseUrl: 'http://localhost:8080/v1',
+  },
+  azure_foundry: {
+    name: 'Azure AI Foundry',
+    defaultModel: 'mistral-large-latest',
+    requiresKey: true,
+    requiresBaseUrl: true,
+    baseUrlI18nKey: 'azure',
+    baseUrlPlaceholder: 'https://<resource>.services.ai.azure.com/openai/v1/responses',
   },
   cursor: {
     name: 'Cursor (Subscription)',
     defaultModel: 'auto',
     requiresKey: false,
+    defaultBaseUrl: 'http://127.0.0.1:8765/v1',
   },
   anthropic: { name: 'Anthropic', defaultModel: 'claude-haiku-4-5-20251001', requiresKey: true },
   openrouter: {
@@ -176,19 +254,54 @@ export const PROVIDER_INFO: Record<
   gemini: { name: 'Google Gemini', defaultModel: 'gemini-3-flash-preview', requiresKey: true },
   deepseek: { name: 'DeepSeek', defaultModel: 'deepseek-chat', requiresKey: true },
   groq: { name: 'Groq', defaultModel: 'llama-3.3-70b-versatile', requiresKey: true },
-  ollama: { name: 'Ollama (Local)', defaultModel: 'gemma3:4b', requiresKey: false },
+  ollama: {
+    name: 'Ollama (Local)',
+    defaultModel: 'gemma3:4b',
+    requiresKey: false,
+    defaultBaseUrl: 'http://localhost:11434',
+  },
+  // Runs the `claude` CLI already signed in on this machine. defaultModel is the
+  // sentinel for Claude Code's own default model (no --model flag). The settings page
+  // shows a translated name (settings.llmConfiguration.claudeCliName); this is the
+  // English fallback.
+  claude_cli: {
+    name: 'Claude subscription (via Claude Code)',
+    defaultModel: 'claude_cli',
+    requiresKey: false,
+    localCli: true,
+  },
+  // OpenAI's official Sign in with ChatGPT for open-source apps (preview). The
+  // backend holds the tokens. The model normally comes from the signed-in
+  // account's catalog; defaultModel (the docs' example slug) is only the fallback.
+  // The settings page shows a translated name (settings.llmConfiguration.chatgptName).
+  chatgpt: {
+    name: 'ChatGPT plan (Sign in with ChatGPT)',
+    defaultModel: 'gpt-6.1-sol',
+    requiresKey: false,
+    chatgptSignIn: true,
+  },
+  // No model of the app's own: defaultModel is only a placeholder the backend
+  // stores. The settings page shows a translated name (settings.llmConfiguration.agentName).
+  agent: {
+    name: 'Coding agent',
+    defaultModel: 'agent',
+    requiresKey: false,
+    agentMode: true,
+  },
 };
 
 // Feature configuration types
 export interface FeatureConfig {
   enable_cover_letter: boolean;
   enable_outreach_message: boolean;
+  enable_interview_prep: boolean;
   enable_resume_feedback: boolean;
 }
 
 export interface FeatureConfigUpdate {
   enable_cover_letter?: boolean;
   enable_outreach_message?: boolean;
+  enable_interview_prep?: boolean;
   enable_resume_feedback?: boolean;
 }
 
@@ -221,7 +334,7 @@ export async function updateFeatureConfig(config: FeatureConfigUpdate): Promise<
 }
 
 // Language configuration types
-export type SupportedLanguage = 'en' | 'es' | 'zh' | 'ja' | 'pt';
+export type SupportedLanguage = 'en' | 'es' | 'zh' | 'ja' | 'pt' | 'fr' | 'ko';
 
 export interface LanguageConfig {
   ui_language: SupportedLanguage;
@@ -417,6 +530,7 @@ export async function updateFeaturePrompts(update: FeaturePromptsUpdate): Promis
 // API Key Management types
 export type ApiKeyProvider =
   | 'openai'
+  | 'azure_foundry'
   | 'anthropic'
   | 'google'
   | 'openrouter'
@@ -445,6 +559,7 @@ export interface ApiKeyStatusResponse {
 
 export interface ApiKeysUpdateRequest {
   openai?: string;
+  azure_foundry?: string;
   anthropic?: string;
   google?: string;
   openrouter?: string;
@@ -463,6 +578,7 @@ export interface ApiKeysUpdateResponse {
 export const API_KEY_PROVIDER_INFO: Record<ApiKeyProvider, { name: string; description: string }> =
   {
     openai: { name: 'OpenAI', description: 'GPT-4, GPT-4o, etc.' },
+    azure_foundry: { name: 'Azure AI Foundry', description: 'Azure AI Inference models' },
     anthropic: { name: 'Anthropic', description: 'Claude 3.5, Claude 4, etc.' },
     google: { name: 'Google', description: 'Gemini 1.5, Gemini 2, etc.' },
     openrouter: { name: 'OpenRouter', description: 'Access multiple providers' },

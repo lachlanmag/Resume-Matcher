@@ -40,7 +40,9 @@ def tailor_length_settings_from_config(stored: dict[str, Any]) -> TailorLengthSe
     )
 
 
-def tailor_length_settings_from_resume_doc(resume: dict[str, Any]) -> TailorLengthSettings | None:
+def tailor_length_settings_from_resume_doc(
+    resume: dict[str, Any],
+) -> TailorLengthSettings | None:
     raw = resume.get("tailor_settings")
     if not isinstance(raw, dict):
         return None
@@ -104,7 +106,12 @@ def estimate_overhead_words(resume_data: dict[str, Any]) -> int:
                 total += len(desc.split())
     additional = resume_data.get("additional") or {}
     if isinstance(additional, dict):
-        for field in ("technicalSkills", "languages", "certificationsTraining", "awards"):
+        for field in (
+            "technicalSkills",
+            "languages",
+            "certificationsTraining",
+            "awards",
+        ):
             items = additional.get(field, [])
             if isinstance(items, list):
                 total += sum(len(str(item).split()) for item in items)
@@ -196,7 +203,9 @@ def plan_per_job_bullet_targets(
     job_count = work_experience_job_count(resume_data)
     if job_count == 0:
         return []
-    budget_source = budget_resume_data if budget_resume_data is not None else resume_data
+    budget_source = (
+        budget_resume_data if budget_resume_data is not None else resume_data
+    )
     budget = estimate_total_bullet_budget(budget_source, settings, template_settings)
     return allocate_job_bullet_counts(
         job_count,
@@ -240,7 +249,7 @@ def build_length_constraints_block(
         "candidate pool for that role.",
         "- SELECT the best JD-aligned bullets from each pool; rephrase for fit. Do NOT keep "
         "bullets only because they appear first.",
-        "- Use action \"replace_list\" on workExperience[i].description to set the full chosen list.",
+        '- Use action "replace_list" on workExperience[i].description to set the full chosen list.',
         "- Do not invent facts, metrics, or responsibilities not supported by the master pool.",
         "",
         "Per-role targets (index 0 = most recent job):",
@@ -287,7 +296,13 @@ def _truncate_job_descriptions(
     job_indices = _work_job_indices(work)
     for job_idx, array_i in enumerate(job_indices):
         entry = work[array_i]
-        target = targets[job_idx] if job_idx < len(targets) else targets[-1] if targets else 0
+        target = (
+            targets[job_idx]
+            if job_idx < len(targets)
+            else targets[-1]
+            if targets
+            else 0
+        )
         desc = entry.get("description")
         if not isinstance(desc, list):
             continue
@@ -296,6 +311,7 @@ def _truncate_job_descriptions(
         master_pool = {
             _normalize_bullet(b) for b in _master_pool_for_job(master_data, array_i)
         }
+
         # Prefer keeping tailored bullets not in master last when trimming
         def sort_key(idx: int) -> tuple[int, int]:
             bullet = str(desc[idx])

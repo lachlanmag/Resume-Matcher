@@ -2,6 +2,7 @@
   "common": {
     "save": "保存",
     "saving": "保存中...",
+    "saved": "保存済み",
     "cancel": "キャンセル",
     "delete": "削除",
     "edit": "編集",
@@ -30,13 +31,27 @@
     "unknown": "不明",
     "keysCleared": "APIキーが正常にクリアされました",
     "databaseReset": "データベースが正常にリセットされました",
-    "popupBlocked": "ポップアップがブロックされました。ポップアップを許可するか、次のURLを手動で開いてください: {url}"
+    "popupBlocked": "ポップアップがブロックされました。ポップアップを許可するか、次のURLを手動で開いてください: {url}",
+    "resumeDeleted": "この履歴書は削除されました。別の履歴書をアップロードするか選択してください。"
   },
   "home": {
     "brandLine1": "履歴書",
     "brandLine2": "マッチャー",
     "docs": "利用ドキュメント",
     "launchApp": "アプリを起動"
+  },
+  "community": {
+    "follow": "@srbhr をフォロー",
+    "star": "スター",
+    "starOnGithub": "GitHub でスターを付ける",
+    "sponsor": "スポンサー",
+    "discord": "Discord",
+    "joinDiscord": "Discord に参加",
+    "contributors": "コントリビューター",
+    "settingsPrompt": "Resume Matcher を気に入っていただけましたか？",
+    "sponsorProject": "プロジェクトをスポンサーする",
+    "joinTheDiscord": "Discord に参加する",
+    "aboutTitle": "このアプリについて"
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -45,7 +60,8 @@
     "settings": "設定",
     "backToDashboard": "ダッシュボードに戻る",
     "goToSettings": "設定へ",
-    "applicationTracker": "応募トラッカー"
+    "applicationTracker": "応募トラッカー",
+    "queue": "カスタマイズキュー"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -64,6 +80,7 @@
     "downloadPdf": "PDFをダウンロード",
     "tailorResume": "求人に合わせてカスタマイズ",
     "selectModule": "モジュールを選択",
+    "modulesHeading": "履歴書モジュール",
     "masterResume": "マスター履歴書",
     "tailoredResume": "カスタマイズ履歴書",
     "initializeMasterResume": "マスター履歴書を初期化",
@@ -92,21 +109,67 @@
     "uploadDialog": {
       "success": "履歴書のアップロードに成功しました。",
       "successMaster": "履歴書がアップロードされ、マスターとして設定されました。",
+      "successMasterTrack": "履歴書が新しいマスタートラックとしてアップロードされました。",
       "successMissingId": "アップロードは成功しましたが、履歴書 ID が返されませんでした。",
       "parsingFailed": "履歴書はアップロードされましたが、AI解析に失敗しました。手動でカスタマイズすることは可能です。",
       "failed": "アップロードに失敗しました。",
       "dropzoneTitle": "クリックまたはファイルをドラッグ",
-      "dropzoneSubtitle": "PDF、DOC、DOCX（最大 4MB）",
+      "dropzoneSubtitle": "PDF、DOCX（最大 4MB）",
       "tryDifferentFile": "別のファイルを試す",
       "parsingFailedKeepOpen": "AI 解析に失敗しました。別のファイルを試すか、このダイアログを閉じてください。"
-    }
+    },
+    "errors": {
+      "loadFailed": "履歴書を読み込めませんでした。もう一度お試しください。",
+      "deleteFailed": "履歴書を削除できませんでした。現在の履歴書は引き続き利用できます。"
+    },
+    "defaultBadge": "デフォルト",
+    "masterTrack": "マスタートラック",
+    "setDefault": "デフォルトに設定",
+    "duplicate": "複製",
+    "addMasterTrack": "マスタートラックを追加",
+    "masterLimitReached": "マスター履歴書は最大{max}件まで"
   },
   "builder": {
+    "panels": {
+      "nothingYet": "まだ何も生成されていません",
+      "preview": "プレビュー"
+    },
     "title": "履歴書ビルダー",
+    "copySuffix": "(コピー)",
     "editMode": "編集モード",
     "previewMode": "プレビューモード",
     "createAndPreview": "作成＆プレビュー",
     "unsavedDraft": "未保存の下書き",
+    "autoSave": {
+      "saving": "同期中...",
+      "saved": "すべての変更を保存しました",
+      "localDraft": "下書きをローカルに保存しました",
+      "saveNow": "今すぐ保存",
+      "retrySave": "保存を再試行",
+      "savedButton": "保存済み",
+      "localDraftUnavailable": "ローカル下書きを保存できません"
+    },
+    "agentUpdate": {
+      "applied": "コーディングエージェントが更新しました",
+      "conflictTitle": "コーディングエージェントがこの履歴書を変更しました",
+      "conflictBody": "同じ部分に未保存の編集があるため、自動保存を一時停止しています。エージェントの版を使うと未保存の編集は破棄されます。自分の編集を残すと、エージェントの変更の上に保存されます。",
+      "useAgent": "エージェントの版を使う",
+      "keepMine": "自分の編集を残す",
+      "chooseFirst": "コーディングエージェントがこの履歴書を変更しました。上部のバナーでエージェントの版を使うか自分の編集を残すかを選んでから、もう一度お試しください。"
+    },
+    "draftRecovery": {
+      "title": "ローカル下書きを復元しますか？",
+      "description": "ブラウザ内のローカル下書きがサーバーに保存された内容と異なります。復元して編集を続けるか、サーバー版を使用してローカル下書きを破棄できます。",
+      "newDescription": "このブラウザーには未保存の履歴書の下書きがあります。復元して編集を続けるか、破棄して新しく作成してください。",
+      "restoreDraft": "下書きを復元",
+      "useServer": "サーバー版を使用"
+    },
+    "leaveWithLocalDraft": {
+      "title": "同期せずに移動しますか？",
+      "description": "最新の変更はまだサーバーに同期できていません。ローカル下書きはこのブラウザに保存されていますが、別のブラウザや端末では利用できない場合があります。",
+      "leave": "ダッシュボードへ移動",
+      "stay": "編集を続ける"
+    },
     "personalInfo": "個人情報",
     "summary": "概要",
     "experience": "職歴",
@@ -169,6 +232,7 @@
       "moveUp": "上へ移動",
       "moveDown": "下へ移動",
       "deleteSection": "セクションを削除",
+      "duplicateSection": "セクションを複製",
       "deleteTitle": "セクションを削除",
       "deleteDescription": "「{name}」を削除しますか？この操作は元に戻せません。"
     },
@@ -176,12 +240,9 @@
       "resume": "履歴書",
       "coverLetter": "カバーレター",
       "outreach": "連絡メール",
-      "jdMatch": "JD一致"
-    },
-    "footer": {
-      "moduleLabel": "履歴書ビルダーモジュール",
-      "singleColumn": "1カラム",
-      "twoColumn": "2カラム"
+      "jdMatch": "JD一致",
+      "interviewPrep": "面接準備",
+      "atsCheck": "ATSチェック"
     },
     "pageSize": {
       "usLetter": "USレター"
@@ -196,8 +257,10 @@
       "generateButton": "{title}を生成",
       "coverLetterFooter": "ヒント：先にカスタマイズすると精度が上がります。",
       "outreachFooter": "ヒント：短く、個別性を入れましょう。",
+      "interviewPrepDescription": "カスタマイズ済み履歴書と求人内容に基づいて、職種別の面接準備を生成します。",
       "feedbackDescription": "このカスタマイズ履歴書を求人内容と照らし合わせ、HR視点のフィードバックとATS分析を取得します。",
-      "feedbackFooter": "ヒント：応募前に、ギャップと質問を手がかりに編集してください。"
+      "feedbackFooter": "ヒント：応募前に、ギャップと質問を手がかりに編集してください。",
+      "interviewPrepFooter": "ヒント：カスタマイズ後に、履歴書の根拠に基づく正確な回答を準備しましょう。"
     },
     "regenerateDialog": {
       "title": "{title}を再生成しますか？",
@@ -243,14 +306,17 @@
         "newLabel": "新しい内容",
         "noContent": "内容なし",
         "applying": "適用中...",
-        "loading": "改善された内容を生成中..."
+        "loading": "改善された内容を生成中...",
+        "retryRefresh": "再読み込み",
+        "refreshing": "再読み込み中..."
       },
       "errors": {
         "generationFailed": "生成に失敗しました。もう一度お試しください。",
         "applyFailed": "変更の適用に失敗しました。もう一度お試しください。",
         "resumeChanged": "再生成後に履歴書の内容が変更されました。再生成してからもう一度お試しください。",
         "noChangesToApply": "適用できる変更がありません。",
-        "networkError": "ネットワークエラー。接続を確認してください。"
+        "networkError": "ネットワークエラー。接続を確認してください。",
+        "refreshFailed": "変更は保存されましたが、履歴書を再読み込みできませんでした。再読み込みをお試しください。"
       }
     },
     "tailorLength": {
@@ -290,6 +356,17 @@
         "keywordsExtracted": "抽出キーワード数: {count}",
         "matchesFound": "一致数: {count}",
         "matchRateLabel": "一致率:"
+      },
+      "atsScore": {
+        "description": "保存済みの履歴書をこの求人内容に照らして採点します。PDF自体の読み取りはATSチェックタブで確認できます。",
+        "loading": "ATSスコアを読み込み中…",
+        "notCalculated": "この履歴書のATSスコアはまだ計算されていません。",
+        "loadFailed": "保存されたATSスコアを読み込めませんでした。再計算するか、ページを再読み込みしてください。",
+        "lastCalculated": "最終計算：{date}",
+        "recalculate": "再計算",
+        "recalculating": "計算中…",
+        "saveFirst": "変更を保存してから再計算してください。",
+        "recalculateFailed": "ATSスコアを計算できませんでした。スコアが保存される前にカスタマイズした履歴書の場合は、「履歴書をカスタマイズ」ページでもう一度カスタマイズしてください。"
       }
     },
     "genericItemForm": {
@@ -303,7 +380,9 @@
         "descriptionPoints": "説明ポイント"
       },
       "actions": {
-        "addPoint": "ポイントを追加"
+        "addPoint": "ポイントを追加",
+        "togglePointStyle": "箇条書き記号を切り替え",
+        "reorderPoint": "ドラッグして項目を並べ替え"
       },
       "placeholders": {
         "title": "タイトル",
@@ -319,6 +398,10 @@
       "experience": {
         "addJob": "職歴を追加",
         "addFirstJob": "最初の職歴を追加",
+        "condense": {
+          "label": "簡略表示（以前の職歴）",
+          "description": "「以前の職歴」の下に1行で表示します。箇条書きは非表示になります。"
+        },
         "fields": {
           "jobTitle": "職種",
           "roleTitle": "役職名",
@@ -402,6 +485,18 @@
         "vivid": {
           "name": "ビビッド",
           "description": "アクセント見出しと矢印箇条書きのカラフルな2カラムレイアウト"
+        },
+        "vividSingle": {
+          "name": "ビビッド1カラム",
+          "description": "アクセント見出しと矢印箇条書きのカラフルな1カラムレイアウト"
+        },
+        "modernDeedy": {
+          "name": "Modern Deedy",
+          "description": "Lato書体の1ページ向け高密度レイアウト。見出しは淡いグレーの大文字"
+        },
+        "deedy": {
+          "name": "Deedy",
+          "description": "細字の名前、狭い左カラム、薄いグレーの見出しを備えた2カラムレイアウト"
         }
       },
       "accentColor": "アクセントカラー",
@@ -464,11 +559,16 @@
       "editorPanel": "編集パネル",
       "coverLetterEditor": "カバーレター編集",
       "outreachEditor": "連絡メール編集",
-      "jdMatchAnalysis": "JD一致分析"
+      "jdMatchAnalysis": "JD一致分析",
+      "interviewPrep": "面接準備",
+      "atsCheck": "ATS読み取りチェック"
     },
     "alerts": {
       "saveNotAvailable": "既存の履歴書を編集中のみ保存できます。",
       "saveFailed": "履歴書の保存に失敗しました。もう一度お試しください。",
+      "autoSaveFailed": "同期できませんでした。下書きはローカルに安全に保存されています。",
+      "formattingSaveFailed": "書式を保存できませんでした。もう一度変更すると再試行します。",
+      "loadFailed": "サーバーからこの履歴書を読み込めませんでした。ページを更新して再試行してください。保存済みのコピーを上書きしないよう、編集は無効になっています。",
       "coverLetterSaveSuccess": "カバーレターを保存しました",
       "outreachSaveSuccess": "連絡メールを保存しました",
       "downloadSuccess": "履歴書をダウンロードしました",
@@ -482,7 +582,134 @@
       "outreachSaveFailed": "連絡メールの保存に失敗しました。もう一度お試しください。",
       "coverLetterGenerateFailed": "カバーレターの生成に失敗しました: {error}",
       "outreachGenerateFailed": "連絡メールの生成に失敗しました: {error}",
+      "interviewPrepGenerateFailed": "面接準備の生成に失敗しました: {error}",
       "feedbackGenerateFailed": "履歴書フィードバックの生成に失敗しました: {error}"
+    },
+    "leaveWithoutDraft": {
+      "title": "未保存の変更を残して移動しますか？",
+      "description": "最新の変更をサーバーと同期できず、このブラウザーにも保存できませんでした。今移動すると変更が失われる可能性があります。",
+      "leave": "保存せずに移動",
+      "stay": "編集を続ける"
+    },
+    "atsCheck": {
+      "aboutTitle": "チェック内容",
+      "aboutDescription": "現在のテンプレートと設定で履歴書を生成し、シンプルなATSのテキスト抽出と同じ方法で読み取ります。AIは使用しません。",
+      "roundTripTitle": "往復チェック",
+      "roundTripDescription": "抽出したテキストを履歴書データと比較します。この出力がどれだけ忠実に読み取れるかの指標であり、特定のATSの精度ではありません。",
+      "tipsTitle": "ヒント",
+      "tips": {
+        "items": {
+          "singleColumn": "1カラムのテンプレートは正しい順序で読み取られます。",
+          "standardHeadings": "職歴、学歴、スキルなど標準的なセクション名を使いましょう。",
+          "contactInBody": "連絡先は本文に記載しましょう。"
+        }
+      },
+      "templateLabel": "テンプレート: {template}",
+      "runButton": "チェック実行",
+      "rerunButton": "再チェック",
+      "running": "チェック中...",
+      "emptyState": "チェックを実行すると、現在のテンプレートでATSがこの履歴書をどう読むか確認できます。",
+      "saveFirst": "チェックを実行する前に履歴書を保存してください。",
+      "unsavedNotice": "未保存の編集は含まれません。最後に保存したバージョンをチェックします。",
+      "error": "チェックに失敗しました。バックエンドとフロントエンドが起動しているか確認して、もう一度お試しください。",
+      "parseability": "読み取りやすさ",
+      "content": "内容",
+      "extractability": {
+        "full": "テキスト抽出: 完全",
+        "partial": "テキスト抽出: 一部",
+        "none": "テキスト抽出: なし"
+      },
+      "status": {
+        "pass": "合格",
+        "warn": "注意",
+        "fail": "不合格"
+      },
+      "checksTitle": "チェック項目",
+      "contentRecall": "内容の再現率",
+      "orderFidelity": "読み取り順序",
+      "allFieldsFound": "すべての項目が抽出テキストに含まれています。",
+      "fieldsTruncated": "この履歴書には検査の上限を超える項目があるため、先頭の項目のみ確認しました。上限を超えた項目はここに反映されません。",
+      "fieldStatus": {
+        "found": "検出済み",
+        "garbled": "文字化け",
+        "missing": "欠落",
+        "hidden": "非表示"
+      },
+      "previewTitle": "抽出テキスト",
+      "sectionKinds": {
+        "experience": "職歴",
+        "education": "学歴",
+        "skills": "スキル"
+      },
+      "checks": {
+        "text_layer": {
+          "title": "選択可能なテキスト",
+          "pass": "{characters}文字のテキストを抽出しました。",
+          "fail": "選択可能なテキストがありません。スキャンまたは画像のみのファイルのようで、ATSは何も読み取れません。"
+        },
+        "garbled_glyphs": {
+          "title": "文字エンコーディング",
+          "pass": "読み取れない文字はありません。",
+          "warn": "{count}文字をデコードできませんでした。",
+          "fail": "{count}文字をデコードできず、ATSには文字化けして見えます。"
+        },
+        "text_coverage": {
+          "title": "テキストと画像",
+          "pass": "すべてのページに実際のテキストがあります。",
+          "warn": "{pages}ページはほぼ画像です。",
+          "fail": "すべてのページがほぼ画像です。"
+        },
+        "multi_column": {
+          "title": "単一の読み取り順序",
+          "pass": "テキストは1カラムで読み取られます。",
+          "fail": "{pages}ページで2カラムを検出しました。多くのATSはカラムを混ぜて読み取ります。",
+          "templateHint": "このテンプレートは2カラム構成です。ATSを使う応募には1カラムのテンプレートを選びましょう。"
+        },
+        "tables": {
+          "title": "表",
+          "pass": "表はありません。",
+          "warn": "{count}個の表があります。一部のATSは表のセルを崩して読み取ったり、読み飛ばしたりします。"
+        },
+        "text_boxes": {
+          "title": "テキストボックス",
+          "pass": "テキストボックスはありません。",
+          "warn": "テキストボックスがあります。一部のATSは無視します。",
+          "fail": "{characters}文字が、多くのATSが無視するテキストボックス内にあります。"
+        },
+        "header_footer_content": {
+          "title": "ヘッダーとフッター",
+          "pass": "ヘッダーやフッターに重要な内容はありません。",
+          "warn": "ヘッダーまたはフッターに内容があり、一部のATSは無視します。",
+          "fail": "連絡先がヘッダーまたはフッターにしかなく、多くのATSは無視します。"
+        },
+        "images": {
+          "title": "画像",
+          "pass": "画像はありません。",
+          "warn": "{count}個の画像があります。画像内のテキストはATSから見えません。"
+        },
+        "page_count": {
+          "title": "長さ",
+          "pass": "{pages}ページ。",
+          "warn": "{pages}ページです。2ページ以内に収めることを検討してください。"
+        },
+        "contact_info": {
+          "title": "連絡先",
+          "pass": "メールと電話番号が冒頭で見つかりました。",
+          "warn": "連絡先が不完全か、テキストの後半にあります。",
+          "fail": "抽出テキストにメールアドレスが見つかりません。"
+        },
+        "section_headings": {
+          "title": "セクション見出し",
+          "pass": "標準的な見出しが見つかりました: {found}。",
+          "warn": "標準的な見出しがありません: {missing}。",
+          "fail": "標準的な見出しがありません: {missing}。職歴、学歴、スキルなどの名前を使いましょう。"
+        },
+        "dates": {
+          "title": "日付",
+          "pass": "日付に年の記載が{years}件見つかりました。",
+          "warn": "認識できる日付が見つかりません。"
+        }
+      }
     }
   },
   "enrichment": {
@@ -509,14 +736,20 @@
       "addingLabel": "追加",
       "existingCount": "（既存 {count} 件）",
       "newCount": "（新規 {count} 件）",
-      "noExistingDescription": "既存の説明はありません"
+      "noExistingDescription": "既存の説明はありません",
+      "partialFailure": "一部の項目を改善できませんでした",
+      "partialFailureDescription": "以下の項目は変更されません。成功した改善を適用し、残りの項目は後でもう一度お試しください。"
     },
     "complete": {
       "title": "履歴書を強化しました！",
       "updatedCountSingular": "{count} 件を更新しました",
       "updatedCountPlural": "{count} 件を更新しました",
       "updatedFallback": "強化した記述を履歴書に反映しました",
-      "doneButton": "完了"
+      "doneButton": "完了",
+      "refreshFailedTitle": "保存済み — 再読み込みが必要です",
+      "refreshFailed": "強化内容は保存されましたが、この画面を再読み込みできませんでした。再試行して最新の履歴書を表示してください。",
+      "retryRefresh": "再読み込み",
+      "refreshing": "履歴書を再読み込み中..."
     },
     "noImprovements": {
       "title": "履歴書はとても良い状態です！",
@@ -524,7 +757,8 @@
     },
     "error": {
       "title": "エラーが発生しました",
-      "unexpected": "予期しないエラーが発生しました"
+      "unexpected": "予期しないエラーが発生しました",
+      "answerRequired": "改善内容を生成する前に、少なくとも1つの質問に回答してください。"
     }
   },
   "tailor": {
@@ -549,6 +783,23 @@
       "full": {
         "label": "完全に調整",
         "description": "求人情報を使って全面的に調整。"
+      }
+    },
+    "length": {
+      "pageLimitLabel": "ページ数の上限",
+      "pageLimitDescription": "可能な範囲で、関連性の低い箇条書きから削除してページ数に収めます。「上限なし」ではページ調整を行いません。",
+      "pageLimitOptions": {
+        "1": "1ページ",
+        "2": "2ページ",
+        "3": "3ページ",
+        "none": "上限なし"
+      },
+      "bulletsLabel": "職歴ごとの箇条書き数",
+      "bulletsDescription": "職歴・プロジェクトごとに残す関連性の高い箇条書きの数。",
+      "bulletOptions": {
+        "3": "最大3",
+        "5": "最大5",
+        "all": "すべて"
       }
     },
     "analyzeJob": "求人を分析",
@@ -585,6 +836,18 @@
       "rejectButton": "拒否して再生成",
       "confirmButton": "確認して保存"
     },
+    "atsScore": {
+      "title": "ATSスコアの内訳",
+      "keywordMatch": "キーワード一致",
+      "skillsCoverage": "スキルの網羅性",
+      "titleMatch": "職種名の一致",
+      "sectionCompleteness": "セクションの充実度",
+      "dateConsistency": "日付表記の一貫性",
+      "missingKeywords": "不足しているキーワード",
+      "injectableKeywords": "追加可能（マスター履歴書に記載あり）",
+      "recommendations": "推奨事項",
+      "twoColumnWarning": "2カラムのレイアウト：多くのATSは列を正しい順序で読み取れません。応募前にビルダーで1カラムのテンプレートに切り替えてください。"
+    },
     "regenerateDialog": {
       "title": "カスタマイズ済み履歴書を再生成しますか？",
       "description": "現在のプレビューを破棄し、新しい AI 調整結果を取得します。",
@@ -599,10 +862,30 @@
       "jobDescriptionTooShort": "求人内容が短すぎます。詳細を追加してから、もう一度お試しください。",
       "apiKeyError": "API キーが機能していません。設定で確認してください。",
       "rateLimit": "レート制限に達しました。約1分待ってから再試行してください。",
+      "timeout": "履歴書プレビューは {minutes} 分でタイムアウトしました。求人内容を短くするか、よりシンプルなプロンプトで再試行してください。",
       "failedToGenerate": "履歴書を生成できませんでした。設定で API キーを確認してから、もう一度お試しください。",
-      "timeout": "リクエストがタイムアウトしました。より短い求人内容で再試行するか、接続を確認してください。",
       "failedToPreview": "履歴書をプレビューできませんでした。設定で API キーを確認してから、もう一度お試しください。",
-      "failedToConfirm": "変更を適用できませんでした。もう一度お試しください。"
+      "failedToConfirm": "変更を適用できませんでした。もう一度お試しください。",
+      "previewUnavailable": "プレビューの有効期限が切れたか、元の履歴書が変更されました。保存する前に新しいプレビューを生成してください。"
+    },
+    "selectResumeDescription": "箇条書きはこのマスター履歴書から選ばれます。",
+    "tailoringLabel": "カスタマイズ対象：",
+    "jobDescriptionHint": "職務内容と応募要件を含む求人情報の全文を貼り付けてください（50文字以上）。",
+    "steps": {
+      "label": "カスタマイズの流れ",
+      "paste": "求人内容を貼り付け",
+      "generate": "プレビューを生成",
+      "review": "変更を確認して保存"
+    },
+    "selectionSummary": "{total}件中{kept}件の箇条書きを採用（職務・プロジェクトごとに最大{max}件）",
+    "selectionSummaryAll": "{total}件中{kept}件の箇条書きを保持",
+    "pageFit": {
+      "fits": "ページ数の上限内に収まります",
+      "trimmed": "上限内に収めるためさらに{count}件削除",
+      "over": "ページ数の上限を超えています。選択した箇条書きはすべて保持しました",
+      "unavailable": "ページ調整は利用できません",
+      "finalOver": "書き換え後にページ数の上限を超える可能性があります",
+      "notRechecked": "書き換え後のページ数上限への収まりは再確認されていません"
     }
   },
   "settings": {
@@ -617,6 +900,12 @@
     "contentLanguageDescription": "生成コンテンツの言語（履歴書、カバーレター）",
     "uiLanguage": "UI言語",
     "uiLanguageDescription": "ユーザーインターフェースの言語",
+    "languageTitle": "言語",
+    "display": {
+      "title": "表示",
+      "backgroundEffects": "背景エフェクト",
+      "backgroundEffectsDescription": "ページの背景と、AIの処理中に表示されるアニメーション背景です。オフにすると無地の背景になります。"
+    },
     "theme": "テーマ",
     "themeDescription": "お好みのカラーテーマを選択",
     "lightMode": "ライト",
@@ -670,6 +959,23 @@
     },
     "llmConfiguration": {
       "selectedProvider": "選択中: {provider}",
+      "claudeCliNote": "このマシンにインストール済みでサインイン済みの Claude Code CLI を実行するため、ここで API キーは不要です。Claude Code はお使いのアカウント経由でプロンプトを Anthropic に送信します。",
+      "claudeCliDefaultModel": "Claude Code の既定",
+      "claudeCliModelHint": "各エイリアスは、そのファミリーの最新モデルを使います。使えるモデルは Claude プランによって決まります。",
+      "claudeCliName": "Claude サブスクリプション（Claude Code 経由）",
+      "claudeCliShortName": "Claude プラン",
+      "claudeCliWarningTitle": "自己責任でご利用ください",
+      "claudeCliWarning": "Anthropic は、サードパーティ製アプリが Claude Free / Pro / Max プラン経由でリクエストを送ることを認めておらず、このオプションもそれに該当する可能性があります。Anthropic は予告なくこれを適用できます（確実に利用するには Anthropic の API キーをご利用ください）。Resume Matcher が Claude の認証情報を見たり保存したりすることはありません。実行するのは、ご自身で `claude auth login` からサインインした Claude Code CLI だけです。リクエストは Claude プランの利用上限に計上され、代わりに利用クレジットから消費される場合もあります。",
+      "communityBuilt": "コミュニティが開発した機能です。",
+      "chatgptName": "ChatGPT プラン（Sign in with ChatGPT）",
+      "agentShortName": "コーディングエージェント",
+      "agentName": "お使いのコーディングエージェント（Claude Code、Codex、Cursor、Copilot）",
+      "agentNoteTitle": "API キーは不要です",
+      "agentNote": "AI の作業はコーディングエージェントが行います。履歴書と求人内容を読み、最適化した版を書き、resume-matcher コマンドでここに保存します。アプリ自体は AI を呼び出さないため、AI ボタンを押すとエージェントに貼り付けるプロンプトが表示されます。",
+      "agentGuideLink": "エージェント設定ガイド",
+      "chatgptShortName": "ChatGPT プラン",
+      "chatgptWarningTitle": "プレビュー版",
+      "chatgptWarning": "OpenAI 公式のオープンソースアプリ向け Sign in with ChatGPT を使用します。これはプレビュー版のため、変更される可能性があります。ChatGPT Plus と Pro で利用できます。リクエストはお使いのマシンから OpenAI の API に直接送信され、サインイン用のトークンはこのマシンに暗号化して保存されます。利用量は ChatGPT プランの上限に含まれます。Plus では 5 時間の上限を、プランを使う他のアプリと共有します。Pro には 5 時間の上限はありません。確実に利用するには、OpenAI の API キーを使用してください。",
       "modelLabel": "モデル",
       "defaultModel": "既定: {model}",
       "apiKeyLabel": "API キー",
@@ -682,6 +988,8 @@
       "baseUrlLabel": "ベースURL（任意）",
       "baseUrlPlaceholder": "例: https://api.openai.com/v1",
       "baseUrlDescription": "プロキシ/アグリゲーター等のエンドポイントを使う場合に Base URL を上書きできます。空欄の場合は既定値を使用します。",
+      "azureBaseUrlLabel": "Azure AI Foundry エンドポイント",
+      "azureBaseUrlDescription": "Foundry のエンドポイントを貼り付けてください。GPT デプロイではサービスルートまたは /openai/v1/responses を、Azure AI Inference モデルでは /models エンドポイントを使用できます。",
       "ollamaServerUrl": "Ollama サーバー URL",
       "ollamaServerUrlPlaceholder": "http://localhost:11434",
       "reasoningEffortLabel": "推論の深さ",
@@ -706,11 +1014,56 @@
         "health_check_failed": "ヘルスチェックに失敗しました。",
         "duplicate_v1_path": "ヘルスチェックに失敗しました。Base URL に /v1 が重複している可能性があります。",
         "not_found_404": "ヘルスチェックに失敗しました。404 Not Found。Base URL が提供元と一致しているか確認してください。",
-        "html_response": "ヘルスチェックに失敗しました。Base URL が HTML を返しました。コンソールURLや未対応のゲートウェイの可能性があります。"
+        "html_response": "ヘルスチェックに失敗しました。Base URL が HTML を返しました。コンソールURLや未対応のゲートウェイの可能性があります。",
+        "claude_cli_not_found": "Claude Code CLI が見つかりません。Claude Code をインストールし、`claude auth login` を実行してください。",
+        "chatgpt_not_connected": "ChatGPT でサインインしていません。設定で ChatGPT プランを選択し、ChatGPT で続行してください。",
+        "chatgpt_usage_limit": "このアプリの ChatGPT プランの利用上限に達しました。ChatGPT の設定の「使用状況」で確認してください。",
+        "chatgpt_not_eligible": "このアカウントでは ChatGPT プランを利用できません。ChatGPT Plus または Pro が必要です。それ以外の場合は OpenAI の API キーを使用してください。",
+        "api_key_required_for_endpoint": "この API キーは別のエンドポイント用に保存されています。このベース URL でテストするにはキーを入力してください。",
+        "loopback_in_container": "モデルサーバーに接続できません。Docker 内では localhost はコンテナ自身を指します。Base URL に http://host.docker.internal:11434（またはサーバーのポート）を指定してください。"
       },
       "healthWarnings": {
         "empty_content": "ヘルスチェックで空の内容が返されました。"
       }
+    },
+    "chatgpt": {
+      "continue": "ChatGPT で続行",
+      "checking": "確認中",
+      "connected": "接続済み",
+      "notConnected": "未接続",
+      "disconnect": "接続を解除",
+      "manageUsage": "使用状況を管理",
+      "disconnected": "ChatGPT との接続を解除しました。",
+      "revocationUnconfirmed": "このマシンではサインアウトしましたが、OpenAI からセッション終了の確認が得られませんでした。ChatGPT の設定から Resume Matcher の接続を解除することもできます。",
+      "returnConnected": "ChatGPT プランに接続しました。モデルを選んで保存してください。",
+      "returnCancelled": "ChatGPT のサインインはキャンセルされました。",
+      "returnError": "ChatGPT のサインインを完了できませんでした。もう一度お試しください。",
+      "planDeclined": "ChatGPT プランの利用が許可されませんでした。もう一度 ChatGPT で続行して許可するか、OpenAI の API キーを使用してください。",
+      "sameMachineOnly": "Resume Matcher を実行しているマシンのブラウザからサインインしてください。",
+      "signInFailed": "ChatGPT のサインインを開始できませんでした。もう一度お試しください。",
+      "disconnectFailed": "ChatGPT との接続を解除できませんでした。もう一度お試しください。",
+      "statusFailed": "ChatGPT の接続状態を確認できませんでした。",
+      "modelsFailed": "ChatGPT のモデルを読み込めませんでした。モデル名を入力してください。",
+      "modelHint": "サインイン後、モデルは ChatGPT アカウントから取得されます。",
+      "connectToSave": "このプロバイダーを保存するには、ChatGPT でサインインしてください。"
+    },
+    "subscriptionRisk": {
+      "claudeCli": {
+        "title": "Claude プランをここで使いますか？",
+        "risk": "Anthropic は、サードパーティ製アプリが Claude Free / Pro / Max プラン経由でリクエストを送ることを認めていません。Resume Matcher はご自身の Claude Code CLI を実行し、認証情報を見ることはありませんが、Anthropic がこれをサードパーティによる利用とみなし、予告なくアカウントに措置を取る可能性があります。",
+        "usage": "リクエストは Claude プランの利用上限に計上されます。このオプションはコミュニティが開発したもので、Anthropic が Claude Code やポリシーを変更すると動作しなくなる可能性があります。"
+      },
+      "chatgpt": {
+        "title": "ChatGPT プランをここで使いますか？",
+        "risk": "OpenAI のオープンソースアプリ向け Sign in with ChatGPT を使用します。プレビュー版のため、OpenAI が変更または終了する可能性があります。ChatGPT Plus と Pro で利用できます。",
+        "usage": "リクエストは ChatGPT プランの利用上限に計上され、この上限はプランを使う他のアプリと共有されます。このオプションはコミュニティが開発したものです。"
+      },
+      "mcpTitle": "おすすめ：コーディングエージェントに任せる",
+      "mcpBody": "Claude Code、Codex、Cursor、Copilot をすでにお使いですか？ 代わりに「コーディングエージェント」を選んでください。AI の作業はエージェントが自身のアプリ内で行い、Resume Matcher が結果を保存・確認・レンダリングします。API キーは不要です。",
+      "mcpLink": "エージェント設定ガイド",
+      "alternative": "確実に利用したい場合は、戻って API キーまたは Ollama などのローカルモデルを使ってください。",
+      "back": "いいえ、戻る",
+      "accept": "はい、リスクを承諾します"
     },
     "contentGeneration": {
       "title": "コンテンツ生成",
@@ -730,7 +1083,11 @@
       "customPromptLabel": "カスタムプロンプト（任意）",
       "customPromptHelp": "次のプレースホルダーを中括弧で囲んで含めてください：job_description, resume_data, output_language。空欄の場合は既定のプロンプトを使用します。",
       "customPromptResetButton": "デフォルトにリセット",
-      "customPromptErrorMissing": "必須のプレースホルダーが不足しています：{missing}"
+      "customPromptErrorMissing": "必須のプレースホルダーが不足しています：{missing}",
+      "interviewPrep": {
+        "label": "面接準備",
+        "description": "保存済みのカスタマイズ履歴書と一緒に面接準備を自動生成します"
+      }
     },
     "tailorLength": {
       "title": "カスタマイズの長さ（既定）",
@@ -755,10 +1112,12 @@
     "errors": {
       "unableToConnectBackend": "サーバーに接続できません。サーバーが起動していることを確認してください。",
       "apiKeyRequired": "選択したプロバイダーには API キーが必要です。",
+      "baseUrlRequired": "{provider} にはベース URL が必要です。",
       "unknownProvider": "バックエンドから未知のプロバイダーが返されました: {provider}",
       "unableToSaveConfiguration": "設定を保存できません",
       "failedToClearApiKeys": "API キーの消去に失敗しました。もう一度お試しください。",
-      "failedToResetDatabase": "データベースのリセットに失敗しました。もう一度お試しください。"
+      "failedToResetDatabase": "データベースのリセットに失敗しました。もう一度お試しください。",
+      "apiKeyRequiredForEndpoint": "このベース URL またはプロバイダーで使用するには、API キーを再入力してください。"
     },
     "apiKeys": {
       "savedTitle": "保存済み API キー",
@@ -786,9 +1145,20 @@
       "notProcessedYet": "履歴書はまだ処理されていません。カスタマイズ機能で構造化履歴書を生成してください。",
       "noDataAvailable": "利用可能な履歴書データがありません。",
       "failedToLoad": "履歴書データの読み込みに失敗しました。",
-      "failedToDelete": "履歴書の削除に失敗しました。もう一度お試しください。"
+      "failedToDelete": "履歴書の削除に失敗しました。もう一度お試しください。",
+      "failedToDownload": "履歴書をダウンロードできませんでした。もう一度お試しください。",
+      "failedToRename": "履歴書の名前を変更できませんでした。もう一度お試しください。"
     },
-    "titlePlaceholder": "履歴書のタイトルを入力..."
+    "titlePlaceholder": "履歴書のタイトルを入力...",
+    "downloadFailedTitle": "ダウンロードに失敗しました",
+    "renameFailedTitle": "名前の変更に失敗しました",
+    "renameTitle": "履歴書の名前を変更",
+    "defaultBadge": "デフォルトのマスター",
+    "setDefault": "デフォルトのマスターに設定",
+    "setDefaultSuccess": "このマスターがカスタマイズのデフォルトになりました。",
+    "setDefaultError": "この履歴書をデフォルトのマスターに設定できませんでした。もう一度お試しください。",
+    "duplicate": "複製",
+    "duplicateError": "この履歴書を複製できませんでした。もう一度お試しください。"
   },
   "preview": {
     "margins": "余白",
@@ -814,6 +1184,7 @@
       "personalInfo": "個人情報",
       "summary": "概要",
       "experience": "職歴",
+      "earlierExperience": "以前の職歴",
       "education": "学歴",
       "projects": "プロジェクト",
       "skills": "スキル・受賞歴",
@@ -944,6 +1315,7 @@
   },
   "a11y": {
     "removeItem": "項目を削除",
+    "duplicateItem": "項目を複製",
     "removeDescription": "この行を削除",
     "removeFile": "ファイルを削除"
   },
@@ -985,7 +1357,11 @@
       "review": "確認して完了",
       "create": "マスター履歴書を作成",
       "keepAdding": "続けて追加",
-      "backToDashboard": "ダッシュボードに戻る"
+      "backToDashboard": "ダッシュボードに戻る",
+      "openCreated": "作成した履歴書を開く",
+      "retryDraftBackup": "ローカル保存を再試行",
+      "stay": "このページに留まる",
+      "leaveWithoutSaving": "保存せずに移動"
     },
     "preview": {
       "label": "ライブ下書き",
@@ -994,11 +1370,21 @@
       "experience": "職務経験",
       "education": "学歴",
       "projects": "プロジェクト",
-      "skills": "スキル"
+      "skills": "スキル",
+      "inferredSkill": "推測"
     },
     "errors": {
       "turnFailed": "ウィザードはその回答を保存できませんでした。もう一度お試しください。",
-      "finalizeFailed": "ウィザードはマスター履歴書を作成できませんでした。もう一度お試しください。"
+      "finalizeFailed": "ウィザードはマスター履歴書を作成できませんでした。もう一度お試しください。",
+      "createdNavigationFailed": "マスター履歴書は作成されましたが、このページから自動的に開けませんでした。下のボタンから続行してください。"
+    },
+    "draftStorageUnavailable": {
+      "title": "ローカル下書きを保存できません",
+      "description": "最新の進行状況はこのタブにのみ残っています。ページを移動または再読み込みする前に、ローカル保存を再試行してください。"
+    },
+    "leaveWithoutDraft": {
+      "title": "ローカル保存なしで移動しますか？",
+      "description": "ローカル保存が完了する前にページを移動または再読み込みすると、最新の進行状況が失われます。"
     },
     "entry": {
       "kicker": "マスター履歴書の設定",
@@ -1007,7 +1393,7 @@
       "upload": {
         "kicker": "既存ファイル",
         "title": "履歴書をアップロード",
-        "description": "PDF、DOC、DOCX ファイルから始め、Resume Matcher にマスタープロフィールへ解析させます。",
+        "description": "PDF、DOCX ファイルから始め、Resume Matcher にマスタープロフィールへ解析させます。",
         "action": "履歴書をアップロード"
       },
       "wizard": {
@@ -1016,9 +1402,22 @@
         "description": "焦点を絞った質問に答えると、ウィザードが質の高いマスター履歴書の初稿を組み立てます。",
         "action": "ウィザードを開始"
       }
+    },
+    "created": {
+      "title": "マスター履歴書を作成しました",
+      "description": "マスター履歴書を作成しました。開いて編集を続けてください。"
     }
   },
   "tracker": {
+    "manage": "管理",
+    "manageDialog": {
+      "title": "列の管理",
+      "description": "ボードに表示するステージを選択します。",
+      "visible": "表示中",
+      "hidden": "非表示",
+      "lastVisibleHint": "少なくとも1つのステージは表示しておく必要があります。",
+      "close": "完了"
+    },
     "scroll": {
       "prev": "左へスクロール",
       "next": "右へスクロール",
@@ -1084,6 +1483,120 @@
       "loadFailed": "応募を読み込めませんでした。",
       "moveFailed": "応募を移動できませんでした。",
       "deleteFailed": "応募を削除できませんでした。"
+    }
+  },
+  "interviewPrep": {
+    "title": "面接準備",
+    "regenerate": "再生成",
+    "unavailableTitle": "面接準備は利用できません",
+    "loadingContextDescription": "生成前に、このカスタマイズ済み履歴書の求人コンテキストを確認しています。",
+    "missingContextDescription": "このカスタマイズ済み履歴書には、面接準備の生成に必要な保存済み求人コンテキストがありません。求人内容で履歴書を再度カスタマイズしてください。",
+    "saveRequiredDescription": "面接準備を生成する前に、このカスタマイズ済み履歴書を保存してください。",
+    "focusArea": "重点領域",
+    "suggestedAnswerPoints": "回答ポイント",
+    "whyItMatters": "重要な理由",
+    "preparationSuggestion": "準備の提案",
+    "sections": {
+      "roleFit": "職務適合分析",
+      "resumeQuestions": "履歴書ベースの質問",
+      "projectFollowUps": "プロジェクト深掘り質問",
+      "skillGaps": "スキルギャップ",
+      "talkingPoints": "話すべき要点"
+    }
+  },
+  "queue": {
+    "title": "カスタマイズキュー",
+    "subtitle": "求人内容をキューに追加し、バックグラウンドで1件ずつカスタマイズします",
+    "form": {
+      "title": "求人を追加",
+      "masterDescription": "キュー内の各求人は、このマスター履歴書をもとにカスタマイズされます。",
+      "noMaster": "先にダッシュボードでマスター履歴書をアップロードしてください。",
+      "jobDescriptionLabel": "求人内容",
+      "jobDescriptionHint": "職種、会社名、求人IDはAIを使わずに本文から検出されます。誤りがあれば修正してください。",
+      "detectedTitle": "検出された情報",
+      "roleLabel": "職種",
+      "rolePlaceholder": "例: フロントエンドエンジニア",
+      "companyLabel": "会社名",
+      "companyPlaceholder": "例: Stripe",
+      "jobReqIdLabel": "求人ID",
+      "cooldownLabel": "待機時間（秒）",
+      "cooldownHint": "各求人の後に待機し、プロバイダーのレート制限に達するリスクを下げます。",
+      "submit": "キューに追加",
+      "adding": "追加中...",
+      "added": "キューに追加しました。次の求人内容を貼り付けてください。"
+    },
+    "monitor": {
+      "title": "キュー",
+      "count": "求人数: {count}",
+      "refresh": "更新",
+      "clearCompleted": "完了分を削除",
+      "clearAll": "すべて削除",
+      "emptyTitle": "キューに求人はありません",
+      "emptyDescription": "求人内容を追加するとカスタマイズを開始します。",
+      "untitled": "職種未設定",
+      "jobId": "ID {id}",
+      "viewResume": "履歴書を表示",
+      "remove": "キューから削除"
+    },
+    "status": {
+      "pending": "待機中",
+      "processing": "カスタマイズ中",
+      "completed": "完了",
+      "failed": "失敗"
+    },
+    "errors": {
+      "addFailed": "求人を追加できませんでした。もう一度お試しください。",
+      "item": {
+        "not_found": "マスター履歴書または求人が削除されました。",
+        "too_large": "求人内容または履歴書が長すぎるため、カスタマイズできません。",
+        "timeout": "カスタマイズがタイムアウトしました。再試行するには求人をもう一度追加してください。",
+        "failed": "カスタマイズに失敗しました。設定でAIプロバイダーを確認してから、求人をもう一度追加してください。"
+      },
+      "loadFailed": "キューを読み込めませんでした。",
+      "deleteFailed": "求人を削除できませんでした。もう一度お試しください。",
+      "deleteInProgress": "この求人はカスタマイズ中です。完了してから削除してください。",
+      "clearFailed": "キューを削除できませんでした。もう一度お試しください。"
+    }
+  },
+  "agentPrompt": {
+    "instructions": "Resume Matcher のフォルダで動いているコーディングエージェント（Claude Code、Codex、Cursor、Copilot）にこのプロンプトを貼り付けてください。エージェントが AI の作業を行い、結果をここに保存します。",
+    "refresh": "エージェントが保存すると、このページは自動で更新されます。",
+    "copy": "プロンプトをコピー",
+    "copied": "コピーしました",
+    "modeTitle": "エージェントモードがオンです",
+    "tailorPageMessage": "エージェントモードでは、コーディングエージェントが履歴書を最適化します。下に求人内容を貼り付けてから、エージェント用のプロンプトをコピーしてください。",
+    "queuePageMessage": "エージェントモードでは、まとめての処理もコーディングエージェントが行います。各求人内容を jobs/ フォルダに .md または .txt ファイルとして保存し、そのすべての求人に合わせて履歴書を最適化するようエージェントに依頼してください。",
+    "getPrompt": "エージェント用のプロンプトを表示",
+    "createMaster": {
+      "title": "マスター履歴書を作成",
+      "prompt": "Resume Matcher を使って、このファイルから私のマスター履歴書を作成してください：<履歴書の PDF または DOCX のパス>。履歴書のファイルがない場合は、質問しながら一緒に作成してください。"
+    },
+    "tailor": {
+      "title": "履歴書を最適化",
+      "prompt": "Resume Matcher を使って、私のマスター履歴書をこの求人に合わせて最適化してください：\n\n<ここに求人内容を貼り付け>",
+      "promptWithJob": "Resume Matcher を使って、履歴書 {resumeId} をこの求人に合わせて最適化してください：\n\n{job}",
+      "note": "複数の求人がありますか？ 各求人内容を jobs/ フォルダに .md または .txt ファイルとして保存し、そのすべての求人に合わせて履歴書を最適化するようエージェントに依頼してください。それぞれダッシュボードに表示されます。"
+    },
+    "enhance": {
+      "title": "履歴書を強化",
+      "prompt": "Resume Matcher を使って、履歴書 {resumeId} の箇条書きを改善してください。私が書き漏らした成果・数値・ツールについて質問し、回答をもとに履歴書を更新してください。私が伝えていないことは追加しないでください。"
+    },
+    "regenerate": {
+      "title": "エージェントで書き直す",
+      "prompt": "Resume Matcher を使って、履歴書 {resumeId} の <書き直す職歴・プロジェクト・スキル> を書き直してください：<改善したい点>。事実はすべて正確に保ち、保存する前に変更内容を見せてください。"
+    },
+    "coverLetter": {
+      "title": "カバーレターを書く",
+      "prompt": "Resume Matcher を使って、履歴書 {resumeId} が最適化された求人向けのカバーレターを書き、その履歴書に保存してください。"
+    },
+    "outreach": {
+      "title": "アプローチメッセージを書く",
+      "prompt": "Resume Matcher を使って、履歴書 {resumeId} が最適化された求人の採用担当者に送る短いメッセージを書き、その履歴書に保存してください。"
+    },
+    "interviewPrep": {
+      "title": "面接の準備",
+      "prompt": "Resume Matcher を使って、履歴書 {resumeId} と、それが最適化された求人を読み、面接の準備を手伝ってください：想定される質問、話すべきエピソード、こちらから聞く質問。",
+      "note": "エージェントは自身のチャットで回答します。エージェントモードでは、面接準備の内容は履歴書に保存されません。"
     }
   }
 }

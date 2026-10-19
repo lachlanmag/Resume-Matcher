@@ -56,7 +56,7 @@ async def migrate(database: Database | None = None) -> dict[str, Any]:
         return {"status": "no_legacy_file"}
 
     stats = await database.get_stats()
-    if (stats["total_resumes"] or stats["total_jobs"] or stats["total_improvements"]):
+    if stats["total_resumes"] or stats["total_jobs"] or stats["total_improvements"]:
         logger.info("SQLite already populated; skipping TinyDB import.")
         return {"status": "already_populated"}
 
@@ -93,17 +93,21 @@ async def migrate(database: Database | None = None) -> dict[str, Any]:
                     content_type=r.get("content_type", "md"),
                     filename=r.get("filename"),
                     is_master=bool(r.get("is_master", False)),
+                    is_default_master=bool(r.get("is_master", False)),
                     parent_id=r.get("parent_id"),
                     processed_data=r.get("processed_data"),
                     processing_status=r.get("processing_status", "pending"),
                     cover_letter=r.get("cover_letter"),
                     outreach_message=r.get("outreach_message"),
+                    interview_prep=r.get("interview_prep"),
                     title=r.get("title"),
                     original_markdown=r.get("original_markdown"),
                     tailor_settings=r.get("tailor_settings"),
                     resume_feedback=r.get("resume_feedback"),
                     created_at=r.get("created_at") or _utcnow_iso(),
-                    updated_at=r.get("updated_at") or r.get("created_at") or _utcnow_iso(),
+                    updated_at=r.get("updated_at")
+                    or r.get("created_at")
+                    or _utcnow_iso(),
                 )
             )
         for j in jobs:

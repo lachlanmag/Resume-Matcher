@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 import {
   type TailorLengthSettings,
   MIN_TARGET_PAGES,
@@ -10,6 +10,9 @@ import {
   validateTailorLengthSettings,
 } from '@/lib/types/tailor-length';
 import { useTranslations } from '@/lib/i18n';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 
 export interface TailorLengthControlsProps {
   settings: TailorLengthSettings;
@@ -25,6 +28,7 @@ export function TailorLengthControls({
   showDescription = true,
 }: TailorLengthControlsProps) {
   const { t } = useTranslations();
+  const id = useId();
   const validationError = validateTailorLengthSettings(settings);
 
   const pageOptions = Array.from(
@@ -41,79 +45,47 @@ export function TailorLengthControls({
       )}
 
       <div className="space-y-2">
-        <label className="font-mono text-xs font-bold uppercase tracking-wider text-ink-soft">
-          {t('settings.tailorLength.targetPages')}
-        </label>
-        <div className="flex gap-2">
-          {pageOptions.map((n) => (
-            <button
-              key={n}
-              type="button"
-              disabled={disabled}
-              onClick={() => onChange({ ...settings, target_pages: n })}
-              className={`px-4 py-2 text-sm font-mono border-2 border-black transition-colors ${
-                settings.target_pages === n
-                  ? 'bg-blue-700 text-white'
-                  : 'bg-background hover:bg-paper-tint'
-              } disabled:opacity-50`}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
+        <Label id={`${id}-pages`}>{t('settings.tailorLength.targetPages')}</Label>
+        <SegmentedControl
+          aria-labelledby={`${id}-pages`}
+          size="sm"
+          items={pageOptions.map((n) => ({ value: String(n), label: String(n), disabled }))}
+          value={String(settings.target_pages)}
+          onChange={(value) => onChange({ ...settings, target_pages: Number(value) })}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label
-            htmlFor="bullets-min"
-            className="font-mono text-xs font-bold uppercase tracking-wider text-ink-soft"
-          >
-            {t('settings.tailorLength.bulletsMin')}
-          </label>
-          <input
-            id="bullets-min"
+          <Label htmlFor={`${id}-bullets-min`}>{t('settings.tailorLength.bulletsMin')}</Label>
+          <Input
+            id={`${id}-bullets-min`}
             type="number"
             min={MIN_BULLETS_PER_JOB}
             max={MAX_BULLETS_PER_JOB}
             disabled={disabled}
             value={settings.bullets_per_job_min}
-            onChange={(e) =>
-              onChange({
-                ...settings,
-                bullets_per_job_min: Number(e.target.value),
-              })
-            }
-            className="w-full border-2 border-black px-3 py-2 font-mono text-sm bg-background disabled:opacity-50"
+            onChange={(e) => onChange({ ...settings, bullets_per_job_min: Number(e.target.value) })}
           />
         </div>
         <div className="space-y-2">
-          <label
-            htmlFor="bullets-max"
-            className="font-mono text-xs font-bold uppercase tracking-wider text-ink-soft"
-          >
-            {t('settings.tailorLength.bulletsMax')}
-          </label>
-          <input
-            id="bullets-max"
+          <Label htmlFor={`${id}-bullets-max`}>{t('settings.tailorLength.bulletsMax')}</Label>
+          <Input
+            id={`${id}-bullets-max`}
             type="number"
             min={MIN_BULLETS_PER_JOB}
             max={MAX_BULLETS_PER_JOB}
             disabled={disabled}
             value={settings.bullets_per_job_max}
-            onChange={(e) =>
-              onChange({
-                ...settings,
-                bullets_per_job_max: Number(e.target.value),
-              })
-            }
-            className="w-full border-2 border-black px-3 py-2 font-mono text-sm bg-background disabled:opacity-50"
+            onChange={(e) => onChange({ ...settings, bullets_per_job_max: Number(e.target.value) })}
           />
         </div>
       </div>
 
       {validationError && (
-        <p className="text-sm text-red-600 font-mono">{validationError}</p>
+        <p role="alert" className="text-sm text-destructive font-mono">
+          {validationError}
+        </p>
       )}
     </div>
   );

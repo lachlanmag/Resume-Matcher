@@ -13,6 +13,7 @@ import { API_BASE } from '@/lib/api/client';
 import { translate } from '@/lib/i18n/server';
 import { resolveLocale } from '@/lib/i18n/locale';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
+import { runningHeaderCss } from '@/lib/print/running-header';
 import { withNormalizedWorkExperience } from '@/lib/utils/work-experience';
 
 type PageProps = {
@@ -35,6 +36,7 @@ type PageProps = {
     showContactIcons?: string;
     accentColor?: string;
     lang?: string;
+    draft?: string;
   }>;
 };
 
@@ -77,10 +79,12 @@ function parseBoolean(value: string | undefined, defaultValue: boolean): boolean
   return defaultValue;
 }
 
-async function fetchResumeData(id: string): Promise<ResumeData> {
-  const res = await fetch(`${API_BASE}/resumes?resume_id=${encodeURIComponent(id)}`, {
-    cache: 'no-store',
-  });
+async function fetchResumeData(id: string, draftToken?: string): Promise<ResumeData> {
+  const url =
+    draftToken && /^[a-f0-9]{32}$/.test(draftToken)
+      ? `${API_BASE}/resumes/render-drafts/${draftToken}`
+      : `${API_BASE}/resumes?resume_id=${encodeURIComponent(id)}`;
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error(`Failed to load resume (status ${res.status}).`);
   }
@@ -141,7 +145,10 @@ function parseTemplate(value: string | undefined): TemplateType {
     value === 'modern-two-column' ||
     value === 'latex' ||
     value === 'clean' ||
-    value === 'vivid'
+    value === 'vivid' ||
+    value === 'vivid-single' ||
+    value === 'modern-deedy' ||
+    value === 'deedy'
   ) {
     return value;
   }
@@ -161,7 +168,23 @@ function parsePageSize(value: string | undefined): PageSize {
 export default async function PrintResumePage({ params, searchParams }: PageProps) {
   const resolvedParams = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const resumeData = await fetchResumeData(resolvedParams.id);
+  const draftToken = resolvedSearchParams?.draft;
+  let resumeData: ResumeData;
+  try {
+    resumeData = await fetchResumeData(resolvedParams.id, draftToken);
+  } catch (error) {
+    // Render a marker the PDF renderer waits for, so a resume that cannot load
+    // (an expired page-fit draft, an unreachable backend) fails fast instead
+    // of timing out.
+    console.error(draftToken ? 'Failed to load page-fit draft:' : 'Failed to load resume:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return draftToken ? (
+      <div data-print-error="draft-unavailable">Draft unavailable</div>
+    ) : (
+      <div data-print-error="resume-unavailable">Resume unavailable</div>
+    );
+  }
   const locale = resolveLocale(resolvedSearchParams?.lang);
   const t = (key: string, params?: Record<string, string | number>) =>
     translate(locale, key, params);
@@ -182,6 +205,7 @@ export default async function PrintResumePage({ params, searchParams }: PageProp
     languages: t('resume.sections.languages'),
     awards: t('resume.sections.awards'),
     links: t('resume.sections.links'),
+    earlierExperience: t('resume.sections.earlierExperience'),
   };
   const fallbackLabels = {
     name: t('resume.defaults.name'),
@@ -250,11 +274,20 @@ export default async function PrintResumePage({ params, searchParams }: PageProp
   };
 
   return (
-    <div className="resume-print bg-white">
+    // `lang` also drives Chromium's own font fallback during PDF render, which
+    // matters for the CJK faces (L-08).
+    <div className="resume-print bg-white" lang={locale}>
+      {/* "Name · 2 / 3" on pages 2+; the CSS string is fully escaped. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: runningHeaderCss(localizedResumeData.personalInfo?.name),
+        }}
+      />
       <Resume
         resumeData={localizedResumeData}
         template={settings.template}
         settings={printSettings}
+        locale={locale}
         additionalSectionLabels={additionalSectionLabels}
         sectionHeadings={sectionHeadings}
         fallbackLabels={fallbackLabels}

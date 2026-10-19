@@ -1,17 +1,196 @@
 """Unit tests for refiner pure functions — no LLM calls needed."""
 
 import copy
+from typing import Any
+from unittest.mock import AsyncMock
+
 import pytest
 
+from app.schemas.refinement import AlignmentViolation, RefinementConfig
 from app.services.refiner import (
     analyze_keyword_gaps,
     calculate_keyword_match,
+    count_retained_keywords,
     fix_alignment_violations,
     refine_resume,
     remove_ai_phrases,
     validate_master_alignment,
 )
-from app.schemas.refinement import AlignmentViolation, RefinementConfig
+
+
+def test_retained_keywords_use_cjk_substrings_and_latin_term_boundaries() -> None:
+    resume = {"summary": "负责数据分析与Pythonによる開発，熟悉Java开发与JavaScript平台"}
+
+    assert (
+        count_retained_keywords(["数据", "Python", "Java", "JavaScript"], resume) == 4
+    )
+    assert (
+        count_retained_keywords(
+            ["Java", "JavaScript"], {"summary": "负责JavaScript平台开发"}
+        )
+        == 1
+    )
+
+
+async def test_refinement_stats_count_retained_cjk_keyword(
+    sample_resume: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    initial = copy.deepcopy(sample_resume)
+    master = copy.deepcopy(initial)
+    master["additional"]["technicalSkills"].append("数据分析")
+    injected = copy.deepcopy(initial)
+    injected["additional"]["technicalSkills"].append("数据分析")
+    complete = AsyncMock(return_value=injected)
+    monkeypatch.setattr("app.services.refiner.complete_json", complete)
+
+    result = await refine_resume(
+        initial_tailored=initial,
+        master_resume=master,
+        job_description="需要数据分析经验",
+        job_keywords={"required_skills": ["数据"]},
+        config=RefinementConfig(
+            enable_ai_phrase_removal=False,
+            enable_master_alignment_check=False,
+        ),
+    )
+
+    assert result.keywords_applied == ["数据"]
+    assert result.to_stats().keywords_injected == 1
+    assert result.final_match_percentage == 100.0
+    complete.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "summary", ["熟悉Java开发", "𠀀Java𰀀", "개발Java개발", "ᄀJavaᄂ"]
+)
+async def test_refinement_stats_count_latin_keyword_adjacent_to_cjk(
+    sample_resume: dict[str, Any], monkeypatch: pytest.MonkeyPatch, summary: str
+) -> None:
+    initial = copy.deepcopy(sample_resume)
+    master = copy.deepcopy(initial)
+    master["summary"] = summary
+    injected = copy.deepcopy(initial)
+    injected["summary"] = summary
+    complete = AsyncMock(return_value=injected)
+    monkeypatch.setattr("app.services.refiner.complete_json", complete)
+
+    result = await refine_resume(
+        initial_tailored=initial,
+        master_resume=master,
+        job_description="需要熟悉Java开发",
+        job_keywords={"required_skills": ["Java"]},
+        config=RefinementConfig(
+            enable_ai_phrase_removal=False,
+            enable_master_alignment_check=False,
+        ),
+    )
+
+    assert result.keywords_applied == ["Java"]
+    assert result.to_stats().keywords_injected == 1
+    assert result.final_match_percentage == 100.0
+    complete.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "summary", ["𠀀JavaScript𰀀", "개발JavaScript개발", "ᄀJavaScriptᄂ"]
+)
+def test_cjk_boundaries_do_not_split_latin_terms(summary: str) -> None:
+    assert count_retained_keywords(["Java"], {"summary": summary}) == 0
+
+
+def _resume_with_split_bullet() -> dict[str, Any]:
+    return {
+        "personalInfo": {"name": "Ada Lovelace"},
+        "summary": "Backend engineer.",
+        "workExperience": [
+            {
+                "id": 1,
+                "title": "Engineer",
+                "company": "Alpha",
+                "years": "Jan 2020 - Mar 2021",
+                "description": [
+                    "Built Python APIs\nDeployed them to AWS",
+                    "Documented releases",
+                    "Mentored two junior engineers",
+                ],
+            }
+        ],
+        "education": [],
+        "personalProjects": [],
+        "additional": {"technicalSkills": ["Python"]},
+    }
+
+
+_NO_LLM_CONFIG = RefinementConfig(
+    enable_keyword_injection=False,
+    enable_ai_phrase_removal=False,
+    enable_master_alignment_check=False,
+)
+
+
+async def test_refiner_keeps_fixed_rows_when_a_row_spans_lines() -> None:
+    """Under bullet selection the refiner's finalize must not split a row and drop another."""
+    tailored = _resume_with_split_bullet()
+    result = await refine_resume(
+        initial_tailored=tailored,
+        master_resume=copy.deepcopy(tailored),
+        job_description="Python engineer",
+        job_keywords={},
+        config=_NO_LLM_CONFIG,
+        fixed_row_sections=("workExperience", "personalProjects"),
+    )
+    assert result.refined_data["workExperience"][0]["description"] == [
+        "Built Python APIs Deployed them to AWS",
+        "Documented releases",
+        "Mentored two junior engineers",
+    ]
+
+
+async def test_refiner_keeps_fixed_rows_after_keyword_injection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The keyword writer's result is finalized with the same fixed-row contract."""
+    tailored = _resume_with_split_bullet()
+    master = copy.deepcopy(tailored)
+    master["additional"]["technicalSkills"].append("Kubernetes")
+    writer = AsyncMock(return_value=copy.deepcopy(tailored))
+    monkeypatch.setattr("app.services.refiner.complete_json", writer)
+
+    result = await refine_resume(
+        initial_tailored=tailored,
+        master_resume=master,
+        job_description="Python and Kubernetes engineer",
+        job_keywords={"required_skills": ["Kubernetes"]},
+        config=RefinementConfig(
+            enable_keyword_injection=True,
+            enable_ai_phrase_removal=False,
+            enable_master_alignment_check=False,
+        ),
+        fixed_row_sections=("workExperience", "personalProjects"),
+    )
+
+    assert writer.await_count == 1
+    assert result.refined_data["workExperience"][0]["description"] == [
+        "Built Python APIs Deployed them to AWS",
+        "Documented releases",
+        "Mentored two junior engineers",
+    ]
+
+
+async def test_refiner_without_fixed_rows_keeps_its_legacy_split() -> None:
+    tailored = _resume_with_split_bullet()
+    result = await refine_resume(
+        initial_tailored=tailored,
+        master_resume=copy.deepcopy(tailored),
+        job_description="Python engineer",
+        job_keywords={},
+        config=_NO_LLM_CONFIG,
+    )
+    assert result.refined_data["workExperience"][0]["description"] == [
+        "Built Python APIs",
+        "Deployed them to AWS",
+        "Documented releases",
+    ]
 
 
 class TestRemoveAiPhrases:
@@ -22,11 +201,15 @@ class TestRemoveAiPhrases:
         data["workExperience"][0]["description"][0] = "Spearheaded REST API development"
         cleaned, removed = remove_ai_phrases(data)
         assert "spearheaded" in [r.lower() for r in removed]
-        assert "spearheaded" not in cleaned["workExperience"][0]["description"][0].lower()
+        assert (
+            "spearheaded" not in cleaned["workExperience"][0]["description"][0].lower()
+        )
 
     def test_removes_buzzwords(self, sample_resume):
         data = copy.deepcopy(sample_resume)
-        data["summary"] = "Leveraged cutting-edge technologies to build robust solutions"
+        data["summary"] = (
+            "Leveraged cutting-edge technologies to build robust solutions"
+        )
         cleaned, removed = remove_ai_phrases(data)
         removed_lower = [r.lower() for r in removed]
         assert "leveraged" in removed_lower
@@ -36,12 +219,16 @@ class TestRemoveAiPhrases:
         data = copy.deepcopy(sample_resume)
         data["summary"] = "Built robust microservices"
         # "robust" is in the blacklist, but if it's in JD, it should be protected
-        cleaned, removed = remove_ai_phrases(data, job_description="We need robust solutions")
+        cleaned, removed = remove_ai_phrases(
+            data, job_description="We need robust solutions"
+        )
         assert "robust" not in [r.lower() for r in removed]
 
     def test_replaces_with_alternatives(self, sample_resume):
         data = copy.deepcopy(sample_resume)
-        data["workExperience"][0]["description"][0] = "Utilized Python for API development"
+        data["workExperience"][0]["description"][0] = (
+            "Utilized Python for API development"
+        )
         cleaned, removed = remove_ai_phrases(data)
         # "utilized" → "used"
         assert "used" in cleaned["workExperience"][0]["description"][0].lower()
@@ -70,6 +257,84 @@ class TestRemoveAiPhrases:
         assert data == data_before
 
 
+class TestRemoveAiPhrasesKeepsOwnWords:
+    """The scrub targets phrases the AI introduced, not the candidate's own wording."""
+
+    def test_phrases_in_the_master_are_kept(self):
+        data = {"summary": "Built a scalable gateway with stakeholders."}
+        master_text = "Built a scalable gateway, collaborating with stakeholders."
+
+        cleaned, removed = remove_ai_phrases(data, protected_text=master_text)
+
+        assert cleaned == data
+        assert removed == []
+
+    def test_phrases_the_ai_added_are_still_scrubbed(self):
+        data = {"summary": "Spearheaded a scalable gateway."}
+        master_text = "Built a scalable gateway."
+
+        cleaned, removed = remove_ai_phrases(data, protected_text=master_text)
+
+        assert cleaned["summary"] == "Led a scalable gateway."
+        assert [r.lower() for r in removed] == ["spearheaded"]
+
+    def test_matches_whole_words_only(self):
+        data = {"summary": "Improved robustness of the pipeline."}
+
+        cleaned, removed = remove_ai_phrases(data)
+
+        assert cleaned == data
+        assert removed == []
+
+    def test_plural_of_a_phrase_is_still_matched(self):
+        cleaned, _ = remove_ai_phrases({"summary": "Worked with stakeholders daily."})
+        assert cleaned["summary"] == "Worked with team members daily."
+
+    def test_plural_of_a_removed_phrase_leaves_no_stray_s(self):
+        cleaned, _ = remove_ai_phrases(
+            {"summary": "Worked with disruptors in fintech."}
+        )
+        assert "disruptor" not in cleaned["summary"].lower()
+        assert " s " not in f" {cleaned['summary']} "
+
+    def test_removed_phrase_takes_its_article_with_it(self):
+        cleaned, _ = remove_ai_phrases({"summary": "Joined a disruptor in fintech."})
+        assert cleaned["summary"] == "Joined in fintech."
+        cleaned, _ = remove_ai_phrases({"summary": "Backed a disruptor."})
+        assert cleaned["summary"] == "Backed."
+
+    def test_removed_phrase_at_a_string_boundary_leaves_no_stray_space(self):
+        cleaned, _ = remove_ai_phrases({"summary": "A disruptor joins fintech"})
+        assert cleaned["summary"] == "joins fintech"
+        cleaned, _ = remove_ai_phrases({"summary": "Backed a disruptor"})
+        assert cleaned["summary"] == "Backed"
+
+    def test_article_follows_the_replacement(self):
+        cleaned, _ = remove_ai_phrases({"summary": "Built a scalable API."})
+        assert cleaned["summary"] == "Built an expandable API."
+
+    def test_dashes_are_still_replaced(self):
+        cleaned, _ = remove_ai_phrases({"summary": "APIs\u2014fast ones"})
+        assert "\u2014" not in cleaned["summary"]
+
+    @pytest.mark.asyncio
+    async def test_refine_resume_protects_the_masters_wording(self):
+        master = {"summary": "Built a scalable gateway with stakeholders."}
+        tailored = {"summary": "Built a scalable gateway with stakeholders."}
+
+        result = await refine_resume(
+            initial_tailored=tailored,
+            master_resume=master,
+            job_description="Backend engineer",
+            job_keywords={},
+            config=RefinementConfig(
+                enable_keyword_injection=False, enable_master_alignment_check=False
+            ),
+        )
+
+        assert result.refined_data["summary"] == tailored["summary"]
+
+
 class TestValidateMasterAlignment:
     """Tests for validate_master_alignment() — fabrication detection."""
 
@@ -86,7 +351,9 @@ class TestValidateMasterAlignment:
         assert len(skill_violations) >= 1
         assert any("kubernetes" in v.value.lower() for v in skill_violations)
 
-    def test_allows_jd_added_skill_when_explicitly_allowed(self, sample_resume, master_resume):
+    def test_allows_jd_added_skill_when_explicitly_allowed(
+        self, sample_resume, master_resume
+    ):
         tailored = copy.deepcopy(sample_resume)
         tailored["additional"]["technicalSkills"].append("Kubernetes")
         report = validate_master_alignment(
@@ -184,22 +451,30 @@ class TestValidateMasterAlignment:
 
     def test_detects_fabricated_certification(self, sample_resume, master_resume):
         tailored = copy.deepcopy(sample_resume)
-        tailored["additional"]["certificationsTraining"].append("Google Cloud Professional")
+        tailored["additional"]["certificationsTraining"].append(
+            "Google Cloud Professional"
+        )
         report = validate_master_alignment(tailored, master_resume)
-        cert_violations = [v for v in report.violations if v.violation_type == "fabricated_cert"]
+        cert_violations = [
+            v for v in report.violations if v.violation_type == "fabricated_cert"
+        ]
         assert len(cert_violations) >= 1
 
     def test_detects_fabricated_company(self, sample_resume, master_resume):
         tailored = copy.deepcopy(sample_resume)
-        tailored["workExperience"].append({
-            "id": 3,
-            "title": "Engineer",
-            "company": "FakeCompany Inc",
-            "years": "2015 - 2017",
-            "description": ["Did things"],
-        })
+        tailored["workExperience"].append(
+            {
+                "id": 3,
+                "title": "Engineer",
+                "company": "FakeCompany Inc",
+                "years": "2015 - 2017",
+                "description": ["Did things"],
+            }
+        )
         report = validate_master_alignment(tailored, master_resume)
-        company_violations = [v for v in report.violations if v.violation_type == "fabricated_company"]
+        company_violations = [
+            v for v in report.violations if v.violation_type == "fabricated_company"
+        ]
         assert len(company_violations) >= 1
 
     def test_allows_skill_variants_as_non_critical(self, sample_resume, master_resume):
@@ -209,8 +484,7 @@ class TestValidateMasterAlignment:
         tailored["additional"]["technicalSkills"].append("Python 3")
         report = validate_master_alignment(tailored, master_resume)
         python3_violations = [
-            v for v in report.violations
-            if "python 3" in v.value.lower()
+            v for v in report.violations if "python 3" in v.value.lower()
         ]
         # Should be info/variant, NOT critical fabricated_skill
         for v in python3_violations:
@@ -272,15 +546,27 @@ class TestFixAlignmentViolations:
 class TestAnalyzeKeywordGaps:
     """Tests for analyze_keyword_gaps() — keyword matching analysis."""
 
-    def test_finds_missing_keywords(self, sample_resume, master_resume, sample_job_keywords):
-        analysis = analyze_keyword_gaps(sample_job_keywords, sample_resume, master_resume)
+    def test_finds_missing_keywords(
+        self, sample_resume, master_resume, sample_job_keywords
+    ):
+        analysis = analyze_keyword_gaps(
+            sample_job_keywords, sample_resume, master_resume
+        )
         # "Kubernetes" is in required_skills but not in the resume
         assert "Kubernetes" in analysis.missing_keywords
 
-    def test_identifies_injectable_vs_non_injectable(self, sample_resume, master_resume, sample_job_keywords):
-        analysis = analyze_keyword_gaps(sample_job_keywords, sample_resume, master_resume)
+    def test_identifies_injectable_vs_non_injectable(
+        self, sample_resume, master_resume, sample_job_keywords
+    ):
+        analysis = analyze_keyword_gaps(
+            sample_job_keywords, sample_resume, master_resume
+        )
         # Every keyword lands in exactly one bucket
-        all_jd = set(sample_job_keywords["required_skills"] + sample_job_keywords["preferred_skills"] + sample_job_keywords["keywords"])
+        all_jd = set(
+            sample_job_keywords["required_skills"]
+            + sample_job_keywords["preferred_skills"]
+            + sample_job_keywords["keywords"]
+        )
         present = all_jd - set(analysis.missing_keywords)
         injectable = set(analysis.injectable_keywords)
         non_injectable = set(analysis.non_injectable_keywords)
@@ -290,13 +576,21 @@ class TestAnalyzeKeywordGaps:
         # Present + missing = all keywords
         assert present | set(analysis.missing_keywords) == all_jd
 
-    def test_calculates_match_percentage(self, sample_resume, master_resume, sample_job_keywords):
-        analysis = analyze_keyword_gaps(sample_job_keywords, sample_resume, master_resume)
+    def test_calculates_match_percentage(
+        self, sample_resume, master_resume, sample_job_keywords
+    ):
+        analysis = analyze_keyword_gaps(
+            sample_job_keywords, sample_resume, master_resume
+        )
         assert 0.0 <= analysis.current_match_percentage <= 100.0
         assert analysis.potential_match_percentage >= analysis.current_match_percentage
 
     def test_keyword_already_present(self, sample_resume, master_resume):
-        keywords = {"required_skills": ["Python"], "preferred_skills": [], "keywords": []}
+        keywords = {
+            "required_skills": ["Python"],
+            "preferred_skills": [],
+            "keywords": [],
+        }
         analysis = analyze_keyword_gaps(keywords, sample_resume, master_resume)
         assert "Python" not in analysis.missing_keywords
         assert analysis.current_match_percentage == 100.0
@@ -310,12 +604,19 @@ class TestCalculateKeywordMatch:
         assert 0.0 <= pct <= 100.0
 
     def test_returns_zero_for_no_keywords(self, sample_resume):
-        pct = calculate_keyword_match(sample_resume, {"required_skills": [], "preferred_skills": [], "keywords": []})
+        pct = calculate_keyword_match(
+            sample_resume,
+            {"required_skills": [], "preferred_skills": [], "keywords": []},
+        )
         assert pct == 0.0
 
     def test_returns_100_when_all_present(self, sample_resume):
         # Use keywords that are definitely in the resume
-        keywords = {"required_skills": ["Python", "FastAPI"], "preferred_skills": [], "keywords": []}
+        keywords = {
+            "required_skills": ["Python", "FastAPI"],
+            "preferred_skills": [],
+            "keywords": [],
+        }
         pct = calculate_keyword_match(sample_resume, keywords)
         assert pct == 100.0
 
@@ -325,3 +626,140 @@ class TestCalculateKeywordMatch:
         pct = calculate_keyword_match(sample_resume, keywords)
         # "Go" is not in the sample resume as a standalone word
         assert pct == 0.0
+
+
+class TestPreserveDescriptionStyles:
+    """H-04: descriptionStyles must survive the keyword-injection pass.
+
+    inject_keywords returns the model's JSON verbatim after only a top-level
+    structure check, and it is the LAST writer on the improve path. When the
+    model drops descriptionStyles, ResumeData backfills every row to "bullet",
+    silently erasing the user's "plain" rows. Prompt instructions alone are not
+    a guarantee for positional metadata, so a local restore runs after.
+    """
+
+    def test_restores_styles_the_llm_dropped(self):
+        from app.services.refiner import _preserve_description_styles
+
+        original = {
+            "workExperience": [
+                {
+                    "description": ["Led migration", "Cut costs 40%"],
+                    "descriptionStyles": ["plain", "bullet"],
+                }
+            ]
+        }
+        improved = {
+            "workExperience": [
+                {"description": ["Led the platform migration", "Reduced costs by 40%"]}
+            ]
+        }
+
+        out = _preserve_description_styles(original, improved)
+
+        assert out["workExperience"][0]["descriptionStyles"] == ["plain", "bullet"]
+
+    def test_pads_when_the_llm_added_a_row(self):
+        from app.services.refiner import _preserve_description_styles
+
+        original = {
+            "workExperience": [{"description": ["A"], "descriptionStyles": ["plain"]}]
+        }
+        improved = {"workExperience": [{"description": ["A improved", "B new"]}]}
+
+        out = _preserve_description_styles(original, improved)
+
+        assert out["workExperience"][0]["descriptionStyles"] == ["plain", "bullet"]
+
+    def test_trusts_a_correctly_aligned_list_from_the_model(self):
+        from app.services.refiner import _preserve_description_styles
+
+        original = {
+            "workExperience": [
+                {"description": ["A", "B"], "descriptionStyles": ["plain", "plain"]}
+            ]
+        }
+        improved = {
+            "workExperience": [
+                {"description": ["A", "B"], "descriptionStyles": ["bullet", "plain"]}
+            ]
+        }
+
+        out = _preserve_description_styles(original, improved)
+
+        # The model returned an aligned list; it is deliberate output, not loss.
+        assert out["workExperience"][0]["descriptionStyles"] == ["bullet", "plain"]
+
+    def test_covers_projects_and_custom_sections(self):
+        """customSections is a dict keyed by section id, not a list.
+
+        The first version of this test built it as a list, which made the
+        assertion pass against a branch that never executed. The shape here
+        matches ResumeData.customSections: dict[str, CustomSection].
+        """
+        from app.services.refiner import _preserve_description_styles
+
+        original = {
+            "personalProjects": [
+                {"description": ["P1"], "descriptionStyles": ["plain"]}
+            ],
+            "customSections": {
+                "custom_1": {
+                    "sectionType": "itemList",
+                    "items": [{"description": ["C1"], "descriptionStyles": ["plain"]}],
+                }
+            },
+        }
+        improved = {
+            "personalProjects": [{"description": ["P1 reworded"]}],
+            "customSections": {
+                "custom_1": {
+                    "sectionType": "itemList",
+                    "items": [{"description": ["C1 reworded"]}],
+                }
+            },
+        }
+
+        out = _preserve_description_styles(original, improved)
+
+        assert out["personalProjects"][0]["descriptionStyles"] == ["plain"]
+        assert out["customSections"]["custom_1"]["items"][0]["descriptionStyles"] == [
+            "plain"
+        ]
+
+    def test_matches_custom_sections_by_key_not_position(self):
+        """Dict ordering is not part of the contract, so match by key."""
+        from app.services.refiner import _preserve_description_styles
+
+        original = {
+            "customSections": {
+                "alpha": {
+                    "items": [{"description": ["A"], "descriptionStyles": ["plain"]}]
+                },
+                "beta": {
+                    "items": [{"description": ["B"], "descriptionStyles": ["bullet"]}]
+                },
+            }
+        }
+        # Same sections, reversed insertion order.
+        improved = {
+            "customSections": {
+                "beta": {"items": [{"description": ["B reworded"]}]},
+                "alpha": {"items": [{"description": ["A reworded"]}]},
+            }
+        }
+
+        out = _preserve_description_styles(original, improved)
+
+        assert out["customSections"]["alpha"]["items"][0]["descriptionStyles"] == [
+            "plain"
+        ]
+        assert out["customSections"]["beta"]["items"][0]["descriptionStyles"] == [
+            "bullet"
+        ]
+
+    def test_keyword_injection_prompt_carries_the_preserve_rule(self):
+        """The local net is defence-in-depth; the prompt should still ask."""
+        from app.prompts.refinement import KEYWORD_INJECTION_PROMPT
+
+        assert "descriptionStyles" in KEYWORD_INJECTION_PROMPT

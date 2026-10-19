@@ -4,12 +4,15 @@ import type { ResumeData, ResumeSectionHeadings } from '@/components/dashboard/r
 import { getSortedSections, getSectionMeta } from '@/lib/utils/section-helpers';
 import { formatDateRange } from '@/lib/utils';
 import { DynamicResumeSection } from './dynamic-resume-section';
-import { SafeHtml } from './safe-html';
+import { DescriptionList } from './description-list';
+import { EarlierExperience, splitCondensed } from './earlier-experience';
+import { RESUME_SECTION, RESUME_SECTION_TITLE, resumeItem } from './page-break-attrs';
 import { WorkExperienceBlock } from './work-experience-block';
 import baseStyles from './styles/_base.module.css';
 import styles from './styles/swiss-two-column.module.css';
 
 interface ResumeTwoColumnProps {
+  earlierExperienceLabel?: string;
   data: ResumeData;
   showContactIcons?: boolean;
   sectionHeadings?: Partial<ResumeSectionHeadings>;
@@ -30,16 +33,28 @@ export const ResumeTwoColumn: React.FC<ResumeTwoColumnProps> = ({
   data,
   showContactIcons = false,
   sectionHeadings,
+  earlierExperienceLabel,
 }) => {
   const { personalInfo, summary, workExperience, education, personalProjects, additional } = data;
 
   // Drop blank/whitespace-only entries so empty lines (e.g. from editing in the
   // builder) never render in the resume or PDF (issue #763).
-  const technicalSkills = additional?.technicalSkills?.filter((item): item is string => typeof item === 'string' && item.trim() !== '') ?? [];
-  const languages = additional?.languages?.filter((item): item is string => typeof item === 'string' && item.trim() !== '') ?? [];
+  const technicalSkills =
+    additional?.technicalSkills?.filter(
+      (item): item is string => typeof item === 'string' && item.trim() !== ''
+    ) ?? [];
+  const languages =
+    additional?.languages?.filter(
+      (item): item is string => typeof item === 'string' && item.trim() !== ''
+    ) ?? [];
   const certificationsTraining =
-    additional?.certificationsTraining?.filter((item): item is string => typeof item === 'string' && item.trim() !== '') ?? [];
-  const awards = additional?.awards?.filter((item): item is string => typeof item === 'string' && item.trim() !== '') ?? [];
+    additional?.certificationsTraining?.filter(
+      (item): item is string => typeof item === 'string' && item.trim() !== ''
+    ) ?? [];
+  const awards =
+    additional?.awards?.filter(
+      (item): item is string => typeof item === 'string' && item.trim() !== ''
+    ) ?? [];
 
   // Get sorted visible sections
   const sortedSections = getSortedSections(data);
@@ -196,8 +211,8 @@ export const ResumeTwoColumn: React.FC<ResumeTwoColumnProps> = ({
         <div className={styles.mainColumn}>
           {/* Summary Section */}
           {isSectionVisible('summary') && summary && (
-            <div className={baseStyles['resume-section']}>
-              <h3 className={baseStyles['resume-section-title']}>
+            <div {...RESUME_SECTION} className={baseStyles['resume-section']}>
+              <h3 {...RESUME_SECTION_TITLE} className={baseStyles['resume-section-title']}>
                 {getSectionDisplayName('summary', headingFallbacks.summary)}
               </h3>
               <p className={`text-justify ${baseStyles['resume-text-sm']}`}>{summary}</p>
@@ -206,12 +221,12 @@ export const ResumeTwoColumn: React.FC<ResumeTwoColumnProps> = ({
 
           {/* Experience Section */}
           {isSectionVisible('workExperience') && workExperience && workExperience.length > 0 && (
-            <div className={baseStyles['resume-section']}>
-              <h3 className={baseStyles['resume-section-title']}>
+            <div {...RESUME_SECTION} className={baseStyles['resume-section']}>
+              <h3 {...RESUME_SECTION_TITLE} className={baseStyles['resume-section-title']}>
                 {getSectionDisplayName('workExperience', headingFallbacks.experience)}
               </h3>
               <div className={baseStyles['resume-items']}>
-                {workExperience.map((exp) => (
+                {splitCondensed(workExperience).full.map((exp) => (
                   <WorkExperienceBlock
                     key={exp.id}
                     job={exp}
@@ -222,6 +237,12 @@ export const ResumeTwoColumn: React.FC<ResumeTwoColumnProps> = ({
                     textClassName={baseStyles['resume-text-xs']}
                   />
                 ))}
+                {splitCondensed(workExperience).condensed.length > 0 && (
+                  <EarlierExperience
+                    items={splitCondensed(workExperience).condensed}
+                    label={earlierExperienceLabel}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -230,13 +251,17 @@ export const ResumeTwoColumn: React.FC<ResumeTwoColumnProps> = ({
           {isSectionVisible('personalProjects') &&
             personalProjects &&
             personalProjects.length > 0 && (
-              <div className={baseStyles['resume-section']}>
-                <h3 className={baseStyles['resume-section-title']}>
+              <div {...RESUME_SECTION} className={baseStyles['resume-section']}>
+                <h3 {...RESUME_SECTION_TITLE} className={baseStyles['resume-section-title']}>
                   {getSectionDisplayName('personalProjects', headingFallbacks.projects)}
                 </h3>
                 <div className={baseStyles['resume-items']}>
                   {personalProjects.map((project) => (
-                    <div key={project.id} className={baseStyles['resume-item']}>
+                    <div
+                      key={project.id}
+                      {...resumeItem(project.description)}
+                      className={baseStyles['resume-item']}
+                    >
                       <div
                         className={`flex justify-between items-baseline ${baseStyles['resume-row-tight']}`}
                       >
@@ -296,20 +321,11 @@ export const ResumeTwoColumn: React.FC<ResumeTwoColumnProps> = ({
                           <span>{project.role}</span>
                         </div>
                       )}
-                      {project.description && project.description.length > 0 && (
-                        <ul
-                          className={`ml-4 ${baseStyles['resume-list']} ${baseStyles['resume-text-xs']}`}
-                        >
-                          {project.description.map((desc, index) => (
-                            <li key={index} className="flex">
-                              <span className="mr-1.5 flex-shrink-0">•&nbsp;</span>
-                              <span>
-                                <SafeHtml html={desc} />
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                      <DescriptionList
+                        items={project.description}
+                        styles={project.descriptionStyles}
+                        textClassName={baseStyles['resume-text-xs']}
+                      />
                     </div>
                   ))}
                 </div>
@@ -318,8 +334,8 @@ export const ResumeTwoColumn: React.FC<ResumeTwoColumnProps> = ({
 
           {/* Certifications/Training - Main column */}
           {isSectionVisible('additional') && certificationsTraining.length > 0 && (
-            <div className={baseStyles['resume-section']}>
-              <h3 className={baseStyles['resume-section-title']}>
+            <div {...RESUME_SECTION} className={baseStyles['resume-section']}>
+              <h3 {...RESUME_SECTION_TITLE} className={baseStyles['resume-section-title']}>
                 {headingFallbacks.certifications}
               </h3>
               <ul className={`ml-4 ${baseStyles['resume-list']} ${baseStyles['resume-text-xs']}`}>
@@ -343,13 +359,13 @@ export const ResumeTwoColumn: React.FC<ResumeTwoColumnProps> = ({
         <div className={styles.sidebarColumn}>
           {/* Education Section */}
           {isSectionVisible('education') && education && education.length > 0 && (
-            <div className={baseStyles['resume-section']}>
-              <h3 className={baseStyles['resume-section-title-sm']}>
+            <div {...RESUME_SECTION} className={baseStyles['resume-section']}>
+              <h3 {...RESUME_SECTION_TITLE} className={baseStyles['resume-section-title-sm']}>
                 {getSectionDisplayName('education', headingFallbacks.education)}
               </h3>
               <div className={baseStyles['resume-stack']}>
                 {education.map((edu) => (
-                  <div key={edu.id}>
+                  <div key={edu.id} {...resumeItem()}>
                     <h4
                       className={`${baseStyles['resume-item-title-sm']} ${baseStyles['sidebar-text-wrap']}`}
                     >
@@ -377,8 +393,10 @@ export const ResumeTwoColumn: React.FC<ResumeTwoColumnProps> = ({
 
           {/* Skills Section */}
           {isSectionVisible('additional') && technicalSkills.length > 0 && (
-            <div className={baseStyles['resume-section']}>
-              <h3 className={baseStyles['resume-section-title-sm']}>{headingFallbacks.skills}</h3>
+            <div {...RESUME_SECTION} className={baseStyles['resume-section']}>
+              <h3 {...RESUME_SECTION_TITLE} className={baseStyles['resume-section-title-sm']}>
+                {headingFallbacks.skills}
+              </h3>
               <div className="flex flex-wrap gap-1">
                 {technicalSkills.map((skill, index) => (
                   <span key={index} className={baseStyles['resume-skill-pill']}>
@@ -391,16 +409,20 @@ export const ResumeTwoColumn: React.FC<ResumeTwoColumnProps> = ({
 
           {/* Languages Section */}
           {isSectionVisible('additional') && languages.length > 0 && (
-            <div className={baseStyles['resume-section']}>
-              <h3 className={baseStyles['resume-section-title-sm']}>{headingFallbacks.languages}</h3>
+            <div {...RESUME_SECTION} className={baseStyles['resume-section']}>
+              <h3 {...RESUME_SECTION_TITLE} className={baseStyles['resume-section-title-sm']}>
+                {headingFallbacks.languages}
+              </h3>
               <p className={baseStyles['resume-text-xs']}>{languages.join(' • ')}</p>
             </div>
           )}
 
           {/* Awards Section */}
           {isSectionVisible('additional') && awards.length > 0 && (
-            <div className={baseStyles['resume-section']}>
-              <h3 className={baseStyles['resume-section-title-sm']}>{headingFallbacks.awards}</h3>
+            <div {...RESUME_SECTION} className={baseStyles['resume-section']}>
+              <h3 {...RESUME_SECTION_TITLE} className={baseStyles['resume-section-title-sm']}>
+                {headingFallbacks.awards}
+              </h3>
               <ul className={baseStyles['resume-list']}>
                 {awards.map((award, index) => (
                   <li key={index} className={baseStyles['resume-text-xs']}>
@@ -414,8 +436,10 @@ export const ResumeTwoColumn: React.FC<ResumeTwoColumnProps> = ({
           {/* Links Section */}
           {personalInfo &&
             (personalInfo.website || personalInfo.linkedin || personalInfo.github) && (
-              <div className={baseStyles['resume-section']}>
-                <h3 className={baseStyles['resume-section-title-sm']}>{headingFallbacks.links}</h3>
+              <div {...RESUME_SECTION} className={baseStyles['resume-section']}>
+                <h3 {...RESUME_SECTION_TITLE} className={baseStyles['resume-section-title-sm']}>
+                  {headingFallbacks.links}
+                </h3>
                 <div
                   className={`${baseStyles['resume-stack-tight']} ${baseStyles['resume-meta-sm']}`}
                 >

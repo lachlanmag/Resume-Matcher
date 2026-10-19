@@ -1,6 +1,8 @@
 """Unit tests for apply_diffs() — path resolution, verification gates, and actions."""
 
 import copy
+from typing import Any
+
 import pytest
 
 from app.schemas.models import ResumeChange
@@ -104,6 +106,41 @@ class TestApplyDiffsAppend:
         assert len(applied) == 1
         assert len(result["personalProjects"][0]["description"]) == original_count + 1
 
+    def test_append_rejected_on_fixed_row_sections(
+        self, sample_resume: dict[str, Any]
+    ) -> None:
+        """Harness-selected bullet sets never grow; other lists still accept appends."""
+        changes = [
+            ResumeChange(
+                path=f"{section}[0].description",
+                action="append",
+                original=None,
+                value="Implemented CI/CD pipelines with GitHub Actions",
+                reason="test",
+            )
+            for section in ("workExperience", "personalProjects")
+        ] + [
+            ResumeChange(
+                path="additional.technicalSkills",
+                action="append",
+                original=None,
+                value="Terraform",
+                reason="test",
+            )
+        ]
+        result, applied, rejected = apply_diffs(
+            sample_resume,
+            changes,
+            fixed_row_sections=("workExperience", "personalProjects"),
+        )
+        assert rejected == changes[:2]
+        assert applied == changes[2:]
+        for section in ("workExperience", "personalProjects"):
+            assert (
+                result[section][0]["description"]
+                == sample_resume[section][0]["description"]
+            )
+
 
 class TestApplyDiffsAddSkill:
     """Tests for adding verified skills to the technical skills list."""
@@ -204,7 +241,9 @@ class TestApplyDiffsReorder:
         assert len(applied) == 1
         assert result["additional"]["technicalSkills"] == reordered
 
-    def test_reorder_with_unverified_items_drops_them_keeps_originals(self, sample_resume):
+    def test_reorder_with_unverified_items_drops_them_keeps_originals(
+        self, sample_resume
+    ):
         """Issue #736: a reorder mixing in new items is salvaged, not dropped —
         new items without a verified target are removed, originals preserved."""
         original = sample_resume["additional"]["technicalSkills"]
@@ -213,7 +252,11 @@ class TestApplyDiffsReorder:
                 path="additional.technicalSkills",
                 action="reorder",
                 original=None,
-                value=["Python", "Kubernetes", "Go"],  # Kubernetes/Go new, no verified targets
+                value=[
+                    "Python",
+                    "Kubernetes",
+                    "Go",
+                ],  # Kubernetes/Go new, no verified targets
                 reason="test",
             )
         ]
@@ -278,13 +321,22 @@ class TestApplyDiffsReorder:
 class TestApplyDiffsBlockedPaths:
     """Tests for blocked path rejection."""
 
-    @pytest.mark.parametrize("path,original_val", [
-        ("personalInfo.name", "Jane Doe"),
-        ("personalInfo.email", "jane@example.com"),
-    ])
+    @pytest.mark.parametrize(
+        "path,original_val",
+        [
+            ("personalInfo.name", "Jane Doe"),
+            ("personalInfo.email", "jane@example.com"),
+        ],
+    )
     def test_reject_personal_info(self, sample_resume, path, original_val):
         changes = [
-            ResumeChange(path=path, action="replace", original=original_val, value="X", reason="test")
+            ResumeChange(
+                path=path,
+                action="replace",
+                original=original_val,
+                value="X",
+                reason="test",
+            )
         ]
         result, applied, rejected = apply_diffs(sample_resume, changes)
         assert len(rejected) == 1
@@ -531,7 +583,9 @@ class TestApplyDiffsEdgeCases:
         result, applied, rejected = apply_diffs(sample_resume, changes)
         assert len(rejected) == 1
 
-    def test_reorder_with_duplicates_is_deduped_and_preserves_originals(self, sample_resume):
+    def test_reorder_with_duplicates_is_deduped_and_preserves_originals(
+        self, sample_resume
+    ):
         """Issue #736: a reorder with a duplicate and missing items is salvaged —
         the duplicate is collapsed and every original is preserved (no loss)."""
         original = sample_resume["additional"]["technicalSkills"]
@@ -540,15 +594,21 @@ class TestApplyDiffsEdgeCases:
                 path="additional.technicalSkills",
                 action="reorder",
                 original=None,
-                value=["Python", "Python", "Docker", "AWS", "PostgreSQL"],  # Python duplicated, Redis/FastAPI missing
+                value=[
+                    "Python",
+                    "Python",
+                    "Docker",
+                    "AWS",
+                    "PostgreSQL",
+                ],  # Python duplicated, Redis/FastAPI missing
                 reason="test",
             )
         ]
         result, applied, rejected = apply_diffs(sample_resume, changes)
         skills = result["additional"]["technicalSkills"]
         assert len(applied) == 1
-        assert skills.count("Python") == 1          # duplicate collapsed
-        assert set(skills) == set(original)          # nothing lost
+        assert skills.count("Python") == 1  # duplicate collapsed
+        assert set(skills) == set(original)  # nothing lost
 
     def test_empty_path_rejected(self, sample_resume):
         """Empty path string should be rejected."""
@@ -606,9 +666,15 @@ class TestApplyDiffsEdgeCases:
         ]
         result, applied, rejected = apply_diffs(sample_resume, changes)
         assert len(applied) == 1
-        assert result["workExperience"][1]["description"][0] == "Updated payment system description"
+        assert (
+            result["workExperience"][1]["description"][0]
+            == "Updated payment system description"
+        )
         # First entry unchanged
-        assert result["workExperience"][0]["description"][0] == sample_resume["workExperience"][0]["description"][0]
+        assert (
+            result["workExperience"][0]["description"][0]
+            == sample_resume["workExperience"][0]["description"][0]
+        )
 
 
 class TestApplyDiffsReplaceList:
@@ -739,7 +805,9 @@ class TestApplyDiffsNewPaths:
             ("education[0].years", "2014 - 2018", "2014 - 2020"),
         ],
     )
-    def test_reject_blocked_education_fields(self, sample_resume, path, original, value):
+    def test_reject_blocked_education_fields(
+        self, sample_resume, path, original, value
+    ):
         """Degree/institution/years stay blocked even though description is now allowed."""
         changes = [
             ResumeChange(
@@ -767,7 +835,15 @@ class TestReorderSalvage:
                 path="additional.technicalSkills",
                 action="reorder",
                 original=None,
-                value=["FastAPI", "Python", "Docker", "AWS", "PostgreSQL", "Redis", "Kubernetes"],
+                value=[
+                    "FastAPI",
+                    "Python",
+                    "Docker",
+                    "AWS",
+                    "PostgreSQL",
+                    "Redis",
+                    "Kubernetes",
+                ],
                 reason="surface JD skills; Kubernetes is JD-required",
             )
         ]
@@ -776,18 +852,28 @@ class TestReorderSalvage:
         )
         skills = result["additional"]["technicalSkills"]
         assert len(applied) == 1 and len(rejected) == 0
-        assert "Kubernetes" in skills                      # verified new skill added
-        assert set(original).issubset(set(skills))         # no original lost
-        assert skills[0] == "FastAPI"                       # LLM order honored
+        assert "Kubernetes" in skills  # verified new skill added
+        assert set(original).issubset(set(skills))  # no original lost
+        assert skills[0] == "FastAPI"  # LLM order honored
 
-    def test_reorder_with_unverified_new_skill_drops_only_that_skill(self, sample_resume):
+    def test_reorder_with_unverified_new_skill_drops_only_that_skill(
+        self, sample_resume
+    ):
         original = sample_resume["additional"]["technicalSkills"]
         changes = [
             ResumeChange(
                 path="additional.technicalSkills",
                 action="reorder",
                 original=None,
-                value=["Redis", "Python", "FastAPI", "Docker", "AWS", "PostgreSQL", "Rust"],
+                value=[
+                    "Redis",
+                    "Python",
+                    "FastAPI",
+                    "Docker",
+                    "AWS",
+                    "PostgreSQL",
+                    "Rust",
+                ],
                 reason="Rust is not in the verified targets",
             )
         ]
@@ -795,9 +881,9 @@ class TestReorderSalvage:
             sample_resume, changes, allowed_skill_targets=[{"skill": "Kubernetes"}]
         )
         skills = result["additional"]["technicalSkills"]
-        assert len(applied) == 1                            # salvaged, not rejected
-        assert "Rust" not in skills                         # unverified addition dropped
-        assert set(original).issubset(set(skills))          # originals preserved
+        assert len(applied) == 1  # salvaged, not rejected
+        assert "Rust" not in skills  # unverified addition dropped
+        assert set(original).issubset(set(skills))  # originals preserved
         assert skills[0] == "Redis"
 
     def test_reorder_omitting_original_skill_preserves_it(self, sample_resume):
@@ -814,8 +900,8 @@ class TestReorderSalvage:
         result, applied, rejected = apply_diffs(sample_resume, changes)
         skills = result["additional"]["technicalSkills"]
         assert len(applied) == 1
-        assert set(skills) == set(original)                 # nothing lost
-        assert skills[:2] == ["Redis", "Python"]            # requested order first
+        assert set(skills) == set(original)  # nothing lost
+        assert skills[:2] == ["Redis", "Python"]  # requested order first
 
     def test_reorder_languages_with_new_item_drops_it(self, sample_resume):
         original = sample_resume["additional"]["languages"]
@@ -824,14 +910,18 @@ class TestReorderSalvage:
                 path="additional.languages",
                 action="reorder",
                 original=None,
-                value=["Spanish (Conversational)", "English (Native)", "French (Fluent)"],
+                value=[
+                    "Spanish (Conversational)",
+                    "English (Native)",
+                    "French (Fluent)",
+                ],
                 reason="no verified-target gate for languages — must not fabricate",
             )
         ]
         result, applied, rejected = apply_diffs(sample_resume, changes)
         langs = result["additional"]["languages"]
         assert len(applied) == 1
-        assert "French (Fluent)" not in langs               # no fabrication
+        assert "French (Fluent)" not in langs  # no fabrication
         assert set(langs) == set(original)
 
     def test_pure_permutation_still_applies(self, sample_resume):
@@ -848,10 +938,17 @@ class TestReorderSalvage:
         result, applied, rejected = apply_diffs(sample_resume, changes)
         assert len(applied) == 1 and len(rejected) == 0
         assert result["additional"]["technicalSkills"] == [
-            "Redis", "PostgreSQL", "AWS", "Docker", "FastAPI", "Python"
+            "Redis",
+            "PostgreSQL",
+            "AWS",
+            "Docker",
+            "FastAPI",
+            "Python",
         ]
 
-    def test_salvage_places_verified_new_skill_in_requested_position(self, sample_resume):
+    def test_salvage_places_verified_new_skill_in_requested_position(
+        self, sample_resume
+    ):
         """PR #830 review (Copilot): a verified new skill the model puts near the
         top of the reorder must land there, not be appended last."""
         changes = [
@@ -859,7 +956,15 @@ class TestReorderSalvage:
                 path="additional.technicalSkills",
                 action="reorder",
                 original=None,
-                value=["Kubernetes", "Python", "FastAPI", "Docker", "AWS", "PostgreSQL", "Redis"],
+                value=[
+                    "Kubernetes",
+                    "Python",
+                    "FastAPI",
+                    "Docker",
+                    "AWS",
+                    "PostgreSQL",
+                    "Redis",
+                ],
                 reason="prioritize Kubernetes (JD-required, verified)",
             )
         ]
@@ -867,7 +972,9 @@ class TestReorderSalvage:
             sample_resume, changes, allowed_skill_targets=[{"skill": "Kubernetes"}]
         )
         skills = result["additional"]["technicalSkills"]
-        assert skills[0] == "Kubernetes"  # requested position honored, not appended last
+        assert (
+            skills[0] == "Kubernetes"
+        )  # requested position honored, not appended last
         assert set(sample_resume["additional"]["technicalSkills"]).issubset(set(skills))
 
     def test_salvage_preserves_case_duplicate_originals(self, sample_resume):
@@ -878,7 +985,11 @@ class TestReorderSalvage:
                 path="additional.technicalSkills",
                 action="reorder",
                 original=None,
-                value=["Docker", "python", "Go"],  # Go new+unverified, both pythons are originals
+                value=[
+                    "Docker",
+                    "python",
+                    "Go",
+                ],  # Go new+unverified, both pythons are originals
                 reason="test dup handling",
             )
         ]
@@ -888,3 +999,26 @@ class TestReorderSalvage:
         # Both case-variants of the original survive; the unverified new item is dropped.
         assert sorted(skills) == sorted(["python", "Python", "Docker"])
         assert "Go" not in skills
+
+
+class TestReplaceRequiresOriginal:
+    """A replace that does not quote its original text is never applied blind."""
+
+    @pytest.mark.parametrize(
+        ("path", "value"),
+        [
+            ("summary", "Invented summary."),
+            ("workExperience[0].description[0]", "Invented bullet."),
+            # Whole-list paths: a blind replace would also turn the list into a string.
+            ("workExperience[0].description", "Collapsed bullets"),
+            ("additional.technicalSkills", "Python, Go"),
+        ],
+    )
+    def test_replace_without_original_is_rejected(
+        self, sample_resume: dict[str, Any], path: str, value: str
+    ) -> None:
+        change = ResumeChange(path=path, action="replace", value=value, reason="test")
+        result, applied, rejected = apply_diffs(sample_resume, [change])
+        assert applied == []
+        assert rejected == [change]
+        assert result == sample_resume

@@ -190,14 +190,13 @@ fi
 
 # Check for Playwright browsers
 info "Checking Playwright browsers..."
-if [ -d "/root/.cache/ms-playwright" ] || [ -d "/home/appuser/.cache/ms-playwright" ]; then
+if [ -d "${PLAYWRIGHT_BROWSERS_PATH:-/nonexistent}" ] || [ -d "/root/.cache/ms-playwright" ] || [ -d "/home/appuser/.cache/ms-playwright" ]; then
     status "Playwright browsers found"
 else
-    warn "Installing Playwright Chromium (this may take a moment)..."
-    python -m playwright install chromium || {
-        warn "Playwright install failed — PDF export may not work"
-    }
-    status "Playwright setup complete"
+    # Chromium is installed into the image at build time. The container runs as appuser and
+    # PLAYWRIGHT_BROWSERS_PATH (/ms-playwright) is root-owned, so a runtime install cannot succeed.
+    error "Playwright Chromium is missing from this image — PDF export will not work."
+    error "Rebuild the image (e.g. 'docker compose build --no-cache') to install it."
 fi
 
 # Start backend
@@ -205,7 +204,7 @@ echo ""
 info "Starting backend server on internal port ${BACKEND_PORT}..."
 cd /app/backend
 trap '' SIGTERM SIGINT SIGQUIT
-python -m uvicorn app.main:app --host 0.0.0.0 --port "${BACKEND_PORT}" --log-level "${UVICORN_LOG_LEVEL}" &
+python -m uvicorn app.main:app --host 127.0.0.1 --port "${BACKEND_PORT}" --log-level "${UVICORN_LOG_LEVEL}" &
 BACKEND_PID=$!
 trap cleanup SIGTERM SIGINT SIGQUIT
 

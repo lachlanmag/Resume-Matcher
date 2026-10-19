@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 import dynamic from 'next/dynamic';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Label, labelClass } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 
 // Lazy-load TipTap-based editor — keeps it out of the initial bundle.
 const RichTextEditor = dynamic(
@@ -12,15 +13,26 @@ const RichTextEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-[100px] border border-black bg-transparent" aria-busy="true" />
+      <div className="min-h-[100px] border border-ink bg-transparent" aria-busy="true" />
     ),
   }
 );
-import { Plus, Trash2 } from 'lucide-react';
+import { TextAlignLeft, Copy, ListBullets, Plus, Trash } from '@phosphor-icons/react';
 import type { CustomSectionItem } from '@/components/dashboard/resume-component';
 import { useTranslations } from '@/lib/i18n';
+import {
+  alignDescriptionStyles,
+  fromDescriptionRows,
+  toDescriptionRows,
+  toggleDescriptionStyle,
+  type DescriptionRow,
+} from '@/lib/utils/description-styles';
+import { SortableItemList } from '../sortable-item-list';
+import { duplicateById } from '@/lib/utils/reorder-items';
 
 interface GenericItemFormProps {
+  /** Section key, used to build a unique DndContext id per custom section. */
+  sectionKey: string;
   items: CustomSectionItem[];
   onChange: (items: CustomSectionItem[]) => void;
   itemLabel?: string;
@@ -42,6 +54,7 @@ interface GenericItemFormProps {
  * Renders a list of items with configurable fields.
  */
 export const GenericItemForm: React.FC<GenericItemFormProps> = ({
+  sectionKey,
   items,
   onChange,
   itemLabel,
@@ -56,6 +69,7 @@ export const GenericItemForm: React.FC<GenericItemFormProps> = ({
   descriptionPlaceholder,
 }) => {
   const { t } = useTranslations();
+  const fieldId = useId();
 
   const finalItemLabel = itemLabel ?? t('builder.genericItemForm.itemLabel');
   const finalAddLabel =
@@ -81,6 +95,7 @@ export const GenericItemForm: React.FC<GenericItemFormProps> = ({
         location: '',
         years: '',
         description: [''],
+        descriptionStyles: ['bullet'],
       },
     ]);
   };
@@ -117,10 +132,38 @@ export const GenericItemForm: React.FC<GenericItemFormProps> = ({
     onChange(
       items.map((item) => {
         if (item.id === id) {
-          return { ...item, description: [...(item.description || []), ''] };
+          return {
+            ...item,
+            description: [...(item.description || []), ''],
+            descriptionStyles: [...(item.descriptionStyles || []), 'bullet'],
+          };
         }
         return item;
       })
+    );
+  };
+
+  const handleToggleDescriptionStyle = (id: number, index: number) => {
+    onChange(
+      items.map((item) => {
+        if (item.id === id) {
+          return {
+            ...item,
+            descriptionStyles: toggleDescriptionStyle(
+              item.description,
+              item.descriptionStyles,
+              index
+            ),
+          };
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleReorderDescriptions = (id: number, rows: DescriptionRow[]) => {
+    onChange(
+      items.map((item) => (item.id === id ? { ...item, ...fromDescriptionRows(rows) } : item))
     );
   };
 
@@ -130,7 +173,9 @@ export const GenericItemForm: React.FC<GenericItemFormProps> = ({
         if (item.id === id) {
           const newDesc = [...(item.description || [])];
           newDesc.splice(index, 1);
-          return { ...item, description: newDesc };
+          const newStyles = alignDescriptionStyles(item.description, item.descriptionStyles);
+          newStyles.splice(index, 1);
+          return { ...item, description: newDesc, descriptionStyles: newStyles };
         }
         return item;
       })
@@ -138,142 +183,175 @@ export const GenericItemForm: React.FC<GenericItemFormProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleAdd}
-          className="rounded-none border-black hover:bg-black hover:text-white transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" /> {finalAddLabel}
+        <Button variant="outline" size="sm" onClick={handleAdd}>
+          <Plus aria-hidden="true" />
+          {finalAddLabel}
         </Button>
       </div>
 
-      <div className="space-y-8">
-        {items.map((item) => (
-          <div key={item.id} className="p-6 border border-black bg-paper-tint relative group">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => handleRemove(item.id)}
-              aria-label={t('a11y.removeItem')}
-              title={t('a11y.removeItem')}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pr-8">
-              <div className="space-y-2">
-                <Label className="font-mono text-xs uppercase tracking-wider text-steel-grey">
-                  {t('builder.genericItemForm.fields.title')}
-                </Label>
-                <Input
-                  value={item.title || ''}
-                  onChange={(e) => handleChange(item.id, 'title', e.target.value)}
-                  placeholder={finalTitlePlaceholder}
-                  className="rounded-none border-black bg-white"
-                />
-              </div>
-              {showSubtitle && (
-                <div className="space-y-2">
-                  <Label className="font-mono text-xs uppercase tracking-wider text-steel-grey">
-                    {t('builder.genericItemForm.fields.organization')}
-                  </Label>
-                  <Input
-                    value={item.subtitle || ''}
-                    onChange={(e) => handleChange(item.id, 'subtitle', e.target.value)}
-                    placeholder={finalSubtitlePlaceholder}
-                    className="rounded-none border-black bg-white"
-                  />
-                </div>
-              )}
-              {showLocation && (
-                <div className="space-y-2">
-                  <Label className="font-mono text-xs uppercase tracking-wider text-steel-grey">
-                    {t('builder.genericItemForm.fields.location')}
-                  </Label>
-                  <Input
-                    value={item.location || ''}
-                    onChange={(e) => handleChange(item.id, 'location', e.target.value)}
-                    placeholder={finalLocationPlaceholder}
-                    className="rounded-none border-black bg-white"
-                  />
-                </div>
-              )}
-              {showYears && (
-                <div className="space-y-2">
-                  <Label className="font-mono text-xs uppercase tracking-wider text-steel-grey">
-                    {t('builder.genericItemForm.fields.years')}
-                  </Label>
-                  <Input
-                    value={item.years || ''}
-                    onChange={(e) => handleChange(item.id, 'years', e.target.value)}
-                    placeholder={finalYearsPlaceholder}
-                    className="rounded-none border-black bg-white"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <Label className="font-mono text-xs uppercase tracking-wider text-steel-grey">
-                  {t('builder.genericItemForm.fields.descriptionPoints')}
-                </Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleAddDescription(item.id)}
-                  className="h-6 text-xs text-blue-700 hover:text-blue-800 hover:bg-blue-50"
-                >
-                  <Plus className="w-3 h-3 mr-1" /> {t('builder.genericItemForm.actions.addPoint')}
-                </Button>
-              </div>
-              {item.description?.map((desc, idx) => (
-                <div key={idx} className="flex gap-2">
-                  <div className="flex-1">
-                    <RichTextEditor
-                      value={desc}
-                      onChange={(html) => handleDescriptionChange(item.id, idx, html)}
-                      placeholder={finalDescriptionPlaceholder}
-                      minHeight="60px"
-                    />
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveDescription(item.id, idx)}
-                    className="h-[60px] w-8 text-muted-foreground hover:text-destructive self-end"
-                    aria-label={t('a11y.removeDescription')}
-                    title={t('a11y.removeDescription')}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        {items.length === 0 && (
-          <div className="text-center py-12 bg-paper-tint border border-dashed border-black">
-            <p className="font-mono text-sm text-steel-grey mb-4">
-              {t('builder.genericItemForm.noEntries', { label: finalItemLabel })}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAdd}
-              className="rounded-none border-black"
-            >
-              <Plus className="w-4 h-4 mr-2" />{' '}
+      {items.length === 0 ? (
+        <EmptyState
+          variant="framed"
+          title={t('builder.genericItemForm.noEntries', { label: finalItemLabel })}
+          action={
+            <Button variant="outline" size="sm" onClick={handleAdd}>
+              <Plus aria-hidden="true" />
               {t('builder.genericItemForm.addFirstItem', { label: finalItemLabel })}
             </Button>
-          </div>
-        )}
-      </div>
+          }
+        />
+      ) : (
+        <SortableItemList
+          id={`custom-${sectionKey}-items`}
+          items={items}
+          onReorder={onChange}
+          animateItems
+        >
+          {(item) => (
+            <div className="p-6 border border-ink bg-paper relative group">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-16 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-steel hover:text-ink-soft"
+                onClick={() => onChange(duplicateById(items, item.id))}
+                aria-label={t('a11y.duplicateItem')}
+                title={t('a11y.duplicateItem')}
+              >
+                <Copy aria-hidden="true" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive-tint"
+                onClick={() => handleRemove(item.id)}
+                aria-label={t('a11y.removeItem')}
+                title={t('a11y.removeItem')}
+              >
+                <Trash aria-hidden="true" />
+              </Button>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pr-24">
+                <div className="space-y-2">
+                  <Label htmlFor={`${fieldId}-${item.id}-title`}>
+                    {t('builder.genericItemForm.fields.title')}
+                  </Label>
+                  <Input
+                    id={`${fieldId}-${item.id}-title`}
+                    value={item.title || ''}
+                    onChange={(e) => handleChange(item.id, 'title', e.target.value)}
+                    placeholder={finalTitlePlaceholder}
+                  />
+                </div>
+                {showSubtitle && (
+                  <div className="space-y-2">
+                    <Label htmlFor={`${fieldId}-${item.id}-subtitle`}>
+                      {t('builder.genericItemForm.fields.organization')}
+                    </Label>
+                    <Input
+                      id={`${fieldId}-${item.id}-subtitle`}
+                      value={item.subtitle || ''}
+                      onChange={(e) => handleChange(item.id, 'subtitle', e.target.value)}
+                      placeholder={finalSubtitlePlaceholder}
+                    />
+                  </div>
+                )}
+                {showLocation && (
+                  <div className="space-y-2">
+                    <Label htmlFor={`${fieldId}-${item.id}-location`}>
+                      {t('builder.genericItemForm.fields.location')}
+                    </Label>
+                    <Input
+                      id={`${fieldId}-${item.id}-location`}
+                      value={item.location || ''}
+                      onChange={(e) => handleChange(item.id, 'location', e.target.value)}
+                      placeholder={finalLocationPlaceholder}
+                    />
+                  </div>
+                )}
+                {showYears && (
+                  <div className="space-y-2">
+                    <Label htmlFor={`${fieldId}-${item.id}-years`}>
+                      {t('builder.genericItemForm.fields.years')}
+                    </Label>
+                    <Input
+                      id={`${fieldId}-${item.id}-years`}
+                      value={item.years || ''}
+                      onChange={(e) => handleChange(item.id, 'years', e.target.value)}
+                      placeholder={finalYearsPlaceholder}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className={labelClass}>
+                    {t('builder.genericItemForm.fields.descriptionPoints')}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleAddDescription(item.id)}
+                    className="h-6 text-xs text-primary hover:text-primary-hover hover:bg-info-tint"
+                  >
+                    <Plus aria-hidden="true" />
+                    {t('builder.genericItemForm.actions.addPoint')}
+                  </Button>
+                </div>
+                {item.description?.length ? (
+                  <SortableItemList
+                    id={`custom-${sectionKey}-${item.id}-points`}
+                    items={toDescriptionRows(item.description, item.descriptionStyles)}
+                    onReorder={(rows) => handleReorderDescriptions(item.id, rows)}
+                    className="space-y-3"
+                    handleLabel={t('builder.genericItemForm.actions.reorderPoint')}
+                  >
+                    {({ text: desc, style }, idx) => (
+                      <div className="flex gap-3">
+                        <div className="flex-1">
+                          <RichTextEditor
+                            value={desc}
+                            onChange={(html) => handleDescriptionChange(item.id, idx, html)}
+                            placeholder={finalDescriptionPlaceholder}
+                            minHeight="60px"
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => handleToggleDescriptionStyle(item.id, idx)}
+                          className="text-steel hover:text-primary self-end"
+                          aria-label={t('builder.genericItemForm.actions.togglePointStyle')}
+                          title={t('builder.genericItemForm.actions.togglePointStyle')}
+                        >
+                          {style === 'plain' ? (
+                            <TextAlignLeft aria-hidden="true" />
+                          ) : (
+                            <ListBullets aria-hidden="true" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => handleRemoveDescription(item.id, idx)}
+                          className="text-steel hover:text-destructive self-end"
+                          aria-label={t('a11y.removeDescription')}
+                          title={t('a11y.removeDescription')}
+                        >
+                          <Trash aria-hidden="true" />
+                        </Button>
+                      </div>
+                    )}
+                  </SortableItemList>
+                ) : null}
+              </div>
+            </div>
+          )}
+        </SortableItemList>
+      )}
     </div>
   );
 };

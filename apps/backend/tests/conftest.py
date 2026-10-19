@@ -1,14 +1,203 @@
 """Shared test fixtures for Resume Matcher backend tests."""
 
 import copy
-import importlib
+import os
+import socket
+import sys
+import tempfile
+from collections.abc import AsyncIterator, Iterator
+from pathlib import Path
+from typing import Any, NoReturn
+from uuid import uuid4
 
 import pytest
+
+# Set DATA_DIR before pytest imports any test module. Several integration tests
+# import app.main at module scope, which constructs Settings and the global
+# Database during collection; a function fixture would be too late to protect
+# developer state from those imports.
+_ORIGINAL_DATA_DIR = os.environ.get("DATA_DIR")
+_TEST_DATA_DIR_CONTEXT = tempfile.TemporaryDirectory(prefix="resume-matcher-tests-")
+_TEST_DATA_DIR = Path(_TEST_DATA_DIR_CONTEXT.name)
+os.environ["DATA_DIR"] = str(_TEST_DATA_DIR)
+# A developer DATABASE_URL must never reach the suite; TEST_DATABASE_URL opts in.
+_ORIGINAL_DATABASE_ENV = {
+    key: os.environ.get(key) for key in ("DATABASE_URL", "DATABASE_SCHEMA")
+}
+os.environ["DATABASE_URL"] = ""
+os.environ["DATABASE_SCHEMA"] = ""
+# The suite's httpx clients address the app as http://test (or http://t); the
+# ChatGPT origin-guard tests model a LAN deployment (192.168.1.5) that opted in.
+_ORIGINAL_ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS")
+os.environ["ALLOWED_HOSTS"] = "test,t,192.168.1.5,other"
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL") or None
+
+import app.config as _config_module  # noqa: E402 - DATA_DIR must be set first
+
+_IMPORTED_CONFIG_FILE_PATH = _config_module.CONFIG_FILE_PATH
+
+
+class UnexpectedNetworkAccess(RuntimeError):
+    """Raised when a deterministic backend test attempts a real connection."""
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+    """Restore the caller environment and remove session-level temporary data."""
+    del config  # Hook argument is required by pytest but otherwise unused.
+    if _ORIGINAL_DATA_DIR is None:
+        os.environ.pop("DATA_DIR", None)
+    else:
+        os.environ["DATA_DIR"] = _ORIGINAL_DATA_DIR
+    if _ORIGINAL_ALLOWED_HOSTS is None:
+        os.environ.pop("ALLOWED_HOSTS", None)
+    else:
+        os.environ["ALLOWED_HOSTS"] = _ORIGINAL_ALLOWED_HOSTS
+    for key, value in _ORIGINAL_DATABASE_ENV.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
+    _TEST_DATA_DIR_CONTEXT.cleanup()
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    """``postgres`` tests need TEST_DATABASE_URL; ``sqlite_only`` tests skip under it."""
+    del config
+    for item in items:
+        if TEST_DATABASE_URL and "sqlite_only" in item.keywords:
+            item.add_marker(pytest.mark.skip(reason="SQLite-specific"))
+        if not TEST_DATABASE_URL and "postgres" in item.keywords:
+            item.add_marker(pytest.mark.skip(reason="TEST_DATABASE_URL not set"))
+
+
+def postgres_test_url() -> str:
+    from app.db_url import normalize_database_url
+
+    assert TEST_DATABASE_URL
+    return normalize_database_url(TEST_DATABASE_URL)
+
+
+def drop_postgres_schema(schema: str) -> None:
+    from sqlalchemy import create_engine
+
+    engine = create_engine(postgres_test_url())
+    try:
+        with engine.begin() as conn:
+            conn.exec_driver_sql(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
+    finally:
+        engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def imported_config_file_path() -> Path:
+    """Return config.py's path alias as captured immediately after safe import."""
+    return _IMPORTED_CONFIG_FILE_PATH
+
+
+@pytest.fixture(scope="session")
+def backend_test_data_dir() -> Path:
+    """Return the temporary DATA_DIR installed before application imports."""
+    return _TEST_DATA_DIR
+
+
+@pytest.fixture(autouse=True)
+def deny_external_network(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Make accidental provider traffic fail before opening a socket.
+
+    ASGITransport and respx-backed HTTP tests do not open sockets and continue
+    to exercise their real in-process transports. Tests requiring an actual
+    network connection must explicitly replace this guard at their boundary.
+    """
+
+    def blocked_connection(*args: Any, **kwargs: Any) -> NoReturn:
+        del args, kwargs
+        raise UnexpectedNetworkAccess(
+            "External network access blocked in deterministic backend tests"
+        )
+
+    real_connect = socket.socket.connect
+    real_socketpair = socket.socketpair
+    pairing = False
+
+    def guarded_connect(sock: socket.socket, address: Any) -> None:
+        # Only the in-process socketpair() below may connect.
+        if pairing:
+            real_connect(sock, address)
+            return
+        blocked_connection()
+
+    def guarded_socketpair(*args: Any, **kwargs: Any) -> tuple[Any, Any]:
+        # Windows emulates socketpair() with a loopback connect(), and every
+        # asyncio event loop builds its self-pipe from it.
+        nonlocal pairing
+        pairing = True
+        try:
+            return real_socketpair(*args, **kwargs)
+        finally:
+            pairing = False
+
+    monkeypatch.setattr(socket, "create_connection", blocked_connection)
+    monkeypatch.setattr(socket.socket, "connect", guarded_connect)
+    monkeypatch.setattr(socket.socket, "connect_ex", blocked_connection)
+    if sys.platform == "win32":
+        monkeypatch.setattr(socket, "socketpair", guarded_socketpair)
+    yield
+
+
+@pytest.fixture(autouse=True)
+async def isolated_backend_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> AsyncIterator[Any]:
+    """Isolate config, crypto and every imported database alias per test."""
+    import app.config as config_module
+    import app.database as database_module
+    from app import crypto
+    from app.config_cache import invalidate_config_cache
+    from app.database import Database
+
+    test_data_dir = tmp_path / "data"
+    if TEST_DATABASE_URL:
+        test_data_dir.mkdir(parents=True)
+        test_db = Database(url=postgres_test_url(), schema=f"t_{uuid4().hex[:20]}")
+    else:
+        test_db = Database(db_path=test_data_dir / "resume_matcher.db")
+
+    monkeypatch.setattr(config_module.settings, "data_dir", test_data_dir)
+    # Preserve compatibility with code/tests that still monkeypatch the legacy
+    # name while guaranteeing old config implementations are safe during RED.
+    monkeypatch.setattr(
+        config_module, "CONFIG_FILE_PATH", test_data_dir / "config.json"
+    )
+    monkeypatch.setattr(database_module, "db", test_db)
+
+    # Modules such as routers and app.main import ``db`` by value. Patch every
+    # alias already loaded during collection; modules imported later receive
+    # app.database.db, which is already the isolated instance.
+    for module_name, module in tuple(sys.modules.items()):
+        if not module_name.startswith("app.") or module is None:
+            continue
+        if isinstance(getattr(module, "db", None), Database):
+            monkeypatch.setattr(module, "db", test_db)
+
+    invalidate_config_cache()
+    crypto.reset_cache()
+    try:
+        yield test_db
+    finally:
+        invalidate_config_cache()
+        crypto.reset_cache()
+        await test_db.close()
+        if test_db.schema:
+            drop_postgres_schema(test_db.schema)
 
 
 # ---------------------------------------------------------------------------
 # Sample resume data — full ResumeData-compatible dict
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_resume() -> dict:
@@ -82,7 +271,14 @@ def sample_resume() -> dict:
             }
         ],
         "additional": {
-            "technicalSkills": ["Python", "FastAPI", "Docker", "AWS", "PostgreSQL", "Redis"],
+            "technicalSkills": [
+                "Python",
+                "FastAPI",
+                "Docker",
+                "AWS",
+                "PostgreSQL",
+                "Redis",
+            ],
             "languages": ["English (Native)", "Spanish (Conversational)"],
             "certificationsTraining": ["AWS Solutions Architect Associate"],
             "awards": ["Employee of the Year 2022"],
@@ -101,6 +297,7 @@ def sample_resume_copy(sample_resume) -> dict:
 # ---------------------------------------------------------------------------
 # Job-related fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_job_keywords() -> dict:
@@ -142,6 +339,7 @@ def sample_job_description() -> str:
 # Master resume — used for alignment validation
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def master_resume(sample_resume) -> dict:
     """Master resume (source of truth) — same as sample_resume by default."""
@@ -151,6 +349,7 @@ def master_resume(sample_resume) -> dict:
 # ---------------------------------------------------------------------------
 # ResumeChange fixtures for diff-based tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_changes():
@@ -193,39 +392,8 @@ def sample_changes():
 # Isolated database — swap the global TinyDB singleton for a temp-file DB
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
-async def isolated_db(tmp_path, monkeypatch):
-    """Replace the global ``db`` singleton with a disposable temp-file SQLite DB
-    across ``app.database`` and every router module that imported it.
-
-    Lets endpoint / e2e tests run against a REAL (but isolated) database instead
-    of a MagicMock, so persistence, the master-resume invariant, and CRUD are
-    actually exercised — without touching the developer's real database. A
-    temp **file** (not ``:memory:``) is required: SQLite's connection pool gives
-    each connection its own in-memory DB, so the async + sync engines would not
-    share state.
-    """
-    import app.database as database_module
-    from app.database import Database
-
-    test_db = Database(db_path=tmp_path / "isolated_db.db")
-    monkeypatch.setattr(database_module, "db", test_db)
-    for router_name in (
-        "resumes",
-        "jobs",
-        "enrichment",
-        "config",
-        "health",
-        "applications",
-        "resume_wizard",
-    ):
-        try:
-            module = importlib.import_module(f"app.routers.{router_name}")
-        except ModuleNotFoundError:
-            continue
-        if hasattr(module, "db"):
-            monkeypatch.setattr(module, "db", test_db)
-    try:
-        yield test_db
-    finally:
-        await test_db.close()
+def isolated_db(isolated_backend_state: Any) -> Any:
+    """Expose the per-test real database (SQLite, or a Postgres schema) to tests that need it."""
+    return isolated_backend_state

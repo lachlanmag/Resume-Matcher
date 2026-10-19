@@ -6,7 +6,11 @@ from enum import Enum
 from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+from app.ai_limits import validate_source_size
+from app.config import normalize_provider
 from app.schemas.feedback import ResumeFeedback
+from app.schemas.refinement import RefinementStats
 from app.schemas.work_experience import (
     normalize_experience_entry,
     normalize_work_experience_list,
@@ -112,6 +116,25 @@ def _coerce_string_list(value: Any) -> list[str]:
     return [coerced] if coerced else []
 
 
+def _coerce_description_styles(value: Any) -> list[Literal["bullet", "plain"]]:
+    """Coerce description style values into supported row styles."""
+    if not isinstance(value, list):
+        return []
+
+    return ["plain" if entry == "plain" else "bullet" for entry in value]
+
+
+def _align_description_styles(
+    description: list[str],
+    description_styles: list[Literal["bullet", "plain"]],
+) -> list[Literal["bullet", "plain"]]:
+    """Keep descriptionStyles aligned with description rows."""
+    return [
+        description_styles[index] if index < len(description_styles) else "bullet"
+        for index, _ in enumerate(description)
+    ]
+
+
 # Section Type Enum for dynamic sections
 class SectionType(str, Enum):
     """Types of resume sections."""
@@ -152,6 +175,10 @@ class Experience(BaseModel):
     location: str | None = None
     roles: list[ExperienceRole] = Field(default_factory=list)
     description: list[str] = Field(default_factory=list)
+    descriptionStyles: list[Literal["bullet", "plain"]] = Field(default_factory=list)
+    # Renders as one "Title, Company, years" line under "Earlier experience"; the
+    # description and location stay stored but are not shown.
+    condensed: bool = False
 
     @model_validator(mode="before")
     @classmethod
@@ -164,6 +191,27 @@ class Experience(BaseModel):
     @classmethod
     def _normalize_description(cls, value: Any) -> list[str]:
         return _coerce_string_list(value)
+
+    @field_validator("descriptionStyles", mode="before")
+    @classmethod
+    def _normalize_description_styles(
+        cls, value: Any
+    ) -> list[Literal["bullet", "plain"]]:
+        return _coerce_description_styles(value)
+
+    @field_validator("condensed", mode="before")
+    @classmethod
+    def _normalize_condensed(cls, value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        return str(value).strip().lower() == "true"
+
+    @model_validator(mode="after")
+    def _sync_description_styles(self) -> "Experience":
+        self.descriptionStyles = _align_description_styles(
+            self.description, self.descriptionStyles
+        )
+        return self
 
     @model_validator(mode="after")
     def _ensure_roles(self) -> Self:
@@ -197,11 +245,26 @@ class Project(BaseModel):
     github: str | None = None
     website: str | None = None
     description: list[str] = Field(default_factory=list)
+    descriptionStyles: list[Literal["bullet", "plain"]] = Field(default_factory=list)
 
     @field_validator("description", mode="before")
     @classmethod
     def _normalize_description(cls, value: Any) -> list[str]:
         return _coerce_string_list(value)
+
+    @field_validator("descriptionStyles", mode="before")
+    @classmethod
+    def _normalize_description_styles(
+        cls, value: Any
+    ) -> list[Literal["bullet", "plain"]]:
+        return _coerce_description_styles(value)
+
+    @model_validator(mode="after")
+    def _sync_description_styles(self) -> "Project":
+        self.descriptionStyles = _align_description_styles(
+            self.description, self.descriptionStyles
+        )
+        return self
 
 
 class AdditionalInfo(BaseModel):
@@ -246,11 +309,26 @@ class CustomSectionItem(BaseModel):
     location: str | None = None
     years: str = ""
     description: list[str] = Field(default_factory=list)
+    descriptionStyles: list[Literal["bullet", "plain"]] = Field(default_factory=list)
 
     @field_validator("description", mode="before")
     @classmethod
     def _normalize_description(cls, value: Any) -> list[str]:
         return _coerce_string_list(value)
+
+    @field_validator("descriptionStyles", mode="before")
+    @classmethod
+    def _normalize_description_styles(
+        cls, value: Any
+    ) -> list[Literal["bullet", "plain"]]:
+        return _coerce_description_styles(value)
+
+    @model_validator(mode="after")
+    def _sync_description_styles(self) -> "CustomSectionItem":
+        self.descriptionStyles = _align_description_styles(
+            self.description, self.descriptionStyles
+        )
+        return self
 
 
 class CustomSection(BaseModel):
@@ -361,7 +439,9 @@ def normalize_resume_data(data: dict[str, Any]) -> dict[str, Any]:
     if "customSections" not in data:
         data["customSections"] = {}
     if "workExperience" in data:
-        data["workExperience"] = normalize_work_experience_list(data.get("workExperience"))
+        data["workExperience"] = normalize_work_experience_list(
+            data.get("workExperience")
+        )
     return data
 
 
@@ -395,6 +475,7 @@ class ResumeUploadResponse(BaseModel):
     resume_id: str
     processing_status: Literal["pending", "processing", "ready", "failed"] = "pending"
     is_master: bool = False
+    is_default_master: bool = False
 
 
 class RawResume(BaseModel):
@@ -405,6 +486,32 @@ class RawResume(BaseModel):
     content_type: str = "md"
     created_at: str
     processing_status: str = "pending"  # pending, processing, ready, failed
+
+
+class InterviewPrepQuestion(BaseModel):
+    """Interview question grounded in the tailored resume and job context."""
+
+    question: str
+    focus_area: str | None = None
+    suggested_answer_points: list[str] = Field(default_factory=list)
+
+
+class InterviewPrepSkillGap(BaseModel):
+    """A preparation target, not a claimed candidate skill."""
+
+    skill: str
+    why_it_matters: str
+    preparation_suggestion: str
+
+
+class InterviewPrepData(BaseModel):
+    """Structured interview preparation content for a tailored resume."""
+
+    role_fit_analysis: list[str]
+    resume_questions: list[InterviewPrepQuestion]
+    project_follow_ups: list[InterviewPrepQuestion]
+    skill_gaps: list[InterviewPrepSkillGap]
+    talking_points: list[str]
 
 
 DEFAULT_TARGET_PAGES = 2
@@ -419,12 +526,18 @@ MAX_BULLETS_PER_JOB = 10
 class TailorLengthSettings(BaseModel):
     """Length targets for resume tailoring (pages and bullets per job)."""
 
-    target_pages: int = Field(default=DEFAULT_TARGET_PAGES, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    target_pages: int = Field(
+        default=DEFAULT_TARGET_PAGES, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES
+    )
     bullets_per_job_min: int = Field(
-        default=DEFAULT_BULLETS_PER_JOB_MIN, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+        default=DEFAULT_BULLETS_PER_JOB_MIN,
+        ge=MIN_BULLETS_PER_JOB,
+        le=MAX_BULLETS_PER_JOB,
     )
     bullets_per_job_max: int = Field(
-        default=DEFAULT_BULLETS_PER_JOB_MAX, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
+        default=DEFAULT_BULLETS_PER_JOB_MAX,
+        ge=MIN_BULLETS_PER_JOB,
+        le=MAX_BULLETS_PER_JOB,
     )
 
     @model_validator(mode="after")
@@ -437,7 +550,9 @@ class TailorLengthSettings(BaseModel):
 class TailorLengthConfigRequest(BaseModel):
     """Request to update global tailor length defaults."""
 
-    target_pages: int | None = Field(default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    target_pages: int | None = Field(
+        default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES
+    )
     bullets_per_job_min: int | None = Field(
         default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
     )
@@ -453,7 +568,9 @@ class TailorLengthConfigResponse(TailorLengthSettings):
 class TailorLengthSettingsPatch(BaseModel):
     """Partial update for per-resume tailor length settings."""
 
-    target_pages: int | None = Field(default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES)
+    target_pages: int | None = Field(
+        default=None, ge=MIN_TARGET_PAGES, le=MAX_TARGET_PAGES
+    )
     bullets_per_job_min: int | None = Field(
         default=None, ge=MIN_BULLETS_PER_JOB, le=MAX_BULLETS_PER_JOB
     )
@@ -479,8 +596,13 @@ class ResumeFetchData(BaseModel):
     processed_resume: ResumeData | None = None
     cover_letter: str | None = None
     outreach_message: str | None = None
+    interview_prep: InterviewPrepData | None = None
     parent_id: str | None = None  # For determining if resume is tailored
     title: str | None = None
+    is_master: bool = False
+    is_default_master: bool = False
+    # None until the resume is formatted in the builder (= the default template).
+    template_settings: "TemplateSettings | None" = None
     tailor_settings: TailorLengthSettings | None = None
     resume_feedback: ResumeFeedback | None = None
 
@@ -498,11 +620,13 @@ class ResumeSummary(BaseModel):
     resume_id: str
     filename: str | None = None
     is_master: bool = False
+    is_default_master: bool = False
     parent_id: str | None = None
     processing_status: str = "pending"
     created_at: str
     updated_at: str
     title: str | None = None
+    template_settings: "TemplateSettings | None" = None
 
 
 class ResumeListResponse(BaseModel):
@@ -510,6 +634,23 @@ class ResumeListResponse(BaseModel):
 
     request_id: str
     data: list[ResumeSummary]
+
+
+class SetDefaultMasterResponse(BaseModel):
+    """Response after switching the default master resume."""
+
+    resume_id: str
+    is_default_master: bool
+
+
+class DuplicateResumeResponse(BaseModel):
+    """Response after duplicating a resume."""
+
+    resume_id: str
+    title: str
+    is_master: bool
+    is_default_master: bool
+    parent_id: str | None = None
 
 
 # Job Description Models
@@ -529,17 +670,142 @@ class JobUploadResponse(BaseModel):
 
 
 # Improvement Models
+ResumeTemplate = Literal[
+    "swiss-single",
+    "swiss-two-column",
+    "modern",
+    "modern-two-column",
+    "latex",
+    "clean",
+    "vivid",
+    "vivid-single",
+    "modern-deedy",
+    "deedy",
+]
+
+
+class TemplateMargins(BaseModel):
+    """Page margins in mm."""
+
+    top: int = Field(10, ge=5, le=25)
+    bottom: int = Field(10, ge=5, le=25)
+    left: int = Field(10, ge=5, le=25)
+    right: int = Field(10, ge=5, le=25)
+
+
+class TemplateSpacing(BaseModel):
+    """Spacing levels (1-5)."""
+
+    section: int = Field(3, ge=1, le=5)
+    item: int = Field(2, ge=1, le=5)
+    lineHeight: int = Field(3, ge=1, le=5)
+
+
+class TemplateFontSize(BaseModel):
+    """Type scale levels (1-5) and font families."""
+
+    base: int = Field(3, ge=1, le=5)
+    headerScale: int = Field(3, ge=1, le=5)
+    headerFont: Literal["serif", "sans-serif", "mono"] = "serif"
+    bodyFont: Literal["serif", "sans-serif", "mono"] = "sans-serif"
+
+
+class TemplateSettings(BaseModel):
+    """A resume's saved formatting.
+
+    Mirrors TemplateSettings in apps/frontend/lib/types/template-settings.ts.
+    """
+
+    template: ResumeTemplate = "swiss-single"
+    pageSize: Literal["A4", "LETTER"] = "A4"
+    margins: TemplateMargins = Field(default_factory=TemplateMargins)
+    spacing: TemplateSpacing = Field(default_factory=TemplateSpacing)
+    fontSize: TemplateFontSize = Field(default_factory=TemplateFontSize)
+    compactMode: bool = False
+    showContactIcons: bool = False
+    accentColor: Literal["blue", "green", "orange", "red"] = "blue"
+    # Orders saves from one builder session (a tab): `revision` counts up per session.
+    # A save older than the stored one from the same session is ignored, so that
+    # tab's requests arriving out of order cannot undo its newer choice. Saves from
+    # other sessions always apply (the last to arrive wins); no clocks involved.
+    session: str | None = Field(None, max_length=64)
+    revision: int = Field(0, ge=0)
+
+
+# ResumeFetchData is declared above TemplateSettings.
+ResumeFetchData.model_rebuild()
+ResumeFetchResponse.model_rebuild()
+ResumeSummary.model_rebuild()
+ResumeListResponse.model_rebuild()
+
+
+class PageFitSettings(BaseModel):
+    """Print settings used to measure page count (mirrors GET /resumes/{id}/pdf)."""
+
+    template: ResumeTemplate = "swiss-single"
+    pageSize: Literal["A4", "LETTER"] = "A4"
+    marginTop: int = Field(10, ge=5, le=25)
+    marginBottom: int = Field(10, ge=5, le=25)
+    marginLeft: int = Field(10, ge=5, le=25)
+    marginRight: int = Field(10, ge=5, le=25)
+    sectionSpacing: int = Field(3, ge=1, le=5)
+    itemSpacing: int = Field(2, ge=1, le=5)
+    lineHeight: int = Field(3, ge=1, le=5)
+    fontSize: int = Field(3, ge=1, le=5)
+    headerScale: int = Field(3, ge=1, le=5)
+    headerFont: Literal["serif", "sans-serif", "mono"] = "serif"
+    bodyFont: Literal["serif", "sans-serif", "mono"] = "sans-serif"
+    compactMode: bool = False
+    showContactIcons: bool = False
+    accentColor: Literal["blue", "green", "orange", "red"] = "blue"
+    lang: str | None = Field(None, pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
+    # Academic CV mode: no page cap. Page fit and verification report the page count
+    # but never trim to a limit or raise an over-limit warning. Not a print setting,
+    # so it is not sent to the print route.
+    cv_mode: bool = False
+
+    def to_query(self) -> dict[str, str]:
+        query: dict[str, str] = {}
+        for name, value in self.model_dump(
+            exclude_none=True, exclude={"cv_mode"}
+        ).items():
+            query[name] = str(value).lower() if isinstance(value, bool) else str(value)
+        return query
+
+
 class ImproveResumeRequest(BaseModel):
     """Request to improve/tailor a resume."""
 
     resume_id: str
     job_id: str
     prompt_id: str | None = None
+    max_bullets_per_entry: int | None = Field(None, ge=1, le=10)
+    page_fit: PageFitSettings | None = None
+    # Page budget for page_fit; ignored without page_fit.
+    max_pages: int = Field(1, ge=1, le=5)
     tailor_length_settings: TailorLengthSettings | None = None
     replace_resume_id: str | None = Field(
         default=None,
         description="When set, confirm updates this tailored resume instead of creating a new one",
     )
+
+
+class BulletSelectionSummary(BaseModel):
+    """What the harness kept/dropped when tailoring from a long master."""
+
+    max_per_entry: int | None  # None = no per-entry cap
+    # Page cap used for page fit; None = no cap (page fit skipped, or cv_mode).
+    max_pages: int | None = None
+    bullets_before: int
+    bullets_after: int
+    trimmed_for_fit: int = 0
+    scoring: Literal["llm", "keyword_fallback"]
+    page_fit: Literal["fits", "trimmed", "over", "unavailable", "skipped"]
+    final_pages: int | None = None
+    # Re-render of the rewritten result: "ok" = final_pages measures it, "skipped" =
+    # it could not be rendered (final_pages is then the pre-rewrite measurement),
+    # None = no final check applies (page fit skipped, over or unavailable).
+    final_check: Literal["ok", "skipped"] | None = None
 
 
 class ImprovementSuggestion(BaseModel):
@@ -581,34 +847,74 @@ class ResumeDiffSummary(BaseModel):
     high_risk_changes: int  # High-risk additions
 
 
-class RefinementStats(BaseModel):
-    """Statistics from the multi-pass refinement process."""
+class ATSSubScores(BaseModel):
+    """Individual component scores that make up the ATS overall score."""
 
-    passes_completed: int = Field(default=0, ge=0, description="Number of passes run")
-    keywords_injected: int = Field(
-        default=0, ge=0, description="Number of keywords injected"
+    keyword_match: float = Field(
+        default=0.0, ge=0.0, le=100.0, description="Keyword match % (0–100)"
     )
-    ai_phrases_removed: list[str] = Field(
-        default_factory=list, description="List of AI phrases that were removed"
+    skills_coverage: float = Field(
+        default=0.0, ge=0.0, le=100.0, description="JD skills matched in resume (0–100)"
     )
-    alignment_violations_fixed: int = Field(
-        default=0, ge=0, description="Number of alignment violations corrected"
+    title_match: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=100.0,
+        description="Posting's exact job title in headline/summary (0–100); "
+        "None when the posting has no title",
     )
-    initial_match_percentage: float = Field(
+    section_completeness: float = Field(
         default=0.0,
         ge=0.0,
         le=100.0,
-        description="Keyword match before refinement",
+        description="Contact info + visible key resume sections present (0–100)",
     )
-    final_match_percentage: float = Field(
-        default=0.0, ge=0.0, le=100.0, description="Keyword match after refinement"
+    date_consistency: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=100.0,
+        description="Share of dates in the dominant format (0–100); "
+        "None when the resume has fewer than two dates",
     )
+
+
+class ATSScore(BaseModel):
+    """ATS-style score breakdown for a resume against a job description."""
+
+    overall_score: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=100.0,
+        description="Weighted composite ATS score (0–100)",
+    )
+    sub_scores: ATSSubScores = Field(default_factory=ATSSubScores)
+    missing_keywords: list[str] = Field(
+        default_factory=list,
+        description="Job keywords absent from the tailored resume",
+    )
+    injectable_keywords: list[str] = Field(
+        default_factory=list,
+        description="Missing keywords that exist in the master resume and can be safely added",
+    )
+    recommendations: list[str] = Field(
+        default_factory=list,
+        description="Actionable suggestions to improve the ATS score",
+    )
+
+
+class ATSScoreRecord(BaseModel):
+    """Last calculated ATS score of a saved tailored resume."""
+
+    score: ATSScore
+    calculated_at: str = Field(description="UTC ISO-8601 time of the calculation")
 
 
 class ImproveResumeData(BaseModel):
     """Data payload for improve response."""
 
     request_id: str
+    preview_id: str | None = None
+    preview_expires_at: str | None = None
     resume_id: str | None = Field(
         default=None,
         description="Null for preview responses; populated when the tailored resume is persisted.",
@@ -620,6 +926,7 @@ class ImproveResumeData(BaseModel):
     markdownImproved: str | None = None
     cover_letter: str | None = None
     outreach_message: str | None = None
+    interview_prep: InterviewPrepData | None = None
 
     # Diff metadata
     diff_summary: ResumeDiffSummary | None = None
@@ -627,6 +934,12 @@ class ImproveResumeData(BaseModel):
 
     # Refinement metadata (multi-pass refinement stats)
     refinement_stats: "RefinementStats | None" = None
+
+    # ATS score breakdown
+    ats_score: "ATSScore | None" = None
+
+    # Harness bullet selection summary (None unless max_bullets_per_entry or page_fit was requested)
+    bullet_selection: BulletSelectionSummary | None = None
 
     # Warning and status fields for transparency
     warnings: list[str] = Field(default_factory=list)
@@ -646,10 +959,19 @@ class ImproveResumeConfirmRequest(BaseModel):
 
     resume_id: str
     job_id: str
+    preview_id: str | None = None
     improved_data: ResumeData
     improvements: list[ImprovementSuggestion]
     tailor_length_settings: TailorLengthSettings | None = None
     replace_resume_id: str | None = None
+
+    @model_validator(mode="after")
+    def _validate_source_budget(self) -> "ImproveResumeConfirmRequest":
+        # A preview-sized resume remains confirmable when suggestions/IDs are
+        # added to its envelope. Each independently bounded source stays capped.
+        validate_source_size(self.improved_data.model_dump(mode="json"))
+        validate_source_size(self.model_dump(mode="json", exclude={"improved_data"}))
+        return self
 
 
 # Config Models
@@ -671,6 +993,11 @@ class LLMConfigRequest(BaseModel):
     # Strictly typed so invalid values are rejected at the boundary (422)
     # rather than corrupting config.json and crashing later reads.
     reasoning_effort: Literal["minimal", "low", "medium", "high", ""] | None = None
+
+    @field_validator("provider", mode="before")
+    @classmethod
+    def _normalize_provider(cls, value: Any) -> Any:
+        return normalize_provider(value)
 
 
 class ProviderConfigSnapshot(BaseModel):
@@ -699,6 +1026,7 @@ class FeatureConfigRequest(BaseModel):
 
     enable_cover_letter: bool | None = None
     enable_outreach_message: bool | None = None
+    enable_interview_prep: bool | None = None
     enable_resume_feedback: bool | None = None
 
 
@@ -707,6 +1035,7 @@ class FeatureConfigResponse(BaseModel):
 
     enable_cover_letter: bool = False
     enable_outreach_message: bool = False
+    enable_interview_prep: bool = False
     enable_resume_feedback: bool = True
 
 
@@ -722,7 +1051,7 @@ class LanguageConfigResponse(BaseModel):
 
     ui_language: str = "en"  # Interface language
     content_language: str = "en"  # Generated content language
-    supported_languages: list[str] = ["en", "es", "zh", "ja"]
+    supported_languages: list[str] = ["en", "es", "zh", "ja", "pt", "fr", "ko"]
 
 
 class PromptOption(BaseModel):
@@ -794,6 +1123,7 @@ class ApiKeysUpdateRequest(BaseModel):
     """Request to update API keys."""
 
     openai: str | None = None
+    azure_foundry: str | None = None
     anthropic: str | None = None
     google: str | None = None
     openrouter: str | None = None
@@ -843,6 +1173,13 @@ class GenerateContentResponse(BaseModel):
     message: str
 
 
+class GenerateInterviewPrepResponse(BaseModel):
+    """Response for on-demand interview preparation generation."""
+
+    interview_prep: InterviewPrepData
+    message: str
+
+
 # Health/Status Models
 class HealthResponse(BaseModel):
     """Health check response."""
@@ -851,11 +1188,24 @@ class HealthResponse(BaseModel):
 
 
 class StatusResponse(BaseModel):
-    """Application status response."""
+    """Application status response.
+
+    In agent mode the user's coding agent does the AI work, so ``llm_configured``
+    and ``llm_healthy`` stay false and ``status`` is ``ready`` as soon as a master
+    resume exists.
+    """
 
     status: str
     llm_configured: bool
     llm_healthy: bool
+    agent_mode: bool = Field(
+        default=False,
+        description=(
+            "True when the 'agent' provider is selected: the user's coding agent "
+            "does the AI work through the resume-matcher command or MCP, and the "
+            "app makes no model calls of its own."
+        ),
+    )
     has_master_resume: bool
     database_stats: dict[str, Any]
 
@@ -885,7 +1235,10 @@ class ResumeChange(BaseModel):
         the current items). For the text actions it must stay a string/None — a
         list there would silently bypass the replace verification gate and crash
         the invented-metrics check, so reject it at parse time."""
-        if isinstance(self.original, list) and self.action not in ("reorder", "replace_list"):
+        if isinstance(self.original, list) and self.action not in (
+            "reorder",
+            "replace_list",
+        ):
             raise ValueError(
                 "'original' may be a list only for the reorder or replace_list actions"
             )
@@ -897,3 +1250,55 @@ class ImproveDiffResult(BaseModel):
 
     changes: list[ResumeChange] = Field(default_factory=list)
     strategy_notes: str = Field(default="")
+
+
+# Single Queue Models
+MAX_QUEUE_COOLDOWN_SECONDS = 60
+
+
+class JobQueueAddRequest(BaseModel):
+    """Request to queue a single job description for background tailoring."""
+
+    resume_id: str
+    job_description: str
+    role: str | None = None
+    company: str | None = None
+    job_req_id: str | None = None
+    # Cooldown after this item; bounded so one request cannot stall the worker.
+    rate_limit_seconds: float = Field(
+        default=5.0, ge=0, le=MAX_QUEUE_COOLDOWN_SECONDS, allow_inf_nan=False
+    )
+    prompt_id: str | None = None
+
+
+class JobQueueItemResponse(BaseModel):
+    """Item in the tailoring queue."""
+
+    item_id: str
+    resume_id: str
+    job_description_snippet: str
+    role: str
+    company: str
+    job_req_id: str
+    status: str
+    tailored_resume_id: str | None = None
+    title: str | None = None
+    job_id: str | None = None
+    error: str | None = None
+    rate_limit_seconds: float
+    created_at: str
+    updated_at: str
+
+
+class JobMetadataParseRequest(BaseModel):
+    """Request to parse metadata (role, company, id) from job description."""
+
+    job_description: str
+
+
+class JobMetadataParseResponse(BaseModel):
+    """Extracted metadata from a job description."""
+
+    role: str
+    company: str
+    job_req_id: str

@@ -1,33 +1,33 @@
 """LLM configuration endpoints."""
 
-import json
+import copy
 import logging
+import secrets
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
-from app.config import settings
-from app.llm import check_llm_health, LLMConfig, resolve_api_key
-from app.schemas import (
-    LLMConfigRequest,
-    LLMConfigResponse,
-    ProviderConfigSnapshot,
-    FeatureConfigRequest,
-    FeatureConfigResponse,
-    FeaturePromptsRequest,
-    FeaturePromptsResponse,
-    LanguageConfigRequest,
-    LanguageConfigResponse,
-    PromptConfigRequest,
-    PromptConfigResponse,
-    PromptOption,
-    TailorLengthConfigRequest,
-    TailorLengthConfigResponse,
-    ApiKeyProviderStatus,
-    ApiKeyStatusResponse,
-    ApiKeysUpdateRequest,
-    ApiKeysUpdateResponse,
-    ResetDatabaseRequest,
+from app.config import (
+    clear_all_api_keys,
+    delete_api_key_from_config,
+    get_api_keys_from_config,
+    get_config_path,
+    load_config_file,
+    save_api_keys_to_config,
+    save_config_file,
+    settings,
+)
+from app.config_cache import invalidate_config_cache
+from app.database import db
+from app.llm import (
+    API_BASE_KEY_BINDING,
+    API_KEY_REQUIRED_FOR_ENDPOINT,
+    LLMConfig,
+    api_base_key_binding,
+    check_llm_health,
+    normalize_endpoint,
+    resolve_api_key,
+    saved_endpoint_accepts_key,
 )
 from app.prompts import (
     DEFAULT_IMPROVE_PROMPT_ID,
@@ -39,24 +39,80 @@ from app.prompts.templates import (
     OUTREACH_MESSAGE_PROMPT,
     TAILORED_RESUME_FEEDBACK_PROMPT,
 )
-from app.config import (
-    get_api_keys_from_config,
-    save_api_keys_to_config,
-    delete_api_key_from_config,
-    clear_all_api_keys,
-    load_config_file,
-    save_config_file,
+from app.schemas import (
+    ApiKeyProviderStatus,
+    ApiKeyStatusResponse,
+    ApiKeysUpdateRequest,
+    ApiKeysUpdateResponse,
+    FeatureConfigRequest,
+    FeatureConfigResponse,
+    FeaturePromptsRequest,
+    FeaturePromptsResponse,
+    LanguageConfigRequest,
+    LanguageConfigResponse,
+    LLMConfigRequest,
+    LLMConfigResponse,
+    PromptConfigRequest,
+    PromptConfigResponse,
+    PromptOption,
+    ProviderConfigSnapshot,
+    ResetDatabaseRequest,
+    TailorLengthConfigRequest,
+    TailorLengthConfigResponse,
 )
-from app.config_cache import invalidate_config_cache
-from app.database import db
 from app.services.tailor_length import tailor_length_settings_from_config
+
+# Providers that cannot function without an explicit endpoint. Mirrors
+# `requiresBaseUrl` in apps/frontend/lib/api/config.ts (M-05) — the UI guard
+# alone left the .env-driven setup path able to persist an unusable config.
+PROVIDERS_REQUIRING_BASE_URL: frozenset[str] = frozenset({"azure_foundry"})
+
+
+def _effective_api_base(stored: dict) -> str | None:
+    """Resolve the base URL the LLM layer will actually use.
+
+    ``stored.get("api_base", default)`` returns None when the key is PRESENT
+    with a null value — which is exactly what an explicit "clear the field"
+    writes. That made validation (which fell back to the env var) disagree with
+    config construction (which did not): saving with LLM_API_BASE set passed
+    the required-base-URL check and then handed api_base=None to LiteLLM.
+    Every site resolves through here so they cannot drift again.
+    """
+    return stored.get("api_base") or settings.llm_api_base or None
+
+
+def _moves_key_to_new_endpoint(
+    stored: dict,
+    provider: str,
+    api_base: str | None,
+) -> bool:
+    """Whether ``provider``'s key would be sent to a custom endpoint not saved for it.
+
+    A blank base is the provider's own endpoint. A custom base is trusted only
+    when it is already the saved base of the saved provider, so an
+    unauthenticated caller cannot point a stored key at a server it controls.
+    """
+    if not normalize_endpoint(api_base):
+        return False
+    return provider != stored.get(
+        "provider", settings.llm_provider
+    ) or normalize_endpoint(api_base) != normalize_endpoint(_effective_api_base(stored))
+
+
+def _proves_key(request_key: str | None, stored_key: str) -> bool:
+    return bool(request_key) and secrets.compare_digest(
+        request_key.encode("utf-8"), stored_key.encode("utf-8")
+    )
+
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/config", tags=["Configuration"])
 
 
 def _get_config_path() -> Path:
     """Get path to config storage file."""
-    return settings.config_path
+    return get_config_path()
 
 
 def _load_config() -> dict:
@@ -84,8 +140,6 @@ def _get_prompt_options() -> list[PromptOption]:
     return [PromptOption(**option) for option in IMPROVE_PROMPT_OPTIONS]
 
 
-
-
 def _provider_snapshot_from_stored(stored: dict) -> dict:
     """Build a raw provider snapshot from top-level config fields."""
     raw_re = stored.get("reasoning_effort", settings.reasoning_effort)
@@ -109,12 +163,17 @@ def _ensure_provider_configs(stored: dict) -> bool:
 
     provider = stored.get("provider", settings.llm_provider)
     if provider and provider not in stored["provider_configs"]:
-        if any(
-            stored.get(k)
-            for k in ("model", "api_base", "api_key")
-            if stored.get(k) not in (None, "")
-        ) or provider in stored:
-            stored["provider_configs"][provider] = _provider_snapshot_from_stored(stored)
+        if (
+            any(
+                stored.get(k)
+                for k in ("model", "api_base", "api_key")
+                if stored.get(k) not in (None, "")
+            )
+            or provider in stored
+        ):
+            stored["provider_configs"][provider] = _provider_snapshot_from_stored(
+                stored
+            )
             mutated = True
 
     return mutated
@@ -153,12 +212,13 @@ def _build_llm_config_response(stored: dict) -> LLMConfigResponse:
         provider=provider,
         model=stored.get("model", settings.llm_model),
         api_key=_mask_api_key(resolve_api_key(stored, provider)),
-        api_base=stored.get("api_base", settings.llm_api_base),
+        api_base=_effective_api_base(stored),
         reasoning_effort=reasoning_effort or None,
         provider_configs=_mask_provider_configs(provider_configs)
         if isinstance(provider_configs, dict) and provider_configs
         else None,
     )
+
 
 async def _log_llm_health_check(config: LLMConfig) -> None:
     """Run a best-effort health check and log outcome without affecting API responses."""
@@ -202,6 +262,7 @@ async def update_llm_config(
     `/config/llm-test` and the System Status panel.
     """
     stored = _load_config()
+    previous = copy.deepcopy(stored)
 
     # Update only provided fields
     if request.provider is not None:
@@ -211,8 +272,9 @@ async def update_llm_config(
     # NOTE: API keys are NOT written here anymore. They live in the encrypted
     # per-provider store (PUT /config/api-keys). Writing the legacy single
     # ``api_key`` slot here is what caused providers to overwrite each other and
-    # shadow the per-provider map in resolve_api_key. request.api_key is ignored
-    # for persistence (kept in the schema only for response masking/back-compat).
+    # shadow the per-provider map in resolve_api_key. request.api_key is never
+    # persisted; it only proves the caller knows a key that would move to a new
+    # endpoint (see below).
     # api_base: distinguish "omitted" (leave unchanged) from "present but
     # blank/null" (explicit clear). The frontend sends api_base: null/"" when
     # the Base URL field is cleared; treating that as "don't change" left a
@@ -228,14 +290,66 @@ async def update_llm_config(
 
     # Build normalized config for response and background health check
     resolved_provider = stored.get("provider", settings.llm_provider)
+
+    # M-05: `requiresBaseUrl` was enforced in the settings UI only, so the
+    # .env-driven path could persist a provider that cannot work without an
+    # endpoint. Fail at save time with a field name instead of surfacing an
+    # opaque LiteLLM error on the user's first generation.
+    if resolved_provider in PROVIDERS_REQUIRING_BASE_URL and not (
+        _effective_api_base(stored)
+    ):
+        # Structured detail using the same {code, field, missing} shape as
+        # update_feature_prompts below, so the UI has one schema to read for
+        # every validation error out of this router.
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "missing_base_url",
+                "field": "api_base",
+                "missing": ["api_base"],
+            },
+        )
+    # The API is unauthenticated: pointing a saved key at a new custom endpoint
+    # requires that key, or anyone who can reach this server could redirect it.
+    resolved_key = resolve_api_key(stored, resolved_provider)
+    moves_key = _moves_key_to_new_endpoint(
+        previous, resolved_provider, _effective_api_base(stored)
+    )
+    proves_key = _proves_key(request.api_key, resolved_key)
+    if resolved_key and moves_key and not proves_key:
+        logger.warning(
+            "Refused to move the %s API key to a new endpoint without the key",
+            resolved_provider,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": API_KEY_REQUIRED_FOR_ENDPOINT,
+                "field": "api_key",
+                "missing": ["api_key"],
+            },
+        )
+    # Bind a saved custom base to the key confirmed for it, so a key that
+    # resolves later (a replaced or deleted key, LLM_API_KEY) is not sent there.
+    # A save that neither moves nor proves the key keeps the existing binding.
+    if not stored.get("api_base"):
+        stored.pop(API_BASE_KEY_BINDING, None)
+    elif moves_key or proves_key:
+        stored[API_BASE_KEY_BINDING] = api_base_key_binding(
+            resolved_provider, stored["api_base"], resolved_key
+        )
+    endpoint_confirmed = saved_endpoint_accepts_key(
+        stored, resolved_provider, _effective_api_base(stored), resolved_key
+    )
     raw_re = stored.get("reasoning_effort", settings.reasoning_effort)
     resolved_reasoning_effort = raw_re if raw_re else None
     test_config = LLMConfig(
         provider=resolved_provider,
         model=stored.get("model", settings.llm_model),
-        api_key=resolve_api_key(stored, resolved_provider),
-        api_base=stored.get("api_base", settings.llm_api_base),
+        api_key=resolved_key if endpoint_confirmed else "",
+        api_base=_effective_api_base(stored),
         reasoning_effort=resolved_reasoning_effort,
+        endpoint_confirmed=endpoint_confirmed,
     )
 
     # Remember last-saved settings per provider for Settings UI switching.
@@ -265,23 +379,38 @@ async def test_llm_connection(request: LLMConfigRequest | None = None) -> dict:
         if request and request.provider
         else stored.get("provider", settings.llm_provider)
     )
+    test_model = (
+        request.model
+        if request and request.model
+        else stored.get("model", settings.llm_model)
+    )
+    test_api_base = (
+        request.api_base
+        if request and request.api_base is not None
+        else _effective_api_base(stored)
+    )
+    if request and request.api_key:
+        test_api_key = request.api_key
+    else:
+        test_api_key = resolve_api_key(stored, test_provider)
+        # A saved key is only tested against the endpoint it was confirmed for.
+        if test_api_key and (
+            _moves_key_to_new_endpoint(stored, test_provider, test_api_base)
+            or not saved_endpoint_accepts_key(
+                stored, test_provider, test_api_base, test_api_key
+            )
+        ):
+            return {
+                "healthy": False,
+                "provider": test_provider,
+                "model": test_model,
+                "error_code": API_KEY_REQUIRED_FOR_ENDPOINT,
+            }
     config = LLMConfig(
         provider=test_provider,
-        model=(
-            request.model
-            if request and request.model
-            else stored.get("model", settings.llm_model)
-        ),
-        api_key=(
-            request.api_key
-            if request and request.api_key
-            else resolve_api_key(stored, test_provider)
-        ),
-        api_base=(
-            request.api_base
-            if request and request.api_base is not None
-            else stored.get("api_base", settings.llm_api_base)
-        ),
+        model=test_model,
+        api_key=test_api_key,
+        api_base=test_api_base,
         reasoning_effort=(
             (request.reasoning_effort or None)
             if request and request.reasoning_effort is not None
@@ -301,6 +430,7 @@ async def get_feature_config() -> FeatureConfigResponse:
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
+        enable_interview_prep=stored.get("enable_interview_prep", False),
         enable_resume_feedback=stored.get("enable_resume_feedback", True),
     )
 
@@ -315,6 +445,8 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
         stored["enable_cover_letter"] = request.enable_cover_letter
     if request.enable_outreach_message is not None:
         stored["enable_outreach_message"] = request.enable_outreach_message
+    if request.enable_interview_prep is not None:
+        stored["enable_interview_prep"] = request.enable_interview_prep
     if request.enable_resume_feedback is not None:
         stored["enable_resume_feedback"] = request.enable_resume_feedback
 
@@ -324,12 +456,13 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
     return FeatureConfigResponse(
         enable_cover_letter=stored.get("enable_cover_letter", False),
         enable_outreach_message=stored.get("enable_outreach_message", False),
+        enable_interview_prep=stored.get("enable_interview_prep", False),
         enable_resume_feedback=stored.get("enable_resume_feedback", True),
     )
 
 
 # Supported languages for i18n
-SUPPORTED_LANGUAGES = ["en", "es", "zh", "ja", "pt"]
+SUPPORTED_LANGUAGES = ["en", "es", "zh", "ja", "pt", "fr", "ko"]
 
 
 @router.get("/language", response_model=LanguageConfigResponse)
@@ -565,6 +698,7 @@ async def update_feature_prompts(
 # their env-fallback skip in resolve_api_key.
 SUPPORTED_PROVIDERS = [
     "openai",
+    "azure_foundry",
     "anthropic",
     "google",
     "openrouter",
@@ -624,6 +758,13 @@ async def update_api_keys(request: ApiKeysUpdateRequest) -> ApiKeysUpdateRespons
         elif "openai" in stored_keys:
             del stored_keys["openai"]
         updated.append("openai")
+
+    if request.azure_foundry is not None:
+        if request.azure_foundry:
+            stored_keys["azure_foundry"] = request.azure_foundry
+        elif "azure_foundry" in stored_keys:
+            del stored_keys["azure_foundry"]
+        updated.append("azure_foundry")
 
     if request.anthropic is not None:
         if request.anthropic:

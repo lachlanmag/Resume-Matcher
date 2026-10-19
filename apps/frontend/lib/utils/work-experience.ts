@@ -82,13 +82,23 @@ export function normalizeExperienceEntry(data: unknown): Experience {
     ? entry.description.map((d) => (typeof d === 'string' ? d : String(d ?? '')))
     : [];
 
-  return {
+  const normalized: Experience = {
     id: typeof entry.id === 'number' ? entry.id : 0,
     company: coerceStr(entry.company),
     location: coerceStr(entry.location) || undefined,
     roles,
     description,
   };
+  // Upstream per-bullet styling and condensed rendering must survive normalization.
+  if (Array.isArray(entry.descriptionStyles)) {
+    normalized.descriptionStyles = entry.descriptionStyles.map((style) =>
+      style === 'plain' ? 'plain' : 'bullet'
+    );
+  }
+  if (typeof entry.condensed === 'boolean') {
+    normalized.condensed = entry.condensed;
+  }
+  return normalized;
 }
 
 export function normalizeWorkExperience(entries: unknown): Experience[] {

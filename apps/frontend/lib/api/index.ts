@@ -50,6 +50,7 @@ export {
   createInitialResumeWizardState,
   finalizeResumeWizard,
   postResumeWizardTurn,
+  ResumeWizardConflictError,
   type ResumeWizardAction,
   type ResumeWizardFinalizeResponse,
   type ResumeWizardSection,

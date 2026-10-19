@@ -44,6 +44,7 @@ interface RegenerateWizardProps {
   // Loading states
   isGenerating: boolean;
   isApplying: boolean;
+  needsRefresh?: boolean;
 
   // Error state
   error: string | null;
@@ -78,6 +79,7 @@ export const RegenerateWizard: React.FC<RegenerateWizardProps> = ({
   regenerateErrors,
   isGenerating,
   isApplying,
+  needsRefresh = false,
   error,
   onGenerate,
   onAccept,
@@ -158,6 +160,7 @@ export const RegenerateWizard: React.FC<RegenerateWizardProps> = ({
         onAccept={onAccept}
         onReject={onReject}
         isApplying={isApplying}
+        needsRefresh={needsRefresh}
       />
     </>
   );

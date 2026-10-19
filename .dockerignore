@@ -34,6 +34,13 @@
 docs/
 assets/
 
+# Local-only / non-build trees (not used by the Dockerfile)
+template-pdfs/
+SVG ICons/
+.claude/
+.agents/
+.superpowers/
+
 # Build artifacts
 dist/
 build/
@@ -52,8 +59,9 @@ apps/backend/data/
 .DS_Store
 Thumbs.db
 
-# Docker files themselves
-Dockerfile
+# Docker files themselves. Dockerfile is deliberately not listed: Compose watch honours
+# this file, so ignoring it would stop the `rebuild` rule on ./Dockerfile from firing.
+# No COPY in the Dockerfile reads the repo root, so it never reaches the image.
 docker-compose.yml
 .dockerignore
 
