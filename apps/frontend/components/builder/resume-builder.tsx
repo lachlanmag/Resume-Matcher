@@ -157,7 +157,18 @@ const agentVersionOf = (data: ServerResume): string =>
     data.cover_letter ?? '',
     data.outreach_message ?? '',
     data.title ?? null,
+    data.resume_feedback ?? null,
+    data.tailor_settings ?? null,
   ]);
+
+/**
+ * The server copy in the editor's shape. The editor's baseline is normalized on
+ * load, so comparing it with a raw server copy would report changes nobody made.
+ */
+const normalizedServerResume = (data: ServerResume): ResumeData | null =>
+  isResumeDataShape(data.processed_resume)
+    ? withNormalizedWorkExperience(data.processed_resume)
+    : null;
 
 /**
  * Count a write this editor makes. While one is pending, or when one finished
@@ -370,6 +381,8 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
     'cover-letter' | 'outreach' | 'interview-prep' | null
   >(null);
   const [agentTask, setAgentTask] = useState<AgentTask | null>(null);
+  // The tailoring length the agent prompt asks for (Apply length / Re-tailor).
+  const [agentTailorLength, setAgentTailorLength] = useState<TailorLengthSettings | null>(null);
   // Agent mode: the agent's saved version, waiting while the user has unsaved
   // edits to the same part, and when one was last applied here.
   const [agentUpdate, setAgentUpdate] = useState<ServerResume | null>(null);
@@ -784,12 +797,20 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
   );
 
   useEffect(() => {
-    if (!resumeId || !isTailoredResume || !enableResumeFeedback || resumeFeedback) {
+    // Agent mode: the app makes no AI calls; the agent writes feedback on request.
+    if (agentMode || !resumeId || !isTailoredResume || !enableResumeFeedback || resumeFeedback) {
       return;
     }
 
     void startFeedbackGeneration(false);
-  }, [resumeId, isTailoredResume, enableResumeFeedback, resumeFeedback, startFeedbackGeneration]);
+  }, [
+    agentMode,
+    resumeId,
+    isTailoredResume,
+    enableResumeFeedback,
+    resumeFeedback,
+    startFeedbackGeneration,
+  ]);
 
   const feedbackGenElapsed = useElapsedSeconds(feedbackGenStatus === 'loading');
 
@@ -910,10 +931,10 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
       try {
         const data = await fetchResume(resumeId);
         const baselines = attachmentBaselinesRef.current;
+        const serverResume = normalizedServerResume(data);
         const changed =
           part === 'resume'
-            ? isResumeDataShape(data.processed_resume) &&
-              !isSameResumeData(data.processed_resume, lastSavedDataRef.current)
+            ? serverResume !== null && !isSameResumeData(serverResume, lastSavedDataRef.current)
             : part === 'coverLetter'
               ? (data.cover_letter ?? '') !== baselines.coverLetter
               : (data.outreach_message ?? '') !== baselines.outreachMessage;
@@ -1266,7 +1287,7 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
   // Agent mode: the parts of the server copy that differ from what this editor
   // last loaded or saved, i.e. what the user's coding agent changed.
   const agentChanges = (data: ServerResume) => {
-    const serverResume = isResumeDataShape(data.processed_resume) ? data.processed_resume : null;
+    const serverResume = normalizedServerResume(data);
     const coverLetter = data.cover_letter ?? '';
     const outreachMessage = data.outreach_message ?? '';
     const baselines = attachmentBaselinesRef.current;
@@ -1278,7 +1299,23 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
       coverLetterChanged: coverLetter !== baselines.coverLetter,
       outreachChanged: outreachMessage !== baselines.outreachMessage,
       title: (data.title ?? null) !== resumeTitle,
+      // Feedback and length settings: the user never edits these in the editor,
+      // so the agent's copy always applies (no conflict to resolve).
+      feedback:
+        JSON.stringify(data.resume_feedback ?? null) !== JSON.stringify(resumeFeedback ?? null),
+      tailorLength:
+        JSON.stringify(data.tailor_settings ?? null) !== JSON.stringify(tailorSettings ?? null),
     };
+  };
+
+  const applyAgentFeedbackAndLength = (data: ServerResume) => {
+    const changes = agentChanges(data);
+    if (changes.feedback) {
+      setResumeFeedback(data.resume_feedback ?? null);
+      setFeedbackGenStatus(data.resume_feedback ? 'ready' : 'idle');
+      setFeedbackGenError(null);
+    }
+    if (changes.tailorLength) setTailorSettings(data.tailor_settings ?? null);
   };
 
   /**
@@ -1320,6 +1357,7 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
     attachmentBaselinesRef.current = baselines;
     persistAttachmentDraft(values, baselines);
     if (changes.title) setResumeTitle(data.title ?? null);
+    applyAgentFeedbackAndLength(data);
     setAgentUpdate(null);
     setAgentAppliedAt(Date.now());
   };
@@ -1365,6 +1403,8 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
         !changes.title
       ) {
         if (agentUpdate) setAgentUpdate(null);
+        // Feedback or length alone: nothing the user edits here, so take it as is.
+        if (changes.feedback || changes.tailorLength) applyAgentFeedbackAndLength(data);
         return;
       }
       if (agentVersionOf(data) === dismissedAgentVersionRef.current) return;
@@ -1891,7 +1931,16 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
                   {t('builder.regenerate.buttonLabel')}
                 </Button>
                 {isTailoredResume && enableResumeFeedback && (
-                  <Button variant="outline" size="sm" onClick={() => setShowFeedbackModal(true)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      // Agent mode with no feedback yet: ask the agent to write it.
+                      agentMode && !resumeFeedback
+                        ? setAgentTask('feedback')
+                        : setShowFeedbackModal(true)
+                    }
+                  >
                     {feedbackGenStatus === 'loading' ? (
                       <>
                         <SpinnerGap aria-hidden="true" className="animate-spin" />
@@ -2052,6 +2101,8 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
                     />
                     {isTailoredResume && resumeId && parentResumeId && tailorJobId && (
                       <TailorSettingsPanel
+                        // Remount when the stored settings change (e.g. the agent saved new ones).
+                        key={JSON.stringify(tailorSettings)}
                         resumeId={resumeId}
                         masterResumeId={parentResumeId}
                         jobId={tailorJobId}
@@ -2067,6 +2118,15 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
                           setHasCurrentLocalDraft(false);
                         }}
                         onError={(msg) => showNotification(msg, 'warning')}
+                        onAgentTask={
+                          agentMode
+                            ? (task, settings) => {
+                                setTailorSettings(settings);
+                                setAgentTailorLength(settings);
+                                setAgentTask(task);
+                              }
+                            : undefined
+                        }
                       />
                     )}
                     <ResumeForm
@@ -2353,12 +2413,14 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
           backgroundGenStatus={feedbackGenStatus}
           backgroundGenError={feedbackGenError}
           onRequestGeneration={startFeedbackGeneration}
+          onAgentTask={agentMode ? setAgentTask : undefined}
         />
       )}
       {agentMode && (
         <AgentPromptDialog
           task={agentTask}
           resumeId={resumeId ?? ''}
+          tailorLength={agentTailorLength}
           onClose={() => setAgentTask(null)}
         />
       )}

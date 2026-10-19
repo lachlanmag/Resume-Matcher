@@ -1575,7 +1575,8 @@
       "title": "Tailor your resume",
       "prompt": "Use Resume Matcher to tailor my master resume to this job:\n\n<paste the job description here>",
       "promptWithJob": "Use Resume Matcher to tailor resume {resumeId} to this job:\n\n{job}",
-      "note": "Several jobs? Save each description as a .md or .txt file in the jobs/ folder and ask your agent to tailor your resume for every job there. Each one appears on the dashboard."
+      "note": "Several jobs? Save each description as a .md or .txt file in the jobs/ folder and ask your agent to tailor your resume for every job there. Each one appears on the dashboard.",
+      "length": "Tailoring length for this job: a {targetPages}-page limit and {min} to {max} bullets per job."
     },
     "enhance": {
       "title": "Enhance your resume",
@@ -1583,7 +1584,7 @@
     },
     "regenerate": {
       "title": "Rewrite with your agent",
-      "prompt": "Use Resume Matcher to rewrite <which experience, projects or skills> in resume {resumeId}: <what to improve>. Keep every fact true and show me the changes before you save them."
+      "prompt": "Use Resume Matcher to rewrite <the summary, or which experience, projects or skills> in resume {resumeId}: <what to improve>. Keep every fact true and show me the changes before you save them."
     },
     "coverLetter": {
       "title": "Write a cover letter",
@@ -1597,6 +1598,22 @@
       "title": "Prepare for the interview",
       "prompt": "Use Resume Matcher to read resume {resumeId} and the job it was tailored to, then help me prepare for the interview: likely questions, the stories to tell and questions to ask them.",
       "note": "Your agent answers in its own chat. In agent mode, interview prep is not saved to the resume."
+    },
+    "feedback": {
+      "title": "Get hiring feedback",
+      "prompt": "Use Resume Matcher to review resume {resumeId} as a hiring manager would, against the job it was tailored to, and save the feedback and your questions for me to that resume."
+    },
+    "applyFeedback": {
+      "title": "Apply your feedback answers",
+      "prompt": "Use Resume Matcher to revise resume {resumeId} from its saved feedback and my answers to its questions. Add facts only from my answers, show me the changes, then save them to that resume."
+    },
+    "applyLength": {
+      "title": "Fit to the length settings",
+      "prompt": "Use Resume Matcher to fit resume {resumeId} to a {targetPages}-page limit and {min} to {max} bullets per job. Pick each job's most relevant bullets from its master resume for the job it was tailored to, invent nothing, and save the result to that resume."
+    },
+    "retailor": {
+      "title": "Re-tailor this resume",
+      "prompt": "Use Resume Matcher to tailor resume {resumeId} again from its master resume, for the job it was tailored to, with a {targetPages}-page limit and {min} to {max} bullets per job. Replace that resume in place instead of adding a new one."
     }
   }
 }

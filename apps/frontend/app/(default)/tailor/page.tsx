@@ -663,6 +663,7 @@ export default function TailorPage() {
         task={showAgentPrompt ? 'tailor' : null}
         resumeId={masterResumeId ?? ''}
         jobDescription={jobDescription}
+        tailorLength={tailorLengthSettings}
         onClose={() => setShowAgentPrompt(false)}
       />
 

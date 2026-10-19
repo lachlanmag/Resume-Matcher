@@ -1528,7 +1528,8 @@
       "title": "Adaptez votre CV",
       "prompt": "Utilise Resume Matcher pour adapter mon CV principal à cette offre :\n\n<collez ici l'offre d'emploi>",
       "promptWithJob": "Utilise Resume Matcher pour adapter le CV {resumeId} à cette offre :\n\n{job}",
-      "note": "Plusieurs offres ? Enregistrez chacune dans un fichier .md ou .txt du dossier jobs/ et demandez à votre agent d'adapter votre CV à chaque offre de ce dossier. Chaque CV apparaît dans le tableau de bord."
+      "note": "Plusieurs offres ? Enregistrez chacune dans un fichier .md ou .txt du dossier jobs/ et demandez à votre agent d'adapter votre CV à chaque offre de ce dossier. Chaque CV apparaît dans le tableau de bord.",
+      "length": "Longueur pour cette offre : {targetPages} page(s) maximum et de {min} à {max} puces par poste."
     },
     "enhance": {
       "title": "Améliorez votre CV",
@@ -1536,7 +1537,7 @@
     },
     "regenerate": {
       "title": "Réécrire avec votre agent",
-      "prompt": "Utilise Resume Matcher pour réécrire <quelle expérience, quels projets ou quelles compétences> dans le CV {resumeId} : <ce qu'il faut améliorer>. Garde tous les faits exacts et montre-moi les changements avant de les enregistrer."
+      "prompt": "Utilise Resume Matcher pour réécrire <le résumé, ou quelle expérience, quels projets ou quelles compétences> dans le CV {resumeId} : <ce qu'il faut améliorer>. Garde tous les faits exacts et montre-moi les changements avant de les enregistrer."
     },
     "coverLetter": {
       "title": "Rédiger une lettre de motivation",
@@ -1550,6 +1551,22 @@
       "title": "Préparer l'entretien",
       "prompt": "Utilise Resume Matcher pour lire le CV {resumeId} et l'offre à laquelle il est adapté, puis aide-moi à préparer l'entretien : questions probables, exemples à raconter et questions à leur poser.",
       "note": "Votre agent répond dans sa propre conversation. En mode agent, la préparation à l'entretien n'est pas enregistrée dans le CV."
+    },
+    "feedback": {
+      "title": "Obtenir un avis de recrutement",
+      "prompt": "Utilise Resume Matcher pour évaluer le CV {resumeId} comme le ferait un recruteur, par rapport à l'offre pour laquelle il a été adapté, et enregistre dans ce CV l'avis et tes questions pour moi."
+    },
+    "applyFeedback": {
+      "title": "Appliquer vos réponses à l'avis",
+      "prompt": "Utilise Resume Matcher pour réviser le CV {resumeId} à partir de son avis enregistré et de mes réponses à ses questions. N'ajoute que des faits tirés de mes réponses, montre-moi les changements, puis enregistre-les dans ce CV."
+    },
+    "applyLength": {
+      "title": "Ajuster à la longueur",
+      "prompt": "Utilise Resume Matcher pour ajuster le CV {resumeId} à {targetPages} page(s) maximum et de {min} à {max} puces par poste. Choisis pour chaque poste les puces les plus pertinentes de son CV principal pour l'offre visée, n'invente rien et enregistre le résultat dans ce CV."
+    },
+    "retailor": {
+      "title": "Réadapter ce CV",
+      "prompt": "Utilise Resume Matcher pour réadapter le CV {resumeId} à partir de son CV principal, pour l'offre visée, avec {targetPages} page(s) maximum et de {min} à {max} puces par poste. Remplace ce CV au lieu d'en ajouter un nouveau."
     }
   },
   "feedback": {

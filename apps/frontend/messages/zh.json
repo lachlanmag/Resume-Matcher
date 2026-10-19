@@ -1575,7 +1575,8 @@
       "title": "定制你的简历",
       "prompt": "使用 Resume Matcher，将我的主简历针对这个职位进行定制：\n\n<在此粘贴职位描述>",
       "promptWithJob": "使用 Resume Matcher，将简历 {resumeId} 针对这个职位进行定制：\n\n{job}",
-      "note": "有多个职位？将每个职位描述保存为 jobs/ 文件夹中的 .md 或 .txt 文件，然后让智能体针对该文件夹中的每个职位定制你的简历。每份简历都会显示在仪表盘上。"
+      "note": "有多个职位？将每个职位描述保存为 jobs/ 文件夹中的 .md 或 .txt 文件，然后让智能体针对该文件夹中的每个职位定制你的简历。每份简历都会显示在仪表盘上。",
+      "length": "该职位的篇幅：最多 {targetPages} 页，每段工作 {min} 至 {max} 条要点。"
     },
     "enhance": {
       "title": "优化你的简历",
@@ -1583,7 +1584,7 @@
     },
     "regenerate": {
       "title": "让智能体改写",
-      "prompt": "使用 Resume Matcher 改写简历 {resumeId} 中的 <要改写的经历、项目或技能>：<需要改进的地方>。保持所有事实真实，并在保存前把改动给我看。"
+      "prompt": "使用 Resume Matcher 改写简历 {resumeId} 中的 <要改写的摘要、经历、项目或技能>：<需要改进的地方>。保持所有事实真实，并在保存前把改动给我看。"
     },
     "coverLetter": {
       "title": "撰写求职信",
@@ -1597,6 +1598,22 @@
       "title": "准备面试",
       "prompt": "使用 Resume Matcher 读取简历 {resumeId} 及其所定制的职位，然后帮我准备面试：可能的问题、可以讲述的经历，以及我可以问对方的问题。",
       "note": "智能体会在它自己的对话中回答。在智能体模式下，面试准备内容不会保存到简历中。"
+    },
+    "feedback": {
+      "title": "获取招聘反馈",
+      "prompt": "使用 Resume Matcher，以招聘经理的视角，对照简历 {resumeId} 所定制的职位进行评估，并把反馈和要问我的问题保存到该简历。"
+    },
+    "applyFeedback": {
+      "title": "应用你对反馈的回答",
+      "prompt": "使用 Resume Matcher，根据已保存的反馈和我对其中问题的回答修改简历 {resumeId}。只添加我回答中提到的事实，先把改动给我看，再保存到该简历。"
+    },
+    "applyLength": {
+      "title": "按篇幅设置调整",
+      "prompt": "使用 Resume Matcher，将简历 {resumeId} 调整为最多 {targetPages} 页、每段工作 {min} 至 {max} 条要点。从主简历中为每段工作挑选与所定制职位最相关的要点，不要编造任何内容，并把结果保存到该简历。"
+    },
+    "retailor": {
+      "title": "重新定制这份简历",
+      "prompt": "使用 Resume Matcher，从主简历出发，针对同一职位重新定制简历 {resumeId}，最多 {targetPages} 页，每段工作 {min} 至 {max} 条要点。直接替换该简历，不要新增一份。"
     }
   }
 }

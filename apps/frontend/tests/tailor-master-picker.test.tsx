@@ -371,8 +371,12 @@ describe('tailor page in agent mode', () => {
       await act(async () => screen.getByRole('button', { name: 'agentPrompt.getPrompt' }).click());
 
       expect(screen.getByRole('dialog', { name: 'agentPrompt.tailor.title' })).toBeInTheDocument();
-      // The test t() returns keys only, so the prompt is the with-job variant's key.
-      expect(screen.getByText('agentPrompt.tailor.promptWithJob')).toBeInTheDocument();
+      // The test t() returns keys only: the with-job prompt, then the tailoring
+      // length the user set on this page.
+      const prompt = screen.getByText((_, el) => el?.tagName === 'PRE');
+      expect(prompt.textContent).toBe(
+        'agentPrompt.tailor.promptWithJob\n\nagentPrompt.tailor.length'
+      );
       expect(api.upload).not.toHaveBeenCalled();
       expect(api.preview).not.toHaveBeenCalled();
     } finally {
